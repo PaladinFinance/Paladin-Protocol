@@ -63,7 +63,9 @@ contract AaveDelegator {
         //Then return the borrowed amount and the used fees to the pool
         uint _returnAmount = feesAmount.sub(_usedAmount);
         uint _keepAmount = amount.add(_usedAmount);
-        _underlying.safeTransfer(borrower, _returnAmount);
+        if(_returnAmount > 0){
+            _underlying.safeTransfer(borrower, _returnAmount);
+        }
         _underlying.safeTransfer(motherPool, _keepAmount);
     }
 

@@ -54,6 +54,7 @@ interface PalPoolInterface {
         address _underlying,
         uint _feesAmount,
         uint _feesUsed,
+        uint startBlock,
         bool _closed
     );
     function getBorrowData(address _loanPool) external returns(
@@ -63,6 +64,7 @@ interface PalPoolInterface {
         address underlying,
         uint feesAmount,
         uint feesUsed,
+        uint startBlock,
         bool closed
     );
 
@@ -73,12 +75,18 @@ interface PalPoolInterface {
     function exchangeRateCurrent() external returns (uint);
     function exchangeRateStored() external view returns (uint);
 
+    function minBorrowFees(uint _amount) external view returns (uint);
+
+    function isKillable(address _loan) external view returns(bool);
+
     // Admin Functions
     //function setNewAdmin(address payable _newAdmin) external;
 
     function setNewController(address _newController) external;
     function setNewInterestModule(address _interestModule) external;
     function setNewDelegator(address _delegator) external;
+
+    function updateMinBorrowLength(uint _length) external;
 
     function addReserve(uint _amount) external;
     function removeReserve(uint _amount) external;

@@ -26,6 +26,8 @@ contract PalPoolStorage {
         uint feesAmount;
         //borrow index at the loan creation
         uint borrowIndex;
+        //block to be able to close the Borrow. Closing before will force to pay fees up to this minimum block
+        uint startBlock;
         //true if the loan is active, false is loan was closed or killed
         bool closed;
     }
@@ -47,11 +49,14 @@ contract PalPoolStorage {
     uint public totalBorrowed;
 
 
+    uint public minBorrowLength = 45290;
+
+
     /** @dev Maximum Borrow Rate to update interest */
     uint internal constant maxBorrowRate = 0.0002e18;
 
-    /** @dev Healt Factor to kill a loan */
-    uint internal constant killFactor = 0.98e18;
+    /** @dev Health Factor to kill a loan */
+    uint internal constant killFactor = 0.96e18;
     /** @dev Ratio of the borrow fees to pay the killer of a loan */
     uint internal constant killerRatio = 0.15e18;
 

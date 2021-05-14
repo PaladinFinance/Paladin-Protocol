@@ -126,6 +126,9 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Make the underlying transfer
         underlying.safeTransfer(msg.sender, _toReturn);
 
+        //Use the controller to check if the burning was successfull
+        require(controller.depositVerify(address(this), msg.sender, amount), Errors.FAIL_DEPOSIT);
+
         //Emit the Withdraw event
         emit Withdraw(msg.sender, amount, address(this));
 
@@ -142,6 +145,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Need the pool to have enough liquidity, and the interests to be up to date
         require(_amount < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
         require(_updateInterest());
+        require(_feeAmount >= minBorrowFees(_amount), Errors.BORROW_INSUFFICIENT_FEES);
 
         address _dest = msg.sender;
 
@@ -161,6 +165,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             address(underlying),
             _feeAmount,
             borrowIndex,
+            block.number,
             false
         );
 
@@ -238,18 +243,37 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         PalLoanInterface _loan = PalLoanInterface(__borrow.loan);
 
         //Calculates the amount of fees used
-        uint _feesUsed = __borrow.amount.sub(__borrow.amount.mul(__borrow.borrowIndex).div(borrowIndex));
+        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
+        uint _penaltyFees = 0;
+        uint _totalFees = _feesUsed;
+
+        if(block.number < (__borrow.startBlock.add(minBorrowLength))){
+            uint _currentBorrowRate = interestModule.getBorrowRate(_underlyingBalance(), totalBorrowed, totalReserve);
+            uint _missingBlocks = (__borrow.startBlock.add(minBorrowLength)).sub(block.number);
+            _penaltyFees = _missingBlocks.mul(__borrow.amount.mul(_currentBorrowRate)).div(mantissaScale);
+            _totalFees = _totalFees.add(_penaltyFees);
+        }
+    
+        //Security so the Borrow can be closed if there are no more fees
+        //(if the Borrow wasn't Killed yet, or the loan is closed before minimum time, and already paid fees aren't enough)
+        if(_totalFees > __borrow.feesAmount){
+            _totalFees = __borrow.feesAmount;
+        }
         
         //Close and destroy the loan
-        _loan.closeLoan(_feesUsed);
+        _loan.closeLoan(_totalFees);
 
         //Set the Borrow as closed
         __borrow.closed = true;
 
         //Update the storage varaibles
-        totalBorrowed = totalBorrowed.sub(__borrow.amount);
+        totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
+        uint _realPenaltyFees = _totalFees.sub(_feesUsed);
+        totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
 
         loanToBorrow[loan]= __borrow;
+
+        require(controller.closeBorrowVerify(address(this), __borrow.borrower, __borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
         //Emit the CloseLoan Event
         emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), false);
@@ -269,9 +293,9 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(_updateInterest());
 
         //Calculate the amount of fee used, and check if the Loan is killable
-        uint _feesUsed = __borrow.amount.sub(__borrow.amount.mul(__borrow.borrowIndex).div(borrowIndex));
-        uint _loanHealthFactor = uint(1e18) - _feesUsed.mul(uint(1e18)).div(__borrow.feesAmount);
-        require(_loanHealthFactor <= killFactor, Errors.NOT_KILLABLE);
+        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
+        uint _loanHealthFactor = _feesUsed.mul(uint(1e18)).div(__borrow.feesAmount);
+        require(_loanHealthFactor >= killFactor, Errors.NOT_KILLABLE);
 
         //Load the Loan
         PalLoanInterface _loan = PalLoanInterface(__borrow.loan);
@@ -282,9 +306,13 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Close the Loan, and update storage variables
         __borrow.closed = true;
 
-        totalBorrowed = totalBorrowed.sub(__borrow.amount);
+        uint _killerFees = (__borrow.feesAmount).mul(killerRatio).div(uint(1e18));
+        totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
+        totalReserve = totalReserve.sub(_killerFees);
 
         loanToBorrow[loan]= __borrow;
+
+        require(controller.killBorrowVerify(address(this), killer, __borrow.loan), Errors.FAIL_KILL_BORROW);
 
         //Emit the CloseLoan Event
         emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), true);
@@ -336,6 +364,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         address _underlying,
         uint _feesAmount,
         uint _feesUsed,
+        uint _startBlock,
         bool _closed
     ){
         return _getBorrowData(__loan);
@@ -353,6 +382,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         address _underlying,
         uint _feesAmount,
         uint _feesUsed,
+        uint _startBlock,
         bool _closed
     ){
         _updateInterest();
@@ -371,6 +401,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         address _underlying,
         uint _feesAmount,
         uint _feesUsed,
+        uint _startBlock,
         bool _closed
     ){
         //Return the data inside a Borrow struct
@@ -382,7 +413,8 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             __borrow.underlying,
             __borrow.feesAmount,
             //Calculate amount of fees used
-            __borrow.amount.sub(__borrow.amount.mul(__borrow.borrowIndex).div(borrowIndex)),
+            (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount),
+            __borrow.startBlock,
             __borrow.closed
         );
 
@@ -443,13 +475,35 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         return _exchangeRate();
     }
     
-        /**
+    /**
     * @notice Get the stored exchange rate for the palToken
     * @dev Calls internal function _exchangeRate
     * @return uint : current exchange rate (scale 1e18)
     */
     function exchangeRateStored() external view override returns (uint){
         return _exchangeRate();
+    }
+
+    /**
+    * @notice Return the minimum of fees to pay to borrow
+    * @dev Fees to pay for a Borrow (for the minimum borrow length)
+    * @return uint : minimum amount (in wei)
+    */
+    function minBorrowFees(uint _amount) public view override returns (uint){
+        uint borrowRate = interestModule.getBorrowRate(_underlyingBalance(), totalBorrowed, totalReserve);
+        return minBorrowLength.mul(_amount.mul(borrowRate)).div(mantissaScale);
+    }
+
+    function isKillable(address _loan) external view override returns(bool){
+        Borrow memory __borrow = loanToBorrow[_loan];
+        if(!__borrow.closed){
+            return false;
+        }
+
+        //Calculate the amount of fee used, and check if the Loan is killable
+        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
+        uint _loanHealthFactor = _feesUsed.mul(uint(1e18)).div(__borrow.feesAmount);
+        return _loanHealthFactor >= killFactor;
     }
 
     /**
@@ -481,7 +535,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         Accumulated Interests = Interest Factor * Borrows
         Total Borrows = Borrows + Accumulated Interests
         Total Reserve = Reserve + Accumulated Interests * Reserve Factor
-        Borrow Index = old Borrow Index + old Borrow Index * Accumulated Interests 
+        Borrow Index = old Borrow Index + old Borrow Index * Interest Factor 
         */
         uint _interestFactor = _borrowRate.mul(_ellapsedBlocks);
         uint _accumulatedInterest = _interestFactor.mul(_borrows).div(mantissaScale);
@@ -528,6 +582,10 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     */
     function setNewDelegator(address _delegator) external override adminOnly {
         delegator = _delegator;
+    }
+
+    function updateMinBorrowLength(uint _length) external override adminOnly {
+        minBorrowLength = _length;
     }
 
     /**

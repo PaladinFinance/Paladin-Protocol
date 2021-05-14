@@ -200,123 +200,6 @@
     },
     {
         "inputs": [],
-        "name": "accrualBlockNumber",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "borrowIndex",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "controller",
-        "outputs": [
-            {
-                "internalType": "contract PaladinControllerInterface",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "palToken",
-        "outputs": [
-            {
-                "internalType": "contract PalToken",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "reserveFactor",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address payable",
-                "name": "_newAdmin",
-                "type": "address"
-            }
-        ],
-        "name": "setNewAdmin",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalBorrowed",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalReserve",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "underlying",
-        "outputs": [
-            {
-                "internalType": "contract IERC20",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
         "name": "_underlyingBalance",
         "outputs": [
             {
@@ -329,33 +212,21 @@
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            }
-        ],
-        "name": "deposit",
+        "inputs": [],
+        "name": "_updateInterest",
         "outputs": [
             {
-                "internalType": "uint256",
+                "internalType": "bool",
                 "name": "",
-                "type": "uint256"
+                "type": "bool"
             }
         ],
         "stateMutability": "nonpayable",
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            }
-        ],
-        "name": "withdraw",
+        "inputs": [],
+        "name": "accrualBlockNumber",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -363,7 +234,39 @@
                 "type": "uint256"
             }
         ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "addReserve",
+        "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_account",
+                "type": "address"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -391,6 +294,103 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "borrowIndex",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "borrowRatePerBlock",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "loan",
+                "type": "address"
+            }
+        ],
+        "name": "closeBorrow",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "controller",
+        "outputs": [
+            {
+                "internalType": "contract PaladinControllerInterface",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "deposit",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "exchangeRateCurrent",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "exchangeRateStored",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
@@ -412,164 +412,6 @@
             }
         ],
         "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "loan",
-                "type": "address"
-            }
-        ],
-        "name": "closeBorrow",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "loan",
-                "type": "address"
-            }
-        ],
-        "name": "killBorrow",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "getPalToken",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_account",
-                "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_account",
-                "type": "address"
-            }
-        ],
-        "name": "underlyingBalanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "getLoansPools",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "borrower",
-                "type": "address"
-            }
-        ],
-        "name": "getLoansByBorrower",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "__loan",
-                "type": "address"
-            }
-        ],
-        "name": "getBorrowDataStored",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "_borrower",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "_loan",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_amount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "_underlying",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_feesAmount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_feesUsed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bool",
-                "name": "_closed",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -613,6 +455,11 @@
                 "type": "uint256"
             },
             {
+                "internalType": "uint256",
+                "name": "_startBlock",
+                "type": "uint256"
+            },
+            {
                 "internalType": "bool",
                 "name": "_closed",
                 "type": "bool"
@@ -622,8 +469,126 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "__loan",
+                "type": "address"
+            }
+        ],
+        "name": "getBorrowDataStored",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "_borrower",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_loan",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_underlying",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_feesAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_feesUsed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_startBlock",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "_closed",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "borrower",
+                "type": "address"
+            }
+        ],
+        "name": "getLoansByBorrower",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
-        "name": "borrowRatePerBlock",
+        "name": "getLoansPools",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPalToken",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "loan",
+                "type": "address"
+            }
+        ],
+        "name": "killBorrow",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "minBorrowFees",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -636,7 +601,124 @@
     },
     {
         "inputs": [],
+        "name": "minBorrowLength",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "palToken",
+        "outputs": [
+            {
+                "internalType": "contract PalToken",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "removeReserve",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "reserveFactor",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address payable",
+                "name": "_newAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "setNewAdmin",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_newController",
+                "type": "address"
+            }
+        ],
+        "name": "setNewController",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_delegator",
+                "type": "address"
+            }
+        ],
+        "name": "setNewDelegator",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_interestModule",
+                "type": "address"
+            }
+        ],
+        "name": "setNewInterestModule",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "supplyRatePerBlock",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalBorrowed",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -662,20 +744,7 @@
     },
     {
         "inputs": [],
-        "name": "exchangeRateCurrent",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "exchangeRateStored",
+        "name": "totalReserve",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -688,52 +757,45 @@
     },
     {
         "inputs": [],
-        "name": "_updateInterest",
+        "name": "underlying",
         "outputs": [
             {
-                "internalType": "bool",
+                "internalType": "contract IERC20",
                 "name": "",
-                "type": "bool"
+                "type": "address"
             }
         ],
-        "stateMutability": "nonpayable",
+        "stateMutability": "view",
         "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_newController",
+                "name": "_account",
                 "type": "address"
             }
         ],
-        "name": "setNewController",
-        "outputs": [],
-        "stateMutability": "nonpayable",
+        "name": "underlyingBalanceOf",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
         "inputs": [
             {
-                "internalType": "address",
-                "name": "_interestModule",
-                "type": "address"
+                "internalType": "uint256",
+                "name": "_length",
+                "type": "uint256"
             }
         ],
-        "name": "setNewInterestModule",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_delegator",
-                "type": "address"
-            }
-        ],
-        "name": "setNewDelegator",
+        "name": "updateMinBorrowLength",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -742,25 +804,18 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "_amount",
+                "name": "amount",
                 "type": "uint256"
             }
         ],
-        "name": "addReserve",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
+        "name": "withdraw",
+        "outputs": [
             {
                 "internalType": "uint256",
-                "name": "_amount",
+                "name": "",
                 "type": "uint256"
             }
         ],
-        "name": "removeReserve",
-        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     }

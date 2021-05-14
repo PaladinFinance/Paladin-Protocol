@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 import "../PalPool.sol";
 import "../utils/SafeMath.sol";
+import "../utils/SafeERC20.sol";
 import "../utils/IERC20.sol";
 import "../tokens/AAVE/IStakedAave.sol";
 import {Errors} from  "../utils/Errors.sol";
@@ -14,6 +15,7 @@ import {Errors} from  "../utils/Errors.sol";
 /// @author Paladin
 contract PalStkAave is PalPool {
     using SafeMath for uint;
+    using SafeERC20 for IERC20;
 
     address private stkAaveAddress;
     address private aaveAddress;
@@ -45,7 +47,7 @@ contract PalStkAave is PalPool {
         uint pendingRewards = stkAave.getTotalRewardsBalance(address(this));
         if(pendingRewards > 0 && claimBlockNumber != block.number){
             stkAave.claimRewards(address(this), pendingRewards);
-            aave.approve(stkAaveAddress, pendingRewards);
+            aave.safeApprove(stkAaveAddress, pendingRewards);
             stkAave.stake(address(this), pendingRewards);
             claimBlockNumber = block.number;
             return true;
@@ -69,7 +71,7 @@ contract PalStkAave is PalPool {
 
         //Transfer the underlying to this contract
         //The amount of underlying needs to be approved before
-        require(underlying.transferFrom(msg.sender, address(this), amount));
+        underlying.safeTransferFrom(msg.sender, address(this), amount);
 
 
         //Find the amount to mint depending of the previous transfer
@@ -113,7 +115,10 @@ contract PalStkAave is PalPool {
         palToken.burn(msg.sender, amount);
 
         //Make the underlying transfer
-        require(underlying.transfer(msg.sender, _toReturn));
+        underlying.safeTransfer(msg.sender, _toReturn);
+
+        //Use the controller to check if the burning was successfull
+        require(controller.depositVerify(address(this), msg.sender, amount), Errors.FAIL_DEPOSIT);
 
         //Emit the Withdraw event
         emit Withdraw(msg.sender, amount, address(this));
@@ -132,6 +137,7 @@ contract PalStkAave is PalPool {
         //Need the pool to have enough liquidity, and the interests to be up to date
         require(_amount < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
         require(_updateInterest());
+        require(_feeAmount >= minBorrowFees(_amount), Errors.BORROW_INSUFFICIENT_FEES);
 
         address _dest = msg.sender;
 
@@ -151,18 +157,19 @@ contract PalStkAave is PalPool {
             address(underlying),
             _feeAmount,
             borrowIndex,
+            block.number,
             false
         );
 
 
         //Send the borrowed amount of underlying tokens to the Loan
-        require(underlying.transfer(address(_newLoan), _amount));
+        underlying.safeTransfer(address(_newLoan), _amount);
 
         //And transfer the fees from the Borrower to the Loan
-        require(underlying.transferFrom(_dest, address(_newLoan), _feeAmount));
+        underlying.safeTransferFrom(_dest, address(_newLoan), _feeAmount);
 
         //Start the Loan (and delegate voting power)
-        require(_newLoan.initiate(_amount, _feeAmount));
+        require(_newLoan.initiate(_amount, _feeAmount), Errors.FAIL_LOAN_INITIATE);
 
         //Update Total Borrowed, and add the new Loan to mappings
         totalBorrowed = totalBorrowed.add(_amount);
@@ -200,7 +207,7 @@ contract PalStkAave is PalPool {
 
         //Transfer the new fees to the Loan
         //If success, update the Borrow data, and call the expand fucntion of the Loan
-        require(underlying.transferFrom(__borrow.borrower, __borrow.loan, feeAmount));
+        underlying.safeTransferFrom(__borrow.borrower, __borrow.loan, feeAmount);
 
         require(_loan.expand(feeAmount), Errors.FAIL_LOAN_EXPAND);
 
@@ -230,18 +237,37 @@ contract PalStkAave is PalPool {
         PalLoanInterface _loan = PalLoanInterface(__borrow.loan);
 
         //Calculates the amount of fees used
-        uint _feesUsed = __borrow.amount.sub(__borrow.amount.mul(__borrow.borrowIndex).div(borrowIndex));
+        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
+        uint _penaltyFees = 0;
+        uint _totalFees = _feesUsed;
+
+        if(block.number < (__borrow.startBlock.add(minBorrowLength))){
+            uint _currentBorrowRate = interestModule.getBorrowRate(_underlyingBalance(), totalBorrowed, totalReserve);
+            uint _missingBlocks = (__borrow.startBlock.add(minBorrowLength)).sub(block.number);
+            _penaltyFees = _missingBlocks.mul(__borrow.amount.mul(_currentBorrowRate)).div(mantissaScale);
+            _totalFees = _totalFees.add(_penaltyFees);
+        }
+    
+        //Security so the Borrow can be closed if there are no more fees
+        //(if the Borrow wasn't Killed yet, or the loan is closed before minimum time, and already paid fees aren't enough)
+        if(_totalFees > __borrow.feesAmount){
+            _totalFees = __borrow.feesAmount;
+        }
         
         //Close and destroy the loan
-        _loan.closeLoan(_feesUsed);
+        _loan.closeLoan(_totalFees);
 
         //Set the Borrow as closed
         __borrow.closed = true;
 
         //Update the storage varaibles
-        totalBorrowed = totalBorrowed.sub(__borrow.amount);
+        totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
+        uint _realPenaltyFees = _totalFees.sub(_feesUsed);
+        totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
 
         loanToBorrow[loan]= __borrow;
+
+        require(controller.closeBorrowVerify(address(this), __borrow.borrower, __borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
         //Emit the CloseLoan Event
         emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), false);
@@ -262,9 +288,9 @@ contract PalStkAave is PalPool {
         require(_updateInterest());
 
         //Calculate the amount of fee used, and check if the Loan is killable
-        uint _feesUsed = __borrow.amount.sub(__borrow.amount.mul(__borrow.borrowIndex).div(borrowIndex));
-        uint _loanHealthFactor = uint(1e18) - _feesUsed.mul(uint(1e18)).div(__borrow.feesAmount);
-        require(_loanHealthFactor <= killFactor, Errors.NOT_KILLABLE);
+        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
+        uint _loanHealthFactor = _feesUsed.mul(uint(1e18)).div(__borrow.feesAmount);
+        require(_loanHealthFactor >= killFactor, Errors.NOT_KILLABLE);
 
         //Load the Loan
         PalLoanInterface _loan = PalLoanInterface(__borrow.loan);
@@ -275,9 +301,13 @@ contract PalStkAave is PalPool {
         //Close the Loan, and update storage variables
         __borrow.closed = true;
 
-        totalBorrowed = totalBorrowed.sub(__borrow.amount);
+        uint _killerFees = (__borrow.feesAmount).mul(killerRatio).div(uint(1e18));
+        totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
+        totalReserve = totalReserve.sub(_killerFees);
 
         loanToBorrow[loan]= __borrow;
+
+        require(controller.killBorrowVerify(address(this), killer, __borrow.loan), Errors.FAIL_KILL_BORROW);
 
         //Emit the CloseLoan Event
         emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), true);

@@ -77,7 +77,15 @@ contract PaladinController is PaladinControllerInterface {
         //Check if the minting succeeded
         
         //no method yet 
+        return true;
+    }
 
+    //Check if a Deposit was successful (to do)
+    function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
+        require(_isPalPool(msg.sender), "Call not allowed");
+        //Check if the minting succeeded
+        
+        //no method yet 
         return true;
     }
     
@@ -93,10 +101,30 @@ contract PaladinController is PaladinControllerInterface {
             address _underlying,
             uint _feesAmount,
             uint _feesUsed,
+            uint _startBlock,
             bool _closed
         ) = _palPool.getBorrowDataStored(loanPool);
         return(borrower == _borrower && amount == _amount && feesAmount == _feesAmount && _closed == false);
     }
+
+
+    function closeBorrowVerify(address palPool, address borrower, address loanPool) external view override returns(bool){
+        require(_isPalPool(msg.sender), "Call not allowed");
+        //Check if the minting succeeded
+        
+        //no method yet 
+        return true;
+    }
+
+
+    function killBorrowVerify(address palPool, address killer, address loanPool) external view override returns(bool){
+        require(_isPalPool(msg.sender), "Call not allowed");
+        //Check if the minting succeeded
+        
+        //no method yet 
+        return true;
+    }
+
         
     
     //Admin function

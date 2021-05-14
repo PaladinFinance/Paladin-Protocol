@@ -25,6 +25,9 @@ interface PaladinControllerInterface {
     function borrowPossible(address palPool, uint amount) external view returns(bool);
 
     function depositVerify(address palPool, address dest, uint amount) external view returns(bool);
+    function withdrawVerify(address palPool, address dest, uint amount) external view returns(bool);
     function borrowVerify(address palPool, address borrower, uint amount, uint feesAmount, address loanPool) external view returns(bool);
+    function closeBorrowVerify(address palPool, address borrower, address loanPool) external view returns(bool);
+    function killBorrowVerify(address palPool, address killer, address loanPool) external view returns(bool);
 
 }

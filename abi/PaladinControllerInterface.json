@@ -32,32 +32,6 @@
         "type": "event"
     },
     {
-        "inputs": [],
-        "name": "getPalTokens",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "getPalPools",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
         "inputs": [
             {
                 "internalType": "address",
@@ -79,6 +53,182 @@
             }
         ],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "borrowPossible",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "borrower",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "feesAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "loanPool",
+                "type": "address"
+            }
+        ],
+        "name": "borrowVerify",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "borrower",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "loanPool",
+                "type": "address"
+            }
+        ],
+        "name": "closeBorrowVerify",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "dest",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "depositVerify",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPalPools",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPalTokens",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "killer",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "loanPool",
+                "type": "address"
+            }
+        ],
+        "name": "killBorrowVerify",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -132,30 +282,6 @@
                 "type": "address"
             },
             {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            }
-        ],
-        "name": "borrowPossible",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "palPool",
-                "type": "address"
-            },
-            {
                 "internalType": "address",
                 "name": "dest",
                 "type": "address"
@@ -166,46 +292,7 @@
                 "type": "uint256"
             }
         ],
-        "name": "depositVerify",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "palPool",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "borrower",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "feesAmount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "loanPool",
-                "type": "address"
-            }
-        ],
-        "name": "borrowVerify",
+        "name": "withdrawVerify",
         "outputs": [
             {
                 "internalType": "bool",
