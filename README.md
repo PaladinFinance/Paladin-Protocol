@@ -4,7 +4,7 @@
 Paladin smart contracts
 
 
-Lending protocol for governance power (inspired by Compound lending system). Instead of sending the tokens to the borrower, the tokens are moved to a smart contract that will delegate its governance power to the borrower
+Lending protocol for governance power. Instead of sending the tokens to the borrower, the tokens are moved to a smart contract that will delegate its governance power to the borrower
 
 
 
