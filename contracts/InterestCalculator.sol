@@ -13,19 +13,26 @@ contract InterestCalculator is InterestInterface {
     /** @notice admin address (contract creator) */
     address public admin;
 
-    /** @notice base mulitplier for borrow rate */
-    uint public multiplierPerBlock = 0.0000002998e18;
+    uint public multiplierPerBlock;
     /** @notice base borrow rate */
-    uint public baseRatePerBlock = 0.0000002416e18;
+    uint public baseRatePerBlock;
     /** @notice mulitplier for borrow rate for the kink */
-    uint public kinkMultiplierPerBlock = 0.0000064021e18;
+    uint public kinkMultiplierPerBlock;
     /** @notice borrow rate for the kink */
-    uint public kinkBaseRatePerBlock = 0.00000048325e18;
+    uint public kinkBaseRatePerBlock;
     /** @notice  ratio of utilization rate at wihich we use kink_ values*/
     uint public kink = 0.8e18;
+    
 
     constructor(){
         admin = msg.sender;
+
+        uint blocksPerYear = 2336000;
+        //Target yearly values for Borrow Rate
+        multiplierPerBlock = uint(0.7e18).div(blocksPerYear);
+        baseRatePerBlock = uint(0.57e18).div(blocksPerYear);
+        kinkMultiplierPerBlock = uint(12.6e18).div(blocksPerYear);
+        kinkBaseRatePerBlock = uint(1.13e18).div(blocksPerYear);
     }
 
     /**

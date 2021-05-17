@@ -9,11 +9,12 @@ import { BigNumber } from "@ethersproject/bignumber";
 chai.use(solidity);
 const { expect } = chai;
 
+const blocksPerYear = 2336000;
 
-const multiplierPerBlock = 0.0000002998;
-const baseRatePerBlock = 0.0000002416;
-const kinkMultiplierPerBlock = 0.0000064021;
-const kinkBaseRatePerBlock = 0.00000048325;
+const multiplierPerBlock = 0.7 / blocksPerYear;
+const baseRatePerBlock = 0.57 / blocksPerYear;
+const kinkMultiplierPerBlock = 12.6 / blocksPerYear;
+const kinkBaseRatePerBlock = 1.13 / blocksPerYear;
 const kink = 0.8;
 
 function simuUtilizationRate(cash: number, borrows: number, reserves: number){
@@ -34,6 +35,10 @@ function simuSupplyRate(cash: number, borrows: number, reserves: number, reserve
     let useRate: number = simuUtilizationRate(cash, borrows, reserves)
     let borRate: number = simuBorrowRate(cash, borrows, reserves)
     return useRate * (borRate * (1 - reserveFactor))
+}
+
+function closeEnough(a: number, b :number){
+    return -1e-10 < (a - b)  && (a - b) < 1e-10;
 }
 
 
@@ -99,7 +104,8 @@ describe('Interest Calculator contract tests', () => {
             let simu :number = simuBorrowRate(v['c'],v['b'],v['r'])
             let val: number = +(ethers.utils.formatEther(res))
             simu = Math.round(simu * 1e18) / 1e18
-            expect(val).to.be.eq(simu)
+            //expect(val).to.be.eq(simu)
+            expect(closeEnough(val, simu))
             
         });
     });
@@ -112,7 +118,8 @@ describe('Interest Calculator contract tests', () => {
             let simu :number = simuSupplyRate(v['c'],v['b'],v['r'])
             let val: number = +(ethers.utils.formatEther(res))
             simu = Math.round(simu * 1e18) / 1e18
-            expect(val).to.be.eq(simu)
+            //expect(val).to.be.eq(simu)
+            expect(closeEnough(val, simu))
             
         });
     });

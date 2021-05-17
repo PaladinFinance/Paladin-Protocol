@@ -49,7 +49,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         underlying = IERC20(_underlying);
         accrualBlockNumber = block.number;
         interestModule = InterestInterface(_interestModule);
-        borrowIndex = 1e18;
+        borrowIndex = 1e36;
         delegator = _delegator;
 
         //Set base values
@@ -541,7 +541,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         uint _accumulatedInterest = _interestFactor.mul(_borrows).div(mantissaScale);
         uint _newBorrows = _borrows.add(_accumulatedInterest);
         uint _newReserve = _reserves.add(reserveFactor.mul(_accumulatedInterest).div(mantissaScale));
-        uint _newBorrowIndex = _oldBorrowIndex.add(_interestFactor.mul(_oldBorrowIndex).div(mantissaScale));
+        uint _newBorrowIndex = _oldBorrowIndex.add((_interestFactor.mul(1e18)).mul(_oldBorrowIndex).div(1e36));
 
         //Update storage
         totalBorrowed = _newBorrows;

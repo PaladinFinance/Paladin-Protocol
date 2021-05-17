@@ -66,7 +66,7 @@ contract PalPoolStorage {
     uint public reserveFactor = 0.2e18;
     /** @notice Last block where the interest where updated for this pool */
     uint public accrualBlockNumber;
-    /** @notice Borrow Index : increase at each interest update to represent borrows interests increasing */
+    /** @notice Borrow Index : increase at each interest update to represent borrows interests increasing (scaled 1e36) */
     uint public borrowIndex;
 
     /** @dev Scale used to represent decimal values */
