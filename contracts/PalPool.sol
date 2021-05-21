@@ -89,7 +89,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         uint _toMint = _num.div(_exchRate);
 
         //Mint the palToken : update balances and Supply
-        palToken.mint(msg.sender, _toMint);
+        require(palToken.mint(msg.sender, _toMint), Errors.FAIL_MINT);
 
         //Emit the Deposit event
         emit Deposit(msg.sender, amount, address(this));
@@ -121,7 +121,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(_toReturn <= _underlyingBalance(), Errors.INSUFFICIENT_CASH);
 
         //Update the palToken balance & Supply
-        palToken.burn(msg.sender, amount);
+        require(palToken.burn(msg.sender, amount), Errors.FAIL_BURN);
 
         //Make the underlying transfer
         underlying.safeTransfer(msg.sender, _toReturn);
@@ -164,6 +164,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             _amount,
             address(underlying),
             _feeAmount,
+            0,
             borrowIndex,
             block.number,
             false
@@ -189,7 +190,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(controller.borrowVerify(address(this), _dest, _amount, _feeAmount, address(_newLoan)), Errors.FAIL_BORROW);
 
         //Emit the NewLoan Event
-        emit NewLoan(_dest, _amount, address(this), address(_newLoan), block.number);
+        emit NewLoan(_dest, address(underlying), _amount, address(this), address(_newLoan), block.number);
 
         //Return the borrowed amount
         return _amount;
@@ -222,7 +223,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
         loanToBorrow[loan]= __borrow;
 
-        emit ExpandLoan(__borrow.borrower, address(underlying), __borrow.feesAmount, __borrow.loan);
+        emit ExpandLoan(__borrow.borrower, address(underlying), address(this), __borrow.feesAmount, __borrow.loan);
 
         return feeAmount;
     }
@@ -265,6 +266,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
         //Set the Borrow as closed
         __borrow.closed = true;
+        __borrow.feesUsed = _totalFees;
 
         //Update the storage varaibles
         totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
@@ -276,7 +278,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(controller.closeBorrowVerify(address(this), __borrow.borrower, __borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), false);
+        emit CloseLoan(__borrow.borrower, address(underlying), __borrow.amount, address(this), _totalFees, loan, false);
     }
 
     /**
@@ -305,6 +307,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
         //Close the Loan, and update storage variables
         __borrow.closed = true;
+        __borrow.feesUsed = __borrow.feesAmount;
 
         uint _killerFees = (__borrow.feesAmount).mul(killerRatio).div(uint(1e18));
         totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
@@ -315,7 +318,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(controller.killBorrowVerify(address(this), killer, __borrow.loan), Errors.FAIL_KILL_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), true);
+        emit CloseLoan(__borrow.borrower, address(underlying), __borrow.amount, address(this), __borrow.feesAmount, loan, true);
     }
 
     function getPalToken() external view override returns(address){
@@ -329,6 +332,9 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
     function underlyingBalanceOf(address _account) public view override returns(uint){
         uint _balance = palToken.balanceOf(_account);
+        if(_balance == 0){
+            return 0;
+        }
         uint _exchRate = _exchangeRate();
         uint _num = _balance.mul(_exchRate);
         return _num.div(mantissaScale);
@@ -346,7 +352,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     /**
     * @notice Return all the Loans for a given address
     * @param borrower Address of the user
-    * @return address[] : list of Loans
+    * @return address : list of Loans
     */
     function getLoansByBorrower(address borrower) external view override returns(address [] memory){
         return borrowsByUser[borrower];
@@ -354,7 +360,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
     /**
     * @notice Return the stored Borrow data for a given Loan
-    * @param __loan address of the new Controller Admin
+    * @param __loan Address of the palLoan
     * Composants of a Borrow struct
     */
     function getBorrowDataStored(address __loan) external view override returns(
@@ -372,7 +378,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
     /**
     * @notice Update the Interests & Return the Borrow data for a given Loan
-    * @param __loan address of the new Controller Admin
+    * @param __loan Address of the palLoan
     * Composants of a Borrow struct
     */
     function getBorrowData(address __loan) external override returns(
@@ -391,7 +397,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
     /**
     * @dev Return the Borrow data for a given Loan
-    * @param __loan address of the new Controller Admin
+    * @param __loan Address of the palLoan
     * Composants of a Borrow struct
     */
     function _getBorrowData(address __loan) internal view returns(
@@ -413,7 +419,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             __borrow.underlying,
             __borrow.feesAmount,
             //Calculate amount of fees used
-            (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount),
+            __borrow.closed ? __borrow.feesUsed : (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount),
             __borrow.startBlock,
             __borrow.closed
         );
@@ -496,7 +502,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
     function isKillable(address _loan) external view override returns(bool){
         Borrow memory __borrow = loanToBorrow[_loan];
-        if(!__borrow.closed){
+        if(__borrow.closed){
             return false;
         }
 

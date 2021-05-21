@@ -10,25 +10,35 @@ interface PalPoolInterface {
 
     //Events
     /** @notice Event when an user deposit tokens in the pool */
-    event Deposit(address user, uint amount, address palToken);
+    event Deposit(address user, uint amount, address palPool);
     /** @notice Event when an user withdraw tokens from the pool */
-    event Withdraw(address user, uint amount, address palToken);
+    event Withdraw(address user, uint amount, address palPool);
     /** @notice Event when a loan is started */
     event NewLoan(
-        address user,
+        address borrower,
+        address underlying,
         uint amount,
-        address palToken,
+        address palPool,
         address loanAddress,
         uint startBlock);
     /** @notice Event when the fee amount in the loan is updated */
     event ExpandLoan(
         address borrower,
         address underlying,
-        uint addedFees,
+        address palPool,
+        uint newFeesAmount,
         address loanAddress
     );
     /** @notice Event when a loan is ended */
-    event CloseLoan(address user, uint amount, address palToken, bool wasKilled);
+    event CloseLoan(
+        address borrower,
+        address underlying,
+        uint amount,
+        address palPool,
+        uint usedFees,
+        address loanAddress,
+        bool wasKilled
+    );
     /** @notice (Admin) Event when the contract admin is updated */
     event newAdmin(address oldAdmin, address newAdmin);
 
@@ -54,7 +64,7 @@ interface PalPoolInterface {
         address _underlying,
         uint _feesAmount,
         uint _feesUsed,
-        uint startBlock,
+        uint _startBlock,
         bool _closed
     );
     function getBorrowData(address _loanPool) external returns(

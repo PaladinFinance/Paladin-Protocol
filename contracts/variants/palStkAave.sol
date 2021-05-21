@@ -79,7 +79,7 @@ contract PalStkAave is PalPool {
         uint _toMint = _num.div(_exchRate);
 
         //Mint the palToken : update balances and Supply
-        palToken.mint(msg.sender, _toMint);
+        require(palToken.mint(msg.sender, _toMint), Errors.FAIL_MINT);
 
         //Emit the Deposit event
         emit Deposit(msg.sender, amount, address(this));
@@ -112,7 +112,7 @@ contract PalStkAave is PalPool {
         require(_toReturn < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
 
         //Update the palToken balance & Supply
-        palToken.burn(msg.sender, amount);
+        require(palToken.burn(msg.sender, amount), Errors.FAIL_BURN);
 
         //Make the underlying transfer
         underlying.safeTransfer(msg.sender, _toReturn);
@@ -156,6 +156,7 @@ contract PalStkAave is PalPool {
             _amount,
             address(underlying),
             _feeAmount,
+            0,
             borrowIndex,
             block.number,
             false
@@ -181,7 +182,7 @@ contract PalStkAave is PalPool {
         require(controller.borrowVerify(address(this), _dest, _amount, _feeAmount, address(_newLoan)), Errors.FAIL_BORROW);
 
         //Emit the NewLoan Event
-        emit NewLoan(_dest, _amount, address(this), address(_newLoan), block.number);
+        emit NewLoan(_dest, address(underlying), _amount, address(this), address(_newLoan), block.number);
 
         //Return the borrowed amount
         return _amount;
@@ -215,7 +216,7 @@ contract PalStkAave is PalPool {
 
         loanToBorrow[loan]= __borrow;
 
-        emit ExpandLoan(__borrow.borrower, address(underlying), __borrow.feesAmount, __borrow.loan);
+        emit ExpandLoan(__borrow.borrower, address(underlying), address(this), __borrow.feesAmount, __borrow.loan);
 
         return feeAmount;
     }
@@ -259,6 +260,7 @@ contract PalStkAave is PalPool {
 
         //Set the Borrow as closed
         __borrow.closed = true;
+        __borrow.feesUsed = _totalFees;
 
         //Update the storage varaibles
         totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
@@ -266,11 +268,12 @@ contract PalStkAave is PalPool {
         totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
 
         loanToBorrow[loan]= __borrow;
+        __borrow.feesUsed = __borrow.feesAmount;
 
         require(controller.closeBorrowVerify(address(this), __borrow.borrower, __borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), false);
+        emit CloseLoan(__borrow.borrower, address(underlying), __borrow.amount, address(this), _totalFees, loan, false);
     }
 
     /**
@@ -310,6 +313,6 @@ contract PalStkAave is PalPool {
         require(controller.killBorrowVerify(address(this), killer, __borrow.loan), Errors.FAIL_KILL_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(__borrow.borrower, __borrow.amount, address(this), true);
+        emit CloseLoan(__borrow.borrower, address(underlying), __borrow.amount, address(this), __borrow.feesAmount, loan, true);
     }
 }

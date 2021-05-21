@@ -24,11 +24,13 @@ contract PalPoolStorage {
         address underlying;
         //amount of fees (in the underlying token) paid by the borrower
         uint feesAmount;
+        //amount of fees (in the underlying token) already used
+        uint feesUsed;
         //borrow index at the loan creation
         uint borrowIndex;
-        //block to be able to close the Borrow. Closing before will force to pay fees up to this minimum block
+        //start block for the Borrow
         uint startBlock;
-        //true if the loan is active, false is loan was closed or killed
+        //false if the loan is active, true is loan was closed or killed
         bool closed;
     }
 
@@ -56,12 +58,12 @@ contract PalPoolStorage {
     uint internal constant maxBorrowRate = 0.0002e18;
 
     /** @dev Health Factor to kill a loan */
-    uint internal constant killFactor = 0.96e18;
+    uint public constant killFactor = 0.96e18;
     /** @dev Ratio of the borrow fees to pay the killer of a loan */
-    uint internal constant killerRatio = 0.15e18;
+    uint public constant killerRatio = 0.15e18;
 
     /** @dev Base value to mint palTokens */
-    uint internal initialExchangeRate = 0.02e18;
+    uint internal initialExchangeRate = 1e18;
     /** @notice Part of the borrows interest to set as Reserves */
     uint public reserveFactor = 0.2e18;
     /** @notice Last block where the interest where updated for this pool */
