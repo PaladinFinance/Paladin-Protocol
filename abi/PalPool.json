@@ -36,7 +36,13 @@
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "user",
+                "name": "borrower",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "underlying",
                 "type": "address"
             },
             {
@@ -48,7 +54,19 @@
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "palToken",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "usedFees",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "loanAddress",
                 "type": "address"
             },
             {
@@ -79,7 +97,7 @@
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "palToken",
+                "name": "palPool",
                 "type": "address"
             }
         ],
@@ -103,8 +121,14 @@
             },
             {
                 "indexed": false,
+                "internalType": "address",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "indexed": false,
                 "internalType": "uint256",
-                "name": "addedFees",
+                "name": "newFeesAmount",
                 "type": "uint256"
             },
             {
@@ -123,7 +147,13 @@
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "user",
+                "name": "borrower",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "underlying",
                 "type": "address"
             },
             {
@@ -135,7 +165,7 @@
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "palToken",
+                "name": "palPool",
                 "type": "address"
             },
             {
@@ -172,7 +202,7 @@
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "palToken",
+                "name": "palPool",
                 "type": "address"
             }
         ],
@@ -571,6 +601,25 @@
         "inputs": [
             {
                 "internalType": "address",
+                "name": "_loan",
+                "type": "address"
+            }
+        ],
+        "name": "isKillable",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
                 "name": "loan",
                 "type": "address"
             }
@@ -578,6 +627,32 @@
         "name": "killBorrow",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "killFactor",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "killerRatio",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
