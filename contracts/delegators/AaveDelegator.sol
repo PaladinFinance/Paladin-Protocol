@@ -73,14 +73,14 @@ contract AaveDelegator {
     * @notice Kills a Loan, and reward the Killer a part of the fees of the Loan
     * @dev Send the reward fees to the Killer, then return the loaned tokens and the fees to the vToken Pool, and destroy the contract
     * @param _killer Address of the Loan Killer
-    * @param killerRatio Percentage of the fees to reward to the killer (scale 1e18)
+    * @param _killerRatio Percentage of the fees to reward to the killer (scale 1e18)
     */
-    function killLoan(address _killer, uint killerRatio) external {
+    function killLoan(address _killer, uint _killerRatio) external {
         IERC20 _underlying = IERC20(underlying);
         
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
-        uint _killerAmount = feesAmount.mul(killerRatio).div(uint(1e18));
+        uint _killerAmount = feesAmount.mul(_killerRatio).div(uint(1e18));
         uint _balance = amount.add(feesAmount);
         uint _poolAmount = _balance.sub(_killerAmount);
         _underlying.safeTransfer(_killer, _killerAmount);

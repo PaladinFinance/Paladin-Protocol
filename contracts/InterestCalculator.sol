@@ -21,7 +21,7 @@ contract InterestCalculator is InterestInterface {
     /** @notice borrow rate for the kink */
     uint public kinkBaseRatePerBlock;
     /** @notice  ratio of utilization rate at wihich we use kink_ values*/
-    uint public kink = 0.8e18;
+    uint public constant kink = 0.8e18;
     
 
     constructor(){

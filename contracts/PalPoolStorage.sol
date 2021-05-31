@@ -5,7 +5,6 @@ import "./PaladinControllerInterface.sol";
 import "./InterestInterface.sol";
 import "./PalPoolInterface.sol";
 import "./PalToken.sol";
-import "./delegators/BasicDelegator.sol";
 import "./utils/IERC20.sol";
 
 /** @title palPool Storage contract  */
@@ -50,12 +49,9 @@ contract PalPoolStorage {
     /** @notice Total of underlying tokens "borrowed" (in Loan Pool contracts) */
     uint public totalBorrowed;
 
-
+    /** @notice Minimum duration of a Borrow (in blocks) */
     uint public minBorrowLength = 45290;
-
-
-    /** @dev Maximum Borrow Rate to update interest */
-    uint internal constant maxBorrowRate = 0.0002e18;
+    
 
     /** @dev Health Factor to kill a loan */
     uint public constant killFactor = 0.96e18;
@@ -63,9 +59,9 @@ contract PalPoolStorage {
     uint public constant killerRatio = 0.15e18;
 
     /** @dev Base value to mint palTokens */
-    uint internal initialExchangeRate = 1e18;
+    uint internal constant initialExchangeRate = 1e18;
     /** @notice Part of the borrows interest to set as Reserves */
-    uint public reserveFactor = 0.2e18;
+    uint public constant reserveFactor = 0.2e18;
     /** @notice Last block where the interest where updated for this pool */
     uint public accrualBlockNumber;
     /** @notice Borrow Index : increase at each interest update to represent borrows interests increasing (scaled 1e36) */

@@ -5,10 +5,9 @@ import "./PalLoanInterface.sol";
 import "./utils/IERC20.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/SafeMath.sol";
-import "./tokens/AAVE/IGovernancePowerDelegationToken.sol";
 import {Errors} from  "./utils/Errors.sol";
 
-/** @title PalToken Loan Pool contract (deployed by PalToken contract) - AAVE version  */
+/** @title PalToken Loan Pool contract (deployed by PalToken contract)  */
 /// @author Paladin
 contract PalLoan is PalLoanInterface {
     using SafeMath for uint;
@@ -51,7 +50,7 @@ contract PalLoan is PalLoanInterface {
     * @return bool : Power Delagation success
     */
     function initiate(uint _amount, uint _feesAmount) external override motherPoolOnly returns(bool){
-        (bool success, bytes memory result) = delegator.delegatecall(msg.data);
+        (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
         return success;
     }
@@ -63,7 +62,7 @@ contract PalLoan is PalLoanInterface {
     * @return bool : Expand success
     */
     function expand(uint _newFeesAmount) external override motherPoolOnly returns(bool){
-        (bool success, bytes memory result) = delegator.delegatecall(msg.data);
+        (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
         return success;
     }
@@ -74,7 +73,7 @@ contract PalLoan is PalLoanInterface {
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
     function closeLoan(uint _usedAmount) external motherPoolOnly override {
-        (bool success, bytes memory result) = delegator.delegatecall(msg.data);
+        (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
 
         //Destruct the contract (to get gas refund on the transaction)
@@ -85,10 +84,10 @@ contract PalLoan is PalLoanInterface {
     * @notice Kills a Loan, and reward the Killer a part of the fees of the Loan
     * @dev Send the reward fees to the Killer, then return the loaned tokens and the fees to the vToken Pool, and destroy the contract
     * @param _killer Address of the Loan Killer
-    * @param killerRatio Percentage of the fees to reward to the killer (scale 1e18)
+    * @param _killerRatio Percentage of the fees to reward to the killer (scale 1e18)
     */
-    function killLoan(address _killer, uint killerRatio) external override motherPoolOnly {
-        (bool success, bytes memory result) = delegator.delegatecall(msg.data);
+    function killLoan(address _killer, uint _killerRatio) external override motherPoolOnly {
+        (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
 
         //Destruct the contract (to get gas refund on the transaction)

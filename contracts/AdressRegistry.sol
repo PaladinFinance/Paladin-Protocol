@@ -26,28 +26,56 @@ contract AddressRegistry is Admin {
     }
 
 
-
-    function getController() public view returns(address){
+    /**
+    * @notice Get the Paladin controller address
+    * @return address : address of the controller
+    */
+    function getController() external view returns(address){
         return controller;
     }
 
-    function getPool(address _underlying) public view returns(address){
+    /**
+    * @notice Return the PalPool linked to a given ERC20 token
+    * @param _underlying Address of the ERC20 underlying for the PalPool
+    * @return address : address of the PalPool
+    */
+    function getPool(address _underlying) external view returns(address){
         return palPools[_underlying];
     }
 
-    function getToken(address _underlying) public view returns(address){
+    /**
+    * @notice Return the PalToken linked to a given ERC20 token
+    * @param _underlying Address of the ERC20 underlying for the PalToken
+    * @return address : address of the PalToken
+    */
+    function getToken(address _underlying) external view returns(address){
         return palTokens[_underlying];
     }
 
-    function getTokenByPool(address _pool) public view returns(address){
+    /**
+    * @notice Return the PalToken linked to a given PalPool
+    * @param _pool Address of the PalToken linked to the PalPool
+    * @return address : address of the PalToken
+    */
+    function getTokenByPool(address _pool) external view returns(address){
         return palTokensByPool[_pool];
     }
 
-
+    /**
+    * @notice Update the Paladin Controller address
+    * @param _newAddress Address of the new Controller
+    */
     function _setController(address _newAddress) external adminOnly {
         controller = _newAddress;
     }
 
+    /**
+    * @notice Add a new Pool to the Registry
+    * @dev Admin fucntion : Add a new PalPool & PalToken in the registry
+    * @param _underlying Pool underlying ERC20 address
+    * @param _pool PalPool address
+    * @param _token PalToken address
+    */
     function _setPool(address _underlying, address _pool, address _token) external adminOnly {
         palPools[_underlying] = _pool;
         palTokens[_underlying] = _token;

@@ -17,10 +17,13 @@ contract PalStkAave is PalPool {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
+    /** @dev stkAAVE token address */
     address private stkAaveAddress;
+    /** @dev AAVE token address */
     address private aaveAddress;
-
+    /** @dev Block number of the last reward claim */
     uint public claimBlockNumber = 0;
+
 
     constructor( 
         address _palToken,
@@ -41,15 +44,32 @@ contract PalStkAave is PalPool {
         aaveAddress = _aaveAddress;
     }
 
+
+    /**
+    * @dev Claim AAVE tokens from the AAVE Safety Module and stake them back in the Module
+    * @return bool : Success
+    */
     function claimFromAave() internal returns(bool) {
-        IERC20 aave = IERC20(aaveAddress);
-        IStakedAave stkAave = IStakedAave(stkAaveAddress);
-        uint pendingRewards = stkAave.getTotalRewardsBalance(address(this));
-        if(pendingRewards > 0 && claimBlockNumber != block.number){
-            stkAave.claimRewards(address(this), pendingRewards);
-            aave.safeApprove(stkAaveAddress, pendingRewards);
-            stkAave.stake(address(this), pendingRewards);
+        //Load contracts
+        IERC20 _aave = IERC20(aaveAddress);
+        IStakedAave _stkAave = IStakedAave(stkAaveAddress);
+
+        //Get pending rewards amount
+        uint _pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
+
+        //If there is reward to claim
+        if(_pendingRewards > 0 && claimBlockNumber != block.number){
+
+            //claim the AAVE tokens
+            _stkAave.claimRewards(address(this), _pendingRewards);
+
+            //Stake the AAVE tokens to get stkAAVE tokens
+            _aave.safeApprove(stkAaveAddress, _pendingRewards);
+            _stkAave.stake(address(this), _pendingRewards);
+
+            //update the block number
             claimBlockNumber = block.number;
+
             return true;
         }
         return true;
@@ -59,10 +79,10 @@ contract PalStkAave is PalPool {
     /**
     * @notice Deposit underlying in the Pool
     * @dev Deposit underlying, and mints palToken for the user
-    * @param amount Amount of underlying to deposit
+    * @param _amount Amount of underlying to deposit
     * @return bool : amount of minted palTokens
     */
-    function deposit(uint amount) external override(PalPool) preventReentry returns(uint){
+    function deposit(uint _amount) external override(PalPool) preventReentry returns(uint){
         require(claimFromAave());
         require(_updateInterest());
 
@@ -71,18 +91,18 @@ contract PalStkAave is PalPool {
 
         //Transfer the underlying to this contract
         //The amount of underlying needs to be approved before
-        underlying.safeTransferFrom(msg.sender, address(this), amount);
+        underlying.safeTransferFrom(msg.sender, address(this), _amount);
 
 
         //Find the amount to mint depending of the previous transfer
-        uint _num = amount.mul(mantissaScale);
+        uint _num = _amount.mul(mantissaScale);
         uint _toMint = _num.div(_exchRate);
 
-        //Mint the palToken : update balances and Supply
+        //Mint the palToken
         require(palToken.mint(msg.sender, _toMint), Errors.FAIL_MINT);
 
         //Emit the Deposit event
-        emit Deposit(msg.sender, amount, address(this));
+        emit Deposit(msg.sender, _amount, address(this));
 
         //Use the controller to check if the minting was successfull
         require(controller.depositVerify(address(this), msg.sender, _toMint), Errors.FAIL_DEPOSIT);
@@ -93,35 +113,35 @@ contract PalStkAave is PalPool {
     /**
     * @notice Withdraw underliyng token from the Pool
     * @dev Transfer underlying token to the user, and burn the corresponding palToken amount
-    * @param amount Amount of palToken to return
+    * @param _amount Amount of palToken to return
     * @return uint : amount of underlying returned
     */
-    function withdraw(uint amount) external override(PalPool) preventReentry returns(uint){
+    function withdraw(uint _amount) external override(PalPool) preventReentry returns(uint){
         require(claimFromAave());
         require(_updateInterest());
-        require(balanceOf(msg.sender) >= amount, Errors.INSUFFICIENT_BALANCE);
+        require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
 
         //Retrieve the current exchange rate palToken:underlying
         uint _exchRate = _exchangeRate();
 
         //Find the amount to return depending on the amount of palToken to burn
-        uint _num = amount.mul(_exchRate);
+        uint _num = _amount.mul(_exchRate);
         uint _toReturn = _num.div(mantissaScale);
 
         //Check if the pool has enough underlying to return
         require(_toReturn < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
 
-        //Update the palToken balance & Supply
-        require(palToken.burn(msg.sender, amount), Errors.FAIL_BURN);
+        //Burn the corresponding palToken amount
+        require(palToken.burn(msg.sender, _amount), Errors.FAIL_BURN);
 
         //Make the underlying transfer
         underlying.safeTransfer(msg.sender, _toReturn);
 
         //Use the controller to check if the burning was successfull
-        require(controller.depositVerify(address(this), msg.sender, amount), Errors.FAIL_DEPOSIT);
+        require(controller.depositVerify(address(this), msg.sender, _amount), Errors.FAIL_DEPOSIT);
 
         //Emit the Withdraw event
-        emit Withdraw(msg.sender, amount, address(this));
+        emit Withdraw(msg.sender, _amount, address(this));
 
         return _toReturn;
     }
@@ -190,129 +210,134 @@ contract PalStkAave is PalPool {
 
     /**
     * @notice Transfer the new fees to the Loan, and expand the Loan
-    * @param loan Address of the Loan
-    * @param feeAmount New amount of fees to pay
+    * @param _loan Address of the Loan
+    * @param _feeAmount New amount of fees to pay
     * @return bool : Amount of fees paid
     */
-    function expandBorrow(address loan, uint feeAmount) external override(PalPool) preventReentry returns(uint){
+    function expandBorrow(address _loan, uint _feeAmount) external override(PalPool) preventReentry returns(uint){
         require(claimFromAave());
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
-        Borrow memory __borrow = loanToBorrow[loan];
-        require(!__borrow.closed, Errors.LOAN_CLOSED);
-        require(__borrow.borrower == msg.sender, Errors.NOT_LOAN_OWNER);
+        Borrow memory _borrow = loanToBorrow[_loan];
+        require(!_borrow.closed, Errors.LOAN_CLOSED);
+        require(_borrow.borrower == msg.sender, Errors.NOT_LOAN_OWNER);
         require(_updateInterest());
         
         //Load the Loan Pool contract
-        PalLoanInterface _loan = PalLoanInterface(__borrow.loan);
+        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
 
         //Transfer the new fees to the Loan
         //If success, update the Borrow data, and call the expand fucntion of the Loan
-        underlying.safeTransferFrom(__borrow.borrower, __borrow.loan, feeAmount);
+        underlying.safeTransferFrom(_borrow.borrower, _borrow.loan, _feeAmount);
 
-        require(_loan.expand(feeAmount), Errors.FAIL_LOAN_EXPAND);
+        require(_palLoan.expand(_feeAmount), Errors.FAIL_LOAN_EXPAND);
 
-        __borrow.feesAmount = __borrow.feesAmount.add(feeAmount);
+        _borrow.feesAmount = _borrow.feesAmount.add(_feeAmount);
 
-        loanToBorrow[loan]= __borrow;
+        loanToBorrow[_loan]= _borrow;
 
-        emit ExpandLoan(__borrow.borrower, address(underlying), address(this), __borrow.feesAmount, __borrow.loan);
+        emit ExpandLoan(_borrow.borrower, address(underlying), address(this), _borrow.feesAmount, _borrow.loan);
 
-        return feeAmount;
+        return _feeAmount;
     }
 
     /**
+    * @notice Close a Loan, and return the non-used fees to the Borrower.
+    * If closed before the minimum required length, penalty fees are taken to the non-used fees
     * @dev Close a Loan, and return the non-used fees to the Borrower
-    * @param loan Address of the Loan
+    * @param _loan Address of the Loan
     */
-    function closeBorrow(address loan) external override(PalPool) preventReentry {
+    function closeBorrow(address _loan) external override(PalPool) preventReentry {
         require(claimFromAave());
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
-        Borrow memory __borrow = loanToBorrow[loan];
-        require(!__borrow.closed, Errors.LOAN_CLOSED);
-        require(__borrow.borrower == msg.sender, Errors.NOT_LOAN_OWNER);
+        Borrow memory _borrow = loanToBorrow[_loan];
+        require(!_borrow.closed, Errors.LOAN_CLOSED);
+        require(_borrow.borrower == msg.sender, Errors.NOT_LOAN_OWNER);
         require(_updateInterest());
 
         //Load the Loan contract
-        PalLoanInterface _loan = PalLoanInterface(__borrow.loan);
+        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
 
         //Calculates the amount of fees used
-        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
+        uint _feesUsed = (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount);
         uint _penaltyFees = 0;
         uint _totalFees = _feesUsed;
 
-        if(block.number < (__borrow.startBlock.add(minBorrowLength))){
+        //If the Borrow is closed before the minimum length, calculates the penalty fees to pay
+        // -> Number of block remaining to complete the minimum length * current Borrow Rate
+        if(block.number < (_borrow.startBlock.add(minBorrowLength))){
             uint _currentBorrowRate = interestModule.getBorrowRate(_underlyingBalance(), totalBorrowed, totalReserve);
-            uint _missingBlocks = (__borrow.startBlock.add(minBorrowLength)).sub(block.number);
-            _penaltyFees = _missingBlocks.mul(__borrow.amount.mul(_currentBorrowRate)).div(mantissaScale);
+            uint _missingBlocks = (_borrow.startBlock.add(minBorrowLength)).sub(block.number);
+            _penaltyFees = _missingBlocks.mul(_borrow.amount.mul(_currentBorrowRate)).div(mantissaScale);
             _totalFees = _totalFees.add(_penaltyFees);
         }
     
         //Security so the Borrow can be closed if there are no more fees
         //(if the Borrow wasn't Killed yet, or the loan is closed before minimum time, and already paid fees aren't enough)
-        if(_totalFees > __borrow.feesAmount){
-            _totalFees = __borrow.feesAmount;
+        if(_totalFees > _borrow.feesAmount){
+            _totalFees = _borrow.feesAmount;
         }
         
         //Close and destroy the loan
-        _loan.closeLoan(_totalFees);
+        _palLoan.closeLoan(_totalFees);
 
         //Set the Borrow as closed
-        __borrow.closed = true;
-        __borrow.feesUsed = _totalFees;
+        _borrow.closed = true;
+        _borrow.feesUsed = _totalFees;
 
-        //Update the storage varaibles
-        totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
+        //Update the storage variables
+        totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
         uint _realPenaltyFees = _totalFees.sub(_feesUsed);
         totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
 
-        loanToBorrow[loan]= __borrow;
-        __borrow.feesUsed = __borrow.feesAmount;
+        loanToBorrow[_loan]= _borrow;
+        _borrow.feesUsed = _borrow.feesAmount;
 
-        require(controller.closeBorrowVerify(address(this), __borrow.borrower, __borrow.loan), Errors.FAIL_CLOSE_BORROW);
+        require(controller.closeBorrowVerify(address(this), _borrow.borrower, _borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(__borrow.borrower, address(underlying), __borrow.amount, address(this), _totalFees, loan, false);
+        emit CloseLoan(_borrow.borrower, address(underlying), _borrow.amount, address(this), _totalFees, _loan, false);
     }
 
     /**
+    * @notice Kill a non-healthy Loan to collect rewards
     * @dev Kill a non-healthy Loan to collect rewards
-    * @param loan Address of the Loan
+    * @param _loan Address of the Loan
     */
-    function killBorrow(address loan) external override(PalPool) preventReentry {
+    function killBorrow(address _loan) external override(PalPool) preventReentry {
         require(claimFromAave());
         address killer = msg.sender;
         //Fetch the corresponding Borrow
         //And check that the killer is not the Borrower, and the Loan is still active
-        Borrow memory __borrow = loanToBorrow[loan];
-        require(!__borrow.closed, Errors.LOAN_CLOSED);
-        require(__borrow.borrower != killer, Errors.LOAN_OWNER);
+        Borrow memory _borrow = loanToBorrow[_loan];
+        require(!_borrow.closed, Errors.LOAN_CLOSED);
+        require(_borrow.borrower != killer, Errors.LOAN_OWNER);
         require(_updateInterest());
 
         //Calculate the amount of fee used, and check if the Loan is killable
-        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
-        uint _loanHealthFactor = _feesUsed.mul(uint(1e18)).div(__borrow.feesAmount);
+        uint _feesUsed = (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount);
+        uint _loanHealthFactor = _feesUsed.mul(uint(1e18)).div(_borrow.feesAmount);
         require(_loanHealthFactor >= killFactor, Errors.NOT_KILLABLE);
 
         //Load the Loan
-        PalLoanInterface _loan = PalLoanInterface(__borrow.loan);
+        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
 
         //Kill the Loan
-        _loan.killLoan(killer, killerRatio);
+        _palLoan.killLoan(killer, killerRatio);
 
         //Close the Loan, and update storage variables
-        __borrow.closed = true;
+        _borrow.closed = true;
 
-        uint _killerFees = (__borrow.feesAmount).mul(killerRatio).div(uint(1e18));
-        totalBorrowed = totalBorrowed.sub((__borrow.amount).add(_feesUsed));
+        uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(uint(1e18));
+        totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
         totalReserve = totalReserve.sub(_killerFees);
 
-        loanToBorrow[loan]= __borrow;
+        loanToBorrow[_loan]= _borrow;
 
-        require(controller.killBorrowVerify(address(this), killer, __borrow.loan), Errors.FAIL_KILL_BORROW);
+        require(controller.killBorrowVerify(address(this), killer, _borrow.loan), Errors.FAIL_KILL_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(__borrow.borrower, address(underlying), __borrow.amount, address(this), __borrow.feesAmount, loan, true);
+        emit CloseLoan(_borrow.borrower, address(underlying), _borrow.amount, address(this), _borrow.feesAmount, _loan, true);
     }
 }

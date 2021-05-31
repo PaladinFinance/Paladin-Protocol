@@ -39,25 +39,27 @@ interface PalPoolInterface {
         address loanAddress,
         bool wasKilled
     );
-    /** @notice (Admin) Event when the contract admin is updated */
-    event newAdmin(address oldAdmin, address newAdmin);
+
+    /** @notice Reserve Events */
+    event AddReserve(uint amount);
+    event RemoveReserve(uint amount);
 
 
     //Functions
-    function deposit(uint amount) external returns(uint);
-    function withdraw(uint amount) external returns(uint);
-    function borrow(uint amount, uint feeAmount) external returns(uint);
-    function expandBorrow(address loanPool, uint feeAmount) external returns(uint);
-    function closeBorrow(address loanPool) external;
-    function killBorrow(address loanPool) external;
+    function deposit(uint _amount) external returns(uint);
+    function withdraw(uint _amount) external returns(uint);
+    function borrow(uint _amount, uint _feeAmount) external returns(uint);
+    function expandBorrow(address _loanPool, uint _feeAmount) external returns(uint);
+    function closeBorrow(address _loanPool) external;
+    function killBorrow(address _loanPool) external;
 
     function getPalToken() external view returns(address);
     function balanceOf(address _account) external view returns(uint);
     function underlyingBalanceOf(address _account) external view returns(uint);
 
     function getLoansPools() external view returns(address [] memory);
-    function getLoansByBorrower(address borrower) external view returns(address [] memory);
-    function getBorrowDataStored(address __loanPool) external view returns(
+    function getLoansByBorrower(address _borrower) external view returns(address [] memory);
+    function getBorrowDataStored(address _loanAddress) external view returns(
         address _borrower,
         address _loanPool,
         uint _amount,
@@ -67,7 +69,7 @@ interface PalPoolInterface {
         uint _startBlock,
         bool _closed
     );
-    function getBorrowData(address _loanPool) external returns(
+    function getBorrowData(address _loanAddress) external returns(
         address borrower,
         address loanPool,
         uint amount,

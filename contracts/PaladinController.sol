@@ -36,16 +36,31 @@ contract PaladinController is PaladinControllerInterface {
         return false;
     }
 
-    //Return the list of palToken
+
+    /**
+    * @notice Get all the PalTokens listed in the controller
+    * @return address[] : List of PalToken addresses
+    */
     function getPalTokens() external view override returns(address[] memory){
         return palTokens;
     }
 
+
+    /**
+    * @notice Get all the PalPools listed in the controller
+    * @return address[] : List of PalPool addresses
+    */
     function getPalPools() external view override returns(address[] memory){
         return palPools;
     }
 
-    //Add a new palToken & palPool to the list
+
+    /**
+    * @notice Add a new PalPool/PalToken couple to the controller list
+    * @param palToken address of the PalToken contract
+    * @param palPool address of the PalPool contract
+    * @return bool : Success
+    */
     function addNewPalToken(address palToken, address palPool) external override returns(bool){
         //Add a new address to the palToken & palPool list
         require(msg.sender == admin, "Admin function");
@@ -55,7 +70,13 @@ contract PaladinController is PaladinControllerInterface {
         return true;
     }    
     
-    //Check if a Withdraw is possible for a given palPool
+
+    /**
+    * @notice Check if the given PalPool has enough cash to make a withdraw
+    * @param palPool address of PalPool
+    * @param amount amount withdrawn
+    * @return bool : true if possible
+    */
     function withdrawPossible(address palPool, uint amount) external view override returns(bool){
         //Get the underlying balance of the palPool contract to check if the action is possible
         PalPool _palPool = PalPool(palPool);
@@ -63,7 +84,13 @@ contract PaladinController is PaladinControllerInterface {
         return(underlying.balanceOf(palPool) >= amount);
     }
     
-    //Check if a Borrow is possible for a given palPool
+
+    /**
+    * @notice Check if the given PalPool has enough cash to borrow
+    * @param palPool address of PalPool
+    * @param amount amount ot borrow
+    * @return bool : true if possible
+    */
     function borrowPossible(address palPool, uint amount) external view override returns(bool){
         //Get the underlying balance of the palPool contract to check if the action is possible
         PalPool _palPool = PalPool(palPool);
@@ -71,25 +98,54 @@ contract PaladinController is PaladinControllerInterface {
         return(underlying.balanceOf(palPool) >= amount);
     }
     
-    //Check if a Deposit was successful (to do)
+
+    /**
+    * @notice Check if Deposit was correctly done
+    * @param palPool address of PalPool
+    * @param dest address to send the minted palTokens
+    * @param amount amount of underlying tokens deposited
+    * @return bool : Verification Success
+    */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
         require(_isPalPool(msg.sender), "Call not allowed");
-        //Check if the minting succeeded
+
+        palPool;
+        dest;
+        amount;
         
         //no method yet 
         return true;
     }
 
-    //Check if a Deposit was successful (to do)
+
+    /**
+    * @notice Check if Withdraw was correctly done
+    * @param palPool address of PalPool
+    * @param dest address to send the underlying tokens
+    * @param amount amount of PalToken returned
+    * @return bool : Verification Success
+    */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
         require(_isPalPool(msg.sender), "Call not allowed");
-        //Check if the minting succeeded
         
+        palPool;
+        dest;
+        amount;
+
         //no method yet 
         return true;
     }
     
-    //Check if a Borrow was successful
+
+    /**
+    * @notice Check if Borrow was correctly done
+    * @param palPool address of PalPool
+    * @param borrower borrower's address 
+    * @param amount amount of token borrowed
+    * @param feesAmount amount of fees paid by the borrower
+    * @param loanPool address of the new deployed PalLoan
+    * @return bool : Verification Success
+    */
     function borrowVerify(address palPool, address borrower, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
         require(_isPalPool(msg.sender), "Call not allowed");
         //Check if the borrow was successful
@@ -104,22 +160,50 @@ contract PaladinController is PaladinControllerInterface {
             uint _startBlock,
             bool _closed
         ) = _palPool.getBorrowDataStored(loanPool);
-        return(borrower == _borrower && amount == _amount && feesAmount == _feesAmount && _closed == false);
+
+        _loan;
+        _amount;
+        _underlying;
+        _feesAmount;
+        _feesUsed;
+        _startBlock;
+
+        return(borrower == _borrower && amount == _amount && feesAmount == _feesAmount && !_closed);
     }
 
 
+    /**
+    * @notice Check if Borrow Closing was correctly done
+    * @param palPool address of PalPool
+    * @param borrower borrower's address
+    * @param loanPool address of the PalLoan contract to close
+    * @return bool : Verification Success
+    */
     function closeBorrowVerify(address palPool, address borrower, address loanPool) external view override returns(bool){
         require(_isPalPool(msg.sender), "Call not allowed");
-        //Check if the minting succeeded
+        
+        palPool;
+        borrower;
+        loanPool;
         
         //no method yet 
         return true;
     }
 
 
+    /**
+    * @notice Check if Borrow Killing was correctly done
+    * @param palPool address of PalPool
+    * @param killer killer's address
+    * @param loanPool address of the PalLoan contract to kill
+    * @return bool : Verification Success
+    */
     function killBorrowVerify(address palPool, address killer, address loanPool) external view override returns(bool){
         require(_isPalPool(msg.sender), "Call not allowed");
-        //Check if the minting succeeded
+        
+        palPool;
+        killer;
+        loanPool;
         
         //no method yet 
         return true;

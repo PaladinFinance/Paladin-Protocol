@@ -10,5 +10,6 @@ types/
 cache/
 artifacts/
 typechain/
+flatten/
 coverage*
 .env
