@@ -5,7 +5,7 @@ import "./InterestInterface.sol";
 
 import "./utils/SafeMath.sol";
 
-/** @title Interest Module for Paladin vToken pools  */
+/** @title Interest Module for Paladin PalPools  */
 /// @author Paladin
 contract InterestCalculator is InterestInterface {
     using SafeMath for uint;
@@ -36,11 +36,11 @@ contract InterestCalculator is InterestInterface {
     }
 
     /**
-    * @notice Calculates the Utilization Rate of a vToken Pool
-    * @dev Calculates the Utilization Rate of a vToken Pool depending of Cash, Borrows & Reserves
-    * @param cash Cash amount of the calling vToken Pool
-    * @param borrows Total Borrowed amount of the calling vToken Pool
-    * @param reserves Total Reserves amount of the calling vToken Pool
+    * @notice Calculates the Utilization Rate of a PalPool
+    * @dev Calculates the Utilization Rate of a PalPool depending of Cash, Borrows & Reserves
+    * @param cash Cash amount of the calling PalPool
+    * @param borrows Total Borrowed amount of the calling PalPool
+    * @param reserves Total Reserves amount of the calling PalPool
     * @return uint : Utilisation Rate of the Pool (scale 1e18)
     */
     function utilizationRate(uint cash, uint borrows, uint reserves) public pure returns(uint){
@@ -53,12 +53,12 @@ contract InterestCalculator is InterestInterface {
     }
 
     /**
-    * @notice Calculates the Supply Rate for the calling vToken Pool
+    * @notice Calculates the Supply Rate for the calling PalPool
     * @dev Calculates the Supply Rate depending on the Pool Borrow Rate & Reserve Factor
-    * @param cash Cash amount of the calling vToken Pool
-    * @param borrows Total Borrowed amount of the calling vToken Pool
-    * @param reserves Total Reserves amount of the calling vToken Pool
-    * @param reserveFactor Reserve Factor of the calling vToken Pool
+    * @param cash Cash amount of the calling PalPool
+    * @param borrows Total Borrowed amount of the calling PalPool
+    * @param reserves Total Reserves amount of the calling PalPool
+    * @param reserveFactor Reserve Factor of the calling PalPool
     * @return uint : Supply Rate for the Pool (scale 1e18)
     */
     function getSupplyRate(uint cash, uint borrows, uint reserves, uint reserveFactor) external view override returns(uint){
@@ -72,11 +72,11 @@ contract InterestCalculator is InterestInterface {
     }
     
     /**
-    * @notice Get the Borrow Rate for a vToken Pool depending on the given parameters
+    * @notice Get the Borrow Rate for a PalPool depending on the given parameters
     * @dev Calls the internal fucntion _borrowRate
-    * @param cash Cash amount of the calling vToken Pool
-    * @param borrows Total Borrowed amount of the calling vToken Pool
-    * @param reserves Total Reserves amount of the calling vToken Pool
+    * @param cash Cash amount of the calling PalPool
+    * @param borrows Total Borrowed amount of the calling PalPool
+    * @param reserves Total Reserves amount of the calling PalPool
     * @return uint : Borrow Rate for the Pool (scale 1e18)
     */
     function getBorrowRate(uint cash, uint borrows, uint reserves) external view override returns(uint){
@@ -85,10 +85,10 @@ contract InterestCalculator is InterestInterface {
     }
 
     /**
-    * @dev Calculates the Borrow Rate for the vToken pool, depending on the utilisation rate & the kink value.
-    * @param cash Cash amount of the calling vToken Pool
-    * @param borrows Total Borrowed amount of the calling vToken Pool
-    * @param reserves Total Reserves amount of the calling vToken Pool
+    * @dev Calculates the Borrow Rate for the PalPool, depending on the utilisation rate & the kink value.
+    * @param cash Cash amount of the calling PalPool
+    * @param borrows Total Borrowed amount of the calling PalPool
+    * @param reserves Total Reserves amount of the calling PalPool
     * @return uint : Borrow Rate for the Pool (scale 1e18)
     */
     function _borrowRate(uint cash, uint borrows, uint reserves) internal view returns(uint){

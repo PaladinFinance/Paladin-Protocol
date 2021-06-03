@@ -3,4 +3,5 @@ pragma solidity ^0.7.6;
 
 interface ICompLike {
     function delegate(address delegatee) external;
+    function getCurrentVotes(address account) external view returns (uint96);
 }

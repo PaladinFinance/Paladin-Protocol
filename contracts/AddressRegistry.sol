@@ -10,6 +10,8 @@ contract AddressRegistry is Admin {
 
     address private controller;
 
+    address private interest;
+
     //underlying -> palToken
     mapping(address => address) private palPools;
 
@@ -32,6 +34,14 @@ contract AddressRegistry is Admin {
     */
     function getController() external view returns(address){
         return controller;
+    }
+
+    /**
+    * @notice Get the Interest Module address
+    * @return address : address of the Interest Module
+    */
+    function getInterestModule() external view returns(address){
+        return interest;
     }
 
     /**
@@ -67,6 +77,14 @@ contract AddressRegistry is Admin {
     */
     function _setController(address _newAddress) external adminOnly {
         controller = _newAddress;
+    }
+
+    /**
+    * @notice Update the Interest Module address
+    * @param _newAddress Address of the new Interest Module
+    */
+    function _setInterest(address _newAddress) external adminOnly {
+        interest = _newAddress;
     }
 
     /**
