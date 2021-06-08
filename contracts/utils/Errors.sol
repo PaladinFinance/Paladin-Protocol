@@ -18,6 +18,7 @@ library Errors {
     string public constant FAIL_DEPOSIT = '11';
     string public constant FAIL_LOAN_INITIATE = '12';
     string public constant FAIL_BORROW = '13';
+    string public constant ZERO_BORROW = '27';
     string public constant BORROW_INSUFFICIENT_FEES = '23';
     string public constant LOAN_CLOSED = '14';
     string public constant NOT_LOAN_OWNER = '15';

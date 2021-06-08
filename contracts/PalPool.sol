@@ -148,8 +148,9 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     function borrow(uint _amount, uint _feeAmount) external virtual override preventReentry returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
         require(_amount < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
-        require(_updateInterest());
+        require(_amount > 0, Errors.ZERO_BORROW);
         require(_feeAmount >= minBorrowFees(_amount), Errors.BORROW_INSUFFICIENT_FEES);
+        require(_updateInterest());
 
         address _dest = msg.sender;
 
@@ -212,6 +213,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         Borrow memory _borrow = loanToBorrow[_loan];
         require(!_borrow.closed, Errors.LOAN_CLOSED);
         require(_borrow.borrower == msg.sender, Errors.NOT_LOAN_OWNER);
+        require(_feeAmount > 0);
         require(_updateInterest());
         
         //Load the Loan Pool contract
@@ -522,7 +524,8 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @return uint : minimum amount (in wei)
     */
     function minBorrowFees(uint _amount) public view override returns (uint){
-        uint borrowRate = interestModule.getBorrowRate(_underlyingBalance(), totalBorrowed, totalReserve);
+        //Future Borrow Rate with the amount to borrow counted as already borrowed
+        uint borrowRate = interestModule.getBorrowRate(_underlyingBalance().sub(_amount), totalBorrowed.add(_amount), totalReserve);
         return minBorrowLength.mul(_amount.mul(borrowRate)).div(mantissaScale);
     }
 

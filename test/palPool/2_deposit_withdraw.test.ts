@@ -268,7 +268,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
         
         it(' should fail if pool cash is too low', async () => {
 
-            const fees = ethers.utils.parseEther('10')
+            const fees = ethers.utils.parseEther('70')
             await underlying.connect(admin).transfer(user2.address, fees)
 
             await underlying.connect(user2).approve(pool.address, fees)

@@ -370,12 +370,12 @@ describe('PalPool : 3 - Borrows tests', () => {
             await pool.connect(admin).updateMinBorrowLength(100)
 
             await pool.connect(user2).deposit(deposit)
-
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
         });
 
 
         it(' should close the Borrow (with the correct Event)', async () => {
+
+            await pool.connect(user1).borrow(borrow_amount, fees_amount)
 
             const loan_address = (await pool.getLoansPools())[0]
             const minBorrowLength = await pool.minBorrowLength()
@@ -408,6 +408,8 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should empty the palLoan balance & return the unused fees to the borrower', async () => {
 
+            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+
             const loan_address = (await pool.getLoansPools())[0]
             const minBorrowLength = await pool.minBorrowLength()
 
@@ -430,9 +432,11 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should take penalty fees if the loan is closed before the minimum time period', async () => {
 
-            const loan_address = (await pool.getLoansPools())[0]
-
             const estimated_fees: number = +((await pool.minBorrowFees(borrow_amount)).toString())
+
+            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+
+            const loan_address = (await pool.getLoansPools())[0]
 
             await pool.connect(user1).closeBorrow(loan_address)
 
@@ -449,6 +453,8 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should fail if already closed', async () => {
 
+            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+
             const loan_address = (await pool.getLoansPools())[0]
 
             await pool.connect(user1).closeBorrow(loan_address)
@@ -462,6 +468,8 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should fail if not palLoan borrower', async () => {
 
+            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+
             const loan_address = (await pool.getLoansPools())[0]
 
             await expect(
@@ -472,6 +480,8 @@ describe('PalPool : 3 - Borrows tests', () => {
 
 
         it(' should fail is address is not a palLoan', async () => {
+
+            await pool.connect(user1).borrow(borrow_amount, fees_amount)
 
             const loan_address = fake_loan.address
 
