@@ -77,7 +77,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
         await token.initiate(pool.address);
 
-        await controller.addNewPalToken(token.address, pool.address);
+        await controller.addNewPool(token.address, pool.address);
     });
 
 
@@ -191,6 +191,48 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).updateMinBorrowLength(newMinValue)
+            ).to.be.revertedWith('1')
+            
+        });
+
+    });
+
+    describe('updatePoolFactors', async () => {
+
+        const newReserveFactor = ethers.utils.parseEther('0.1');
+        const newKillerRatio = ethers.utils.parseEther('0.05');
+        const wrongKillerRatio = ethers.utils.parseEther('0.2');
+
+
+        it(' should update the  correctly', async () => {
+
+            await pool.connect(admin).updatePoolFactors(newReserveFactor, newKillerRatio)
+
+            const pool_reserveFactor: BigNumber = await pool.reserveFactor()
+            const pool_killerRatio: BigNumber = await pool.killerRatio()
+
+            expect(pool_reserveFactor).to.be.eq(newReserveFactor)
+            expect(pool_killerRatio).to.be.eq(newKillerRatio)
+            
+        });
+
+        it(' should fail with invalid parameters', async () => {
+
+            await expect(
+                pool.connect(admin).updatePoolFactors(0, 0)
+            ).to.be.revertedWith('28')
+
+            await expect(
+                pool.connect(admin).updatePoolFactors(newReserveFactor, wrongKillerRatio)
+            ).to.be.revertedWith('28')
+            
+        });
+
+
+        it(' should not be callable by non-admin', async () => {
+
+            await expect(
+                pool.connect(user1).updatePoolFactors(newReserveFactor, newKillerRatio)
             ).to.be.revertedWith('1')
             
         });

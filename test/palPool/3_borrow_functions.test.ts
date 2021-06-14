@@ -82,7 +82,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         await token.initiate(pool.address);
 
-        await controller.addNewPalToken(token.address, pool.address);
+        await controller.addNewPool(token.address, pool.address);
     });
 
 

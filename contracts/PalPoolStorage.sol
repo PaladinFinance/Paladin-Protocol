@@ -56,12 +56,12 @@ contract PalPoolStorage {
     /** @dev Health Factor to kill a loan */
     uint public constant killFactor = 0.96e18;
     /** @dev Ratio of the borrow fees to pay the killer of a loan */
-    uint public constant killerRatio = 0.15e18;
+    uint public killerRatio = 0.15e18;
 
     /** @dev Base value to mint palTokens */
     uint internal constant initialExchangeRate = 1e18;
     /** @notice Part of the borrows interest to set as Reserves */
-    uint public constant reserveFactor = 0.2e18;
+    uint public reserveFactor = 0.2e18;
     /** @notice Last block where the interest where updated for this pool */
     uint public accrualBlockNumber;
     /** @notice Borrow Index : increase at each interest update to represent borrows interests increasing (scaled 1e36) */

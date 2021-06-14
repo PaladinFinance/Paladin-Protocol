@@ -79,7 +79,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
         await token.initiate(pool.address);
 
-        await controller.addNewPalToken(token.address, pool.address);
+        await controller.addNewPool(token.address, pool.address);
     });
 
 

@@ -91,14 +91,13 @@ interface PalPoolInterface {
 
     function isKillable(address _loan) external view returns(bool);
 
-    // Admin Functions
-    //function setNewAdmin(address payable _newAdmin) external;
-
+    //Admin functions : 
     function setNewController(address _newController) external;
     function setNewInterestModule(address _interestModule) external;
     function setNewDelegator(address _delegator) external;
 
     function updateMinBorrowLength(uint _length) external;
+    function updatePoolFactors(uint _reserveFactor, uint _killerRatio) external;
 
     function addReserve(uint _amount) external;
     function removeReserve(uint _amount) external;

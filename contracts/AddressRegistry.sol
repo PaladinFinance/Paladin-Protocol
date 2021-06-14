@@ -23,8 +23,14 @@ contract AddressRegistry is Admin {
 
 
 
-    constructor() {
+    constructor(address[] memory _underlyings, address[] memory _pools, address[] memory _tokens) {
         admin = msg.sender;
+
+        for(uint i = 0; i < _pools.length; i++){
+            palPools[_underlyings[i]] = _pools[i];
+            palTokens[_underlyings[i]] = _tokens[i];
+            palTokensByPool[_pools[i]] = _tokens[i];
+        }
     }
 
 

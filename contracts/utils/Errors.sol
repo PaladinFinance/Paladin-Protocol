@@ -31,8 +31,7 @@ library Errors {
     string public constant FAIL_WITHDRAW = '24';
     string public constant FAIL_CLOSE_BORROW = '25';
     string public constant FAIL_KILL_BORROW = '26';
-
-
-    string public constant ZERO_ADDRESS = '22';    
+    string public constant ZERO_ADDRESS = '22';
+    string public constant INVALID_PARAMETERS = '28'; 
 
 }

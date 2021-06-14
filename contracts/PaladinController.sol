@@ -20,6 +20,7 @@ contract PaladinController is PaladinControllerInterface {
     address[] public palTokens;
     address[] public palPools;
 
+    bool private initialized = false;
 
     constructor(){
         admin = msg.sender;
@@ -54,22 +55,36 @@ contract PaladinController is PaladinControllerInterface {
         return palPools;
     }
 
-
+    /**
+    * @notice Set the basic PalPools/PalTokens controller list
+    * @param _palTokens array of address of PalToken contracts
+    * @param _palPools array of address of PalPool contracts
+    * @return bool : Success
+    */ 
+    function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override returns(bool){
+        require(msg.sender == admin, "Admin function");
+        require(!initialized, "Lists already set");
+        palPools = _palPools;
+        palTokens = _palTokens;
+        initialized = true;
+        return true;
+    }
+    
     /**
     * @notice Add a new PalPool/PalToken couple to the controller list
-    * @param palToken address of the PalToken contract
-    * @param palPool address of the PalPool contract
+    * @param _palToken address of the PalToken contract
+    * @param _palPool address of the PalPool contract
     * @return bool : Success
-    */
-    function addNewPalToken(address palToken, address palPool) external override returns(bool){
+    */ 
+    function addNewPool(address _palToken, address _palPool) external override returns(bool){
         //Add a new address to the palToken & palPool list
         require(msg.sender == admin, "Admin function");
-        require(!_isPalPool(palPool), "Already added");
-        palTokens.push(palToken);
-        palPools.push(palPool);
+        require(!_isPalPool(_palPool), "Already added");
+        palTokens.push(_palToken);
+        palPools.push(_palPool);
         return true;
-    }    
-    
+    }
+
 
     /**
     * @notice Check if the given PalPool has enough cash to make a withdraw

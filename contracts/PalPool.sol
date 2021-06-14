@@ -525,8 +525,9 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     */
     function minBorrowFees(uint _amount) public view override returns (uint){
         //Future Borrow Rate with the amount to borrow counted as already borrowed
-        uint borrowRate = interestModule.getBorrowRate(_underlyingBalance().sub(_amount), totalBorrowed.add(_amount), totalReserve);
-        return minBorrowLength.mul(_amount.mul(borrowRate)).div(mantissaScale);
+        uint _borrowRate = interestModule.getBorrowRate(_underlyingBalance().sub(_amount), totalBorrowed.add(_amount), totalReserve);
+        uint _minFees = minBorrowLength.mul(_amount.mul(_borrowRate)).div(mantissaScale);
+        return _minFees > 0 ? _minFees : 1;
     }
 
     function isKillable(address _loan) external view override returns(bool){
@@ -626,8 +627,25 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @param _length new Minimum Borrow Length
     */
     function updateMinBorrowLength(uint _length) external override adminOnly {
+        require(_length > 0, Errors.INVALID_PARAMETERS);
         minBorrowLength = _length;
     }
+
+
+    /**
+    * @notice Update the Pool Reserve Factor & Killer Ratio
+    * @dev Change Reserve Factor value & Killer Ratio value
+    * @param _reserveFactor new % of fees to set as Reserve
+    * @param _killerRatio new Ratio of Fees to pay the killer
+    */
+    function updatePoolFactors(uint _reserveFactor, uint _killerRatio) external override adminOnly {
+        require(_reserveFactor > 0 && _killerRatio > 0 && _reserveFactor >= _killerRatio, 
+            Errors.INVALID_PARAMETERS
+        );
+        reserveFactor = _reserveFactor;
+        killerRatio = _killerRatio;
+    }
+
 
     /**
     * @notice Add underlying in the Pool Reserve

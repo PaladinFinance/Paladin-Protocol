@@ -76,7 +76,7 @@ describe('PalPool : 1 - constructor and storage tests', () => {
 
         await token.initiate(pool.address);
 
-        await controller.addNewPalToken(token.address, pool.address);
+        await controller.addNewPool(token.address, pool.address);
     });
 
 

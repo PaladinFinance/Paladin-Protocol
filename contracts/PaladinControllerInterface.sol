@@ -17,7 +17,8 @@ interface PaladinControllerInterface {
     //Functions
     function getPalTokens() external view returns(address[] memory);
     function getPalPools() external view returns(address[] memory);
-    function addNewPalToken(address palToken, address palPool) external returns(bool);
+    function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external returns(bool);
+    function addNewPool(address _palToken, address _palPool) external returns(bool);
 
     function setNewAdmin(address payable newAdmin) external returns(bool);
 

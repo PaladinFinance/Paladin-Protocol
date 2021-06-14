@@ -38,7 +38,7 @@ describe('Paladin Controller contract tests', () => {
     });
 
     it(' should add & find correct Pool & Token', async () => {
-        await controller.connect(admin).addNewPalToken(fakeTokenAddress, fakePoolAddress);
+        await controller.connect(admin).setInitialPools([fakeTokenAddress], [fakePoolAddress]);
 
         const tokens = await controller.getPalTokens();
         const pools = await controller.getPalPools();
@@ -51,16 +51,16 @@ describe('Paladin Controller contract tests', () => {
     });
 
     it(' should not add same Pool (& Token) twice', async () => {
-        await controller.connect(admin).addNewPalToken(fakeTokenAddress, fakePoolAddress)
+        await controller.connect(admin).addNewPool(fakeTokenAddress, fakePoolAddress)
 
         await expect(
-            controller.connect(admin).addNewPalToken(fakeTokenAddress, fakePoolAddress)
+            controller.connect(admin).addNewPool(fakeTokenAddress, fakePoolAddress)
         ).to.be.revertedWith('Already added')
     });
 
     it(' should block non-admin to add Pool', async () => {
         await expect(
-            controller.connect(user1).addNewPalToken(fakeTokenAddress, fakePoolAddress),
+            controller.connect(user1).addNewPool(fakeTokenAddress, fakePoolAddress),
             'Admin function'
         ).to.be.revertedWith('Admin function')
     });
@@ -76,14 +76,14 @@ describe('Paladin Controller contract tests', () => {
     });
 
     it(' should change the admin', async () => {
-        await controller.connect(admin).addNewPalToken(fakeTokenAddress, fakePoolAddress)
+        await controller.connect(admin).addNewPool(fakeTokenAddress, fakePoolAddress)
         await controller.connect(admin).setNewAdmin(user1.address)
 
         await expect(
-            controller.connect(admin).addNewPalToken(fakeTokenAddress, fakePoolAddress)
+            controller.connect(admin).addNewPool(fakeTokenAddress, fakePoolAddress)
         ).to.be.revertedWith('Admin function')
 
-        await controller.connect(user1).addNewPalToken(fakeTokenAddress2, fakePoolAddress2);
+        await controller.connect(user1).addNewPool(fakeTokenAddress2, fakePoolAddress2);
 
         const tokens = await controller.getPalTokens();
         const pools = await controller.getPalPools();
