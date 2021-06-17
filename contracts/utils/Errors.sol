@@ -4,6 +4,7 @@ pragma solidity ^0.7.6;
 library Errors {
     // Admin error
     string public constant CALLER_NOT_ADMIN = '1'; // 'The caller must be the admin'
+    string public constant CALLER_NOT_CONTROLLER = '29'; // 'The caller must be the admin'
 
     // ERC20 type errors
     string public constant FAIL_TRANSFER = '2';

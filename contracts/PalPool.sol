@@ -34,6 +34,13 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     }
 
 
+    modifier controllerOnly() {
+        //allows only the Controller and the admin to call the function
+        require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
+        _;
+    }
+
+
 
     //Functions
 
@@ -172,6 +179,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             0,
             borrowIndex,
             block.number,
+            0,
             false
         );
 
@@ -277,6 +285,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Set the Borrow as closed
         _borrow.closed = true;
         _borrow.feesUsed = _totalFees;
+        _borrow.closeBlock = block.number;
 
         //Update the storage variables
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
@@ -319,6 +328,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Close the Loan, and update storage variables
         _borrow.closed = true;
         _borrow.feesUsed = _borrow.feesAmount;
+        _borrow.closeBlock = block.number;
 
         uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(uint(1e18));
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
@@ -399,6 +409,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         uint _feesAmount,
         uint _feesUsed,
         uint _startBlock,
+        uint _closeBlock,
         bool _closed
     ){
         return _getBorrowData(_loanAddress);
@@ -417,6 +428,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         uint _feesAmount,
         uint _feesUsed,
         uint _startBlock,
+        uint _closeBlock,
         bool _closed
     ){
         _updateInterest();
@@ -436,6 +448,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         uint _feesAmount,
         uint _feesUsed,
         uint _startBlock,
+        uint _closeBlock,
         bool _closed
     ){
         //Return the data inside a Borrow struct
@@ -449,6 +462,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             //Calculate amount of fees used
             _borrow.closed ? _borrow.feesUsed : (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount),
             _borrow.startBlock,
+            _borrow.closeBlock,
             _borrow.closed
         );
 
@@ -598,7 +612,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @dev Loads the new Controller for the Pool
     * @param  _newController address of the new Controller
     */
-    function setNewController(address _newController) external override adminOnly {
+    function setNewController(address _newController) external override controllerOnly {
         controller = PaladinControllerInterface(_newController);
     }
 
@@ -668,13 +682,13 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @dev Transfer underlying token from the Pool to the admin
     * @param _amount Amount of underlying to transfer
     */
-    function removeReserve(uint _amount) external override adminOnly {
+    function removeReserve(uint _amount, address _recipient) external override controllerOnly { //add system so Controller can also fetch Fees
         //Check if there is enough in the reserve
         require(_updateInterest());
         require(_amount < _underlyingBalance() && _amount < totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
 
         //Transfer underlying to the admin
-        underlying.safeTransfer(admin, _amount);
+        underlying.safeTransfer(_recipient, _amount);
 
         totalReserve = totalReserve.sub(_amount);
 

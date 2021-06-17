@@ -85,6 +85,8 @@ describe('PalPool : 3 - Borrows tests', () => {
         await controller.addNewPool(token.address, pool.address);
     });
 
+    
+
 
     describe('borrow', async () => {
 
@@ -181,6 +183,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             expect(loan_data._feesAmount).to.be.eq(fees_amount)
             expect(loan_data._feesUsed).to.be.eq(0)
             expect(loan_data._startBlock).to.be.eq(borrow_tx.blockNumber)
+            expect(loan_data._closeBlock).to.be.eq(0)
             expect(loan_data._closed).to.be.false
 
         });
@@ -220,6 +223,22 @@ describe('PalPool : 3 - Borrows tests', () => {
             await expect(
                 pool.connect(user2).borrow(borrow_amount, fees_amount)
             ).to.be.reverted
+            
+        });
+
+        it(' should fail if amount is 0', async () => {
+
+            await expect(
+                pool.connect(user1).borrow(0, fees_amount)
+            ).to.be.revertedWith('27')
+            
+        });
+
+        it(' should fail if no fees provided', async () => {
+
+            await expect(
+                pool.connect(user1).borrow(1, 0)
+            ).to.be.revertedWith('23')
             
         });
 
@@ -382,9 +401,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await mineBlocks(minBorrowLength.toNumber() + 1)
 
-            const close_tx = pool.connect(user1).closeBorrow(loan_address)
-
-            await close_tx
+            const close_tx = await pool.connect(user1).closeBorrow(loan_address)
 
             const loan_data = await pool.getBorrowDataStored(loan_address)
 
@@ -402,6 +419,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             expect(loan_data._closed).to.be.true
             expect(loan_data._feesUsed).not.to.be.eq(0)
+            expect(loan_data._closeBlock).to.be.eq(close_tx.blockNumber)
             
         });
 
@@ -559,6 +577,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             const killerFees = loan_data._feesAmount.mul(killerRatio).div(mantissaScale)
 
             expect(loan_data._closed).to.be.true
+            expect(loan_data._closeBlock).to.be.eq(kill_tx.blockNumber)
 
             expect(newBalance.sub(oldBalance)).to.be.eq(killerFees)
             
@@ -619,6 +638,52 @@ describe('PalPool : 3 - Borrows tests', () => {
             await expect(
                 pool.connect(user2).killBorrow(loan_address)
             ).to.be.revertedWith('14')
+            
+        });
+
+    });
+
+    describe('minBorrowFees', async () => {
+
+        const deposit = ethers.utils.parseEther('1000')
+
+        const borrow_amount = ethers.utils.parseEther('100')
+
+
+        beforeEach(async () => {
+            await underlying.connect(admin).transfer(user2.address, deposit)
+            await underlying.connect(user2).approve(pool.address, deposit)
+            await pool.connect(user2).deposit(deposit)
+        });
+
+
+        it(' should return the right amount', async () => {
+
+            const pool_cash: BigNumber = await pool._underlyingBalance()
+            const pool_borrowed: BigNumber = await pool.totalBorrowed()
+            const pool_reserves: BigNumber = await pool.totalReserve()
+
+            const pool_min_borrow_length: BigNumber = await pool.minBorrowLength()
+
+            const pool_borrow_rate: BigNumber = await interest.getBorrowRate(
+                pool_cash.sub(borrow_amount),
+                pool_borrowed.add(borrow_amount),
+                pool_reserves)
+
+            const estimated_borrow_fees: BigNumber = pool_min_borrow_length.mul(borrow_amount.mul(pool_borrow_rate).div(mantissaScale))
+            
+            const pool_min_borrow_fees = await pool.minBorrowFees(borrow_amount)
+
+            expect(estimated_borrow_fees).to.be.eq(pool_min_borrow_fees)
+            
+        });
+
+
+        it(' should return at least 1', async () => {
+
+            const pool_min_borrow_fees = await pool.minBorrowFees(1)
+
+            expect(pool_min_borrow_fees).not.to.be.null
             
         });
 

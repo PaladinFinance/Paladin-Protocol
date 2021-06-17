@@ -289,7 +289,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
             const oldReserves = await pool.totalReserve()
             const oldCash = await pool._underlyingBalance()
 
-            await pool.connect(admin).removeReserve(amount)
+            await pool.connect(admin).removeReserve(amount, admin.address)
 
             const newReserves = await pool.totalReserve()
             const newCash = await pool._underlyingBalance()
@@ -303,7 +303,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
         it(' should fail if not enough cash in the Pool', async () => {
 
             await expect(
-                pool.connect(admin).removeReserve(amount)
+                pool.connect(admin).removeReserve(amount, admin.address)
             ).to.be.revertedWith('19')
         });
 
@@ -313,7 +313,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
             await underlying.connect(admin).transfer(pool.address, deposit)
 
             await expect(
-                pool.connect(admin).removeReserve(amount)
+                pool.connect(admin).removeReserve(amount, admin.address)
             ).to.be.revertedWith('19')
         });
 
@@ -321,7 +321,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
         it(' should not be callable by non-admin', async () => {
 
             await expect(
-                pool.connect(user1).removeReserve(amount)
+                pool.connect(user1).removeReserve(amount, admin.address)
             ).to.be.revertedWith('1')
             
         });

@@ -173,6 +173,7 @@ contract PaladinController is PaladinControllerInterface {
             uint _feesAmount,
             uint _feesUsed,
             uint _startBlock,
+            uint _closeBlock,
             bool _closed
         ) = _palPool.getBorrowDataStored(loanPool);
 
@@ -182,6 +183,7 @@ contract PaladinController is PaladinControllerInterface {
         _feesAmount;
         _feesUsed;
         _startBlock;
+        _closeBlock;
 
         return(borrower == _borrower && amount == _amount && feesAmount == _feesAmount && !_closed);
     }
@@ -231,12 +233,36 @@ contract PaladinController is PaladinControllerInterface {
     /**
     * @notice Set a new Controller Admin
     * @dev Changes the address for the admin parameter
-    * @param newAdmin address of the new Controller Admin
+    * @param _newAdmin address of the new Controller Admin
     * @return bool : Update success
     */
-    function setNewAdmin(address payable newAdmin) external override returns(bool){
+    function setNewAdmin(address payable _newAdmin) external override returns(bool){
         require(msg.sender == admin, "Admin function");
-        admin = newAdmin;
+        admin = _newAdmin;
         return true;
     }
+
+
+    function setPoolsNewController(address _newController) external override returns(bool){
+        for(uint i = 0; i < palPools.length; i++){
+            PalPoolInterface _palPool = PalPoolInterface(palPools[i]);
+            _palPool.setNewController(_newController);
+        }
+        return true;
+    }
+
+
+    function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override returns(bool){
+        PalPoolInterface _palPool = PalPoolInterface(_pool);
+        _palPool.removeReserve(_amount, _recipient);
+    }
+
+
+    function removeReserveFromAllPools(address _recipient) external override returns(bool){
+        //TO DO
+        //Do we swap all the funds into 1 coin ?
+        //Do we send each of them, and another contract takes care of that ?
+    }
+
+
 }

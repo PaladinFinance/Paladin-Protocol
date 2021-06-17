@@ -179,6 +179,7 @@ contract PalStkAave is PalPool {
             0,
             borrowIndex,
             block.number,
+            0,
             false
         );
 
@@ -285,6 +286,7 @@ contract PalStkAave is PalPool {
         //Set the Borrow as closed
         _borrow.closed = true;
         _borrow.feesUsed = _totalFees;
+        _borrow.closeBlock = block.number;
 
         //Update the storage variables
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
@@ -328,6 +330,8 @@ contract PalStkAave is PalPool {
 
         //Close the Loan, and update storage variables
         _borrow.closed = true;
+        _borrow.feesUsed = _borrow.feesAmount;
+        _borrow.closeBlock = block.number;
 
         uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(uint(1e18));
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));

@@ -29,6 +29,8 @@ contract PalPoolStorage {
         uint borrowIndex;
         //start block for the Borrow
         uint startBlock;
+        //block where the Borrow was closed
+        uint closeBlock;
         //false if the loan is active, true is loan was closed or killed
         bool closed;
     }

@@ -67,6 +67,7 @@ interface PalPoolInterface {
         uint _feesAmount,
         uint _feesUsed,
         uint _startBlock,
+        uint _closeBlock,
         bool _closed
     );
     function getBorrowData(address _loanAddress) external returns(
@@ -77,6 +78,7 @@ interface PalPoolInterface {
         uint feesAmount,
         uint feesUsed,
         uint startBlock,
+        uint _closeBlock,
         bool closed
     );
 
@@ -100,6 +102,6 @@ interface PalPoolInterface {
     function updatePoolFactors(uint _reserveFactor, uint _killerRatio) external;
 
     function addReserve(uint _amount) external;
-    function removeReserve(uint _amount) external;
+    function removeReserve(uint _amount, address _recipient) external;
 
 }

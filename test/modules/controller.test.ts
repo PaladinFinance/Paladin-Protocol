@@ -97,4 +97,5 @@ describe('Paladin Controller contract tests', () => {
             controller.connect(user1).setNewAdmin(user1.address)
         ).to.be.revertedWith('Admin function')
     })
+
 });
