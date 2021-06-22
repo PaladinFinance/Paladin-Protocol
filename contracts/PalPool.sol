@@ -164,6 +164,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     function borrow(address _delegatee, uint _amount, uint _feeAmount) external virtual override preventReentry returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
         require(_amount < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
+        require(_delegatee != address(0), Errors.ZERO_ADDRESS);
         require(_amount > 0, Errors.ZERO_BORROW);
         require(_feeAmount >= minBorrowFees(_amount), Errors.BORROW_INSUFFICIENT_FEES);
         require(_updateInterest());

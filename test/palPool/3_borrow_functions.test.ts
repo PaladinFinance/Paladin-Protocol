@@ -227,6 +227,15 @@ describe('PalPool : 3 - Borrows tests', () => {
         });
 
 
+        it(' should fail if delegatee address is address 0x0', async () => {
+
+            await expect(
+                pool.connect(user1).borrow(ethers.constants.AddressZero, borrow_amount, fees_amount)
+            ).to.be.revertedWith('22')
+            
+        });
+
+
         it(' should fail if not enough fees', async () => {
 
             await expect(
@@ -244,6 +253,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             
         });
 
+
         it(' should fail if amount is 0', async () => {
 
             await expect(
@@ -251,6 +261,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             ).to.be.revertedWith('27')
             
         });
+
 
         it(' should fail if no fees provided', async () => {
 
