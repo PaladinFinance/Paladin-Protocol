@@ -71,7 +71,7 @@ describe('Paladin Controller contract tests', () => {
         ).to.be.revertedWith('Call not allowed')
 
         await expect(
-            controller.borrowVerify(fakePoolAddress, user1.address, 10, 5, fakePoolAddress)
+            controller.borrowVerify(fakePoolAddress, user1.address, user1.address, 10, 5, fakePoolAddress)
         ).to.be.revertedWith('Call not allowed')
     });
 

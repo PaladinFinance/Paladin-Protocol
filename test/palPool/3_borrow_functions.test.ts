@@ -109,7 +109,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should execute correctly (with correct Event)', async () => {
 
-            const borrow_call = pool.connect(user1).borrow(borrow_amount, fees_amount)
+            const borrow_call = pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
 
             await borrow_call
 
@@ -119,6 +119,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             .to.emit(pool, 'NewLoan')
             .withArgs(
                 user1.address,
+                user2.address,
                 underlying.address,
                 borrow_amount,
                 pool.address,
@@ -135,7 +136,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should deploy a palLoan with the correct parameters', async () => {
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
 
             const new_loan_address = (await pool.getLoansPools())[0]
 
@@ -146,6 +147,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             const loan_pool: string = await loan.motherPool()
             const loan_underlying: string = await loan.underlying()
             const loan_borrower: string = await loan.borrower()
+            const loan_delegatee: string = await loan.delegatee()
             const loan_delegator: string = await loan.delegator()
             const loan_borrowAmount: BigNumber = await loan.amount()
             const loan_feesAmount: BigNumber = await loan.feesAmount()
@@ -153,6 +155,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             expect(loan_pool).to.be.eq(pool.address)
             expect(loan_underlying).to.be.eq(underlying.address)
             expect(loan_borrower).to.be.eq(user1.address)
+            expect(loan_delegatee).to.be.eq(user2.address)
             expect(loan_delegator).to.be.eq(delegator.address)
             expect(loan_borrowAmount).to.be.eq(borrow_amount)
             expect(loan_feesAmount).to.be.eq(fees_amount)
@@ -166,7 +169,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should create the Borrow object, with correct values', async () => {
 
-            const borrow_tx = await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            const borrow_tx = await pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
 
             const new_loan_address = (await pool.getLoansPools())[0]
 
@@ -177,6 +180,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             const loan_data = await pool.getBorrowDataStored(new_loan_address)
 
             expect(loan_data._borrower).to.be.eq(user1.address)
+            expect(loan_data._delegatee).to.be.eq(user2.address)
             expect(loan_data._loan).to.be.eq(new_loan_address)
             expect(loan_data._amount).to.be.eq(borrow_amount)
             expect(loan_data._underlying).to.be.eq(underlying.address)
@@ -191,11 +195,25 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should delegate the votes correctly', async () => {
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
 
-            const delegated_votes = await underlying.getCurrentVotes(user1.address)
+            const delegated_votes = await underlying.getCurrentVotes(user2.address)
 
             expect(delegated_votes).to.be.eq(borrow_amount.add(fees_amount))
+            
+        });
+
+
+        it(' should allow borrower to also be delgatee', async () => {
+
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+
+            const new_loan_address = (await pool.getLoansPools())[0]
+
+            const loan_data = await pool.getBorrowDataStored(new_loan_address)
+
+            expect(loan_data._delegatee).to.be.eq(loan_data._borrower)
+            expect(loan_data._delegatee).to.be.eq(user1.address)
             
         });
 
@@ -203,7 +221,7 @@ describe('PalPool : 3 - Borrows tests', () => {
         it(' should fail if not enough cash in the pool', async () => {
 
             await expect(
-                pool.connect(user2).borrow(ethers.utils.parseEther('5000'), fees_amount)
+                pool.connect(user2).borrow(user1.address, ethers.utils.parseEther('5000'), fees_amount)
             ).to.be.revertedWith('9')
             
         });
@@ -212,7 +230,7 @@ describe('PalPool : 3 - Borrows tests', () => {
         it(' should fail if not enough fees', async () => {
 
             await expect(
-                pool.connect(user2).borrow(borrow_amount, ethers.utils.parseEther('0.001'))
+                pool.connect(user2).borrow(user1.address, borrow_amount, ethers.utils.parseEther('0.001'))
             ).to.be.revertedWith('23')
             
         });
@@ -221,7 +239,7 @@ describe('PalPool : 3 - Borrows tests', () => {
         it(' should fail if balance too low to pay for fees', async () => {
 
             await expect(
-                pool.connect(user2).borrow(borrow_amount, fees_amount)
+                pool.connect(user2).borrow(user2.address, borrow_amount, fees_amount)
             ).to.be.reverted
             
         });
@@ -229,7 +247,7 @@ describe('PalPool : 3 - Borrows tests', () => {
         it(' should fail if amount is 0', async () => {
 
             await expect(
-                pool.connect(user1).borrow(0, fees_amount)
+                pool.connect(user1).borrow(user2.address, 0, fees_amount)
             ).to.be.revertedWith('27')
             
         });
@@ -237,7 +255,7 @@ describe('PalPool : 3 - Borrows tests', () => {
         it(' should fail if no fees provided', async () => {
 
             await expect(
-                pool.connect(user1).borrow(1, 0)
+                pool.connect(user1).borrow(user2.address, 1, 0)
             ).to.be.revertedWith('23')
             
         });
@@ -264,7 +282,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await pool.connect(user2).deposit(deposit)
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
         });
         
 
@@ -275,6 +293,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             await expect(pool.connect(user1).expandBorrow(loan_address, expand_fees_amount))
             .to.emit(pool, 'ExpandLoan')
             .withArgs(
+                user1.address,
                 user1.address,
                 underlying.address,
                 pool.address,
@@ -394,7 +413,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should close the Borrow (with the correct Event)', async () => {
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
             const loan_address = (await pool.getLoansPools())[0]
             const minBorrowLength = await pool.minBorrowLength()
@@ -408,6 +427,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             await expect(close_tx)
             .to.emit(pool, 'CloseLoan')
             .withArgs(
+                user1.address,
                 user1.address,
                 underlying.address,
                 borrow_amount,
@@ -426,7 +446,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should empty the palLoan balance & return the unused fees to the borrower', async () => {
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
             const loan_address = (await pool.getLoansPools())[0]
             const minBorrowLength = await pool.minBorrowLength()
@@ -452,7 +472,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             const estimated_fees: number = +((await pool.minBorrowFees(borrow_amount)).toString())
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
             const loan_address = (await pool.getLoansPools())[0]
 
@@ -471,7 +491,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should fail if already closed', async () => {
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
             const loan_address = (await pool.getLoansPools())[0]
 
@@ -486,7 +506,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should fail if not palLoan borrower', async () => {
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
             const loan_address = (await pool.getLoansPools())[0]
 
@@ -499,7 +519,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should fail is address is not a palLoan', async () => {
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
             const loan_address = fake_loan.address
 
@@ -541,11 +561,11 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await pool.connect(user2).deposit(deposit)
 
-            await pool.connect(user1).borrow(borrow_amount, fees_amount)
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
         });
 
 
-        it(' should kill the Borrow and pay the killer', async () => {
+        it(' should kill the Borrow and pay the killer (with the correct Event)', async () => {
 
             const loan_address = (await pool.getLoansPools())[0]
 
@@ -563,6 +583,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             await expect(kill_tx)
             .to.emit(pool, 'CloseLoan')
             .withArgs(
+                user1.address,
                 user1.address,
                 underlying.address,
                 borrow_amount,
@@ -603,6 +624,21 @@ describe('PalPool : 3 - Borrows tests', () => {
             const poolFees = fees_amount.sub(killerFees)
 
             expect(newBalance.sub(oldBalance)).to.be.eq(borrow_amount.add(poolFees))
+            
+        });
+
+
+        it(' should set the "killed" flag in the Borrow object', async () => {
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            await mineBlocks(170)
+
+            await pool.connect(user2).killBorrow(loan_address)
+
+            const loan_data = await pool.getBorrowDataStored(loan_address)
+
+            expect(loan_data._killed).to.be.true;
             
         });
 

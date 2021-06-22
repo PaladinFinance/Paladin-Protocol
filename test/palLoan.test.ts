@@ -19,6 +19,7 @@ describe('PalLoan contract tests', () => {
     let pool: SignerWithAddress
     let admin: SignerWithAddress
     let borrower: SignerWithAddress
+    let delegatee: SignerWithAddress
     let killer: SignerWithAddress
 
     let loan: PalLoan
@@ -36,7 +37,7 @@ describe('PalLoan contract tests', () => {
 
 
     beforeEach( async () => {
-        [pool, admin, borrower, killer] = await ethers.getSigners();
+        [pool, admin, borrower, delegatee, killer] = await ethers.getSigners();
 
         delegator = (await delegatorFactory.connect(admin).deploy()) as BasicDelegator;
         await delegator.deployed();
@@ -69,16 +70,18 @@ describe('PalLoan contract tests', () => {
         let feesAmount = ethers.utils.parseEther('10')
 
         beforeEach(async () => {
-            await loan.connect(pool).initiate(borrowAmount, feesAmount)
+            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
         });
 
         it(' should delegate the right parameters', async () => {
 
             const loan_borrowAmount: BigNumber = await loan.amount()
             const loan_feesAmount: BigNumber = await loan.feesAmount()
+            const loan_delegatee: string = await loan.delegatee()
 
             expect(loan_borrowAmount).to.be.eq(borrowAmount)
             expect(loan_feesAmount).to.be.eq(feesAmount)
+            expect(loan_delegatee).to.be.eq(delegatee.address)
         });
 
 
@@ -87,7 +90,7 @@ describe('PalLoan contract tests', () => {
             await comp.connect(admin).transfer(loan.address, borrowAmount)
             await comp.connect(admin).transfer(loan.address, feesAmount)
 
-            const votes: BigNumber = await comp.getCurrentVotes(borrower.address)
+            const votes: BigNumber = await comp.getCurrentVotes(delegatee.address)
 
             expect(votes).to.be.eq(borrowAmount.add(feesAmount))
         });
@@ -124,7 +127,7 @@ describe('PalLoan contract tests', () => {
             await comp.connect(admin).transfer(loan.address, borrowAmount)
             await comp.connect(admin).transfer(loan.address, feesAmount)
 
-            await loan.connect(pool).initiate(borrowAmount, feesAmount)
+            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
         });
 
@@ -164,7 +167,7 @@ describe('PalLoan contract tests', () => {
             await comp.connect(admin).transfer(loan.address, borrowAmount)
             await comp.connect(admin).transfer(loan.address, feesAmount)
 
-            await loan.connect(pool).initiate(borrowAmount, feesAmount)
+            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
         });
 
@@ -195,7 +198,7 @@ describe('PalLoan contract tests', () => {
 
         it(' should block non-pool calls', async () => {
             await expect(
-                loan.connect(borrower).initiate(0, 0)
+                loan.connect(borrower).initiate(delegatee.address, 0, 0)
             ).to.be.reverted
     
             await expect(

@@ -273,7 +273,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
             await underlying.connect(user2).approve(pool.address, fees)
 
-            await pool.connect(user2).borrow(ethers.utils.parseEther('700'), fees)
+            await pool.connect(user2).borrow(user2.address, ethers.utils.parseEther('700'), fees)
 
             await expect(
                 pool.connect(user1).withdraw(paltoken_amount)
@@ -309,7 +309,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
             const old_exchRate = await pool.exchangeRateStored()
 
-            await pool.connect(user2).borrow(borrow, borrowFees)
+            await pool.connect(user2).borrow(user2.address, borrow, borrowFees)
 
             const loan_address = (await pool.getLoansByBorrower(user2.address))[0]
 

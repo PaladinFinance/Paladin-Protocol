@@ -1,3 +1,11 @@
+//██████╗  █████╗ ██╗      █████╗ ██████╗ ██╗███╗   ██╗
+//██╔══██╗██╔══██╗██║     ██╔══██╗██╔══██╗██║████╗  ██║
+//██████╔╝███████║██║     ███████║██║  ██║██║██╔██╗ ██║
+//██╔═══╝ ██╔══██║██║     ██╔══██║██║  ██║██║██║╚██╗██║
+//██║     ██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║
+//╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
+                                                     
+
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
@@ -15,6 +23,8 @@ contract PalPoolStorage {
     struct Borrow {
         //address of the borrower
         address borrower;
+        //address of the delegatee
+        address delegatee;
         //address of the Loan Pool contract holding the loan
         address loan;
         //amount of the loan
@@ -31,8 +41,10 @@ contract PalPoolStorage {
         uint startBlock;
         //block where the Borrow was closed
         uint closeBlock;
-        //false if the loan is active, true is loan was closed or killed
+        //false if the loan is active, true if loan was closed or killed
         bool closed;
+        //false when the loan is active, true if the loan was killed
+        bool killed;
     }
 
     //palPool variables & Mappings

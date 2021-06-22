@@ -10,11 +10,12 @@ const { expect } = chai;
 
 describe('Basic Delegator contract tests', () => {
     let admin: SignerWithAddress
+    let user: SignerWithAddress
 
     let delegator: BasicDelegator
 
     beforeEach( async () => {
-        [admin] = await ethers.getSigners();
+        [admin, user] = await ethers.getSigners();
 
         const delegatorFactory = await ethers.getContractFactory(
             "BasicDelegator",
@@ -31,7 +32,7 @@ describe('Basic Delegator contract tests', () => {
 
     it(' should fail all function calls', async () => {
         await expect(
-            delegator.connect(admin).initiate(0, 0)
+            delegator.connect(admin).initiate(user.address, 0, 0)
         ).to.be.reverted
 
         /*await expect(

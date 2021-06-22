@@ -106,7 +106,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).setNewController(new_controller.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('29')
 
         });
 
@@ -322,7 +322,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).removeReserve(amount, admin.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('29')
             
         });
 

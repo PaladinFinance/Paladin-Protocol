@@ -1,3 +1,11 @@
+//██████╗  █████╗ ██╗      █████╗ ██████╗ ██╗███╗   ██╗
+//██╔══██╗██╔══██╗██║     ██╔══██╗██╔══██╗██║████╗  ██║
+//██████╔╝███████║██║     ███████║██║  ██║██║██╔██╗ ██║
+//██╔═══╝ ██╔══██║██║     ██╔══██║██║  ██║██║██║╚██╗██║
+//██║     ██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║
+//╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
+                                                     
+
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 //SPDX-License-Identifier: MIT
@@ -16,6 +24,7 @@ interface PalPoolInterface {
     /** @notice Event when a loan is started */
     event NewLoan(
         address borrower,
+        address delegatee,
         address underlying,
         uint amount,
         address palPool,
@@ -24,6 +33,7 @@ interface PalPoolInterface {
     /** @notice Event when the fee amount in the loan is updated */
     event ExpandLoan(
         address borrower,
+        address delegatee,
         address underlying,
         address palPool,
         uint newFeesAmount,
@@ -32,6 +42,7 @@ interface PalPoolInterface {
     /** @notice Event when a loan is ended */
     event CloseLoan(
         address borrower,
+        address delegatee,
         address underlying,
         uint amount,
         address palPool,
@@ -48,7 +59,7 @@ interface PalPoolInterface {
     //Functions
     function deposit(uint _amount) external returns(uint);
     function withdraw(uint _amount) external returns(uint);
-    function borrow(uint _amount, uint _feeAmount) external returns(uint);
+    function borrow(address _delegatee, uint _amount, uint _feeAmount) external returns(uint);
     function expandBorrow(address _loanPool, uint _feeAmount) external returns(uint);
     function closeBorrow(address _loanPool) external;
     function killBorrow(address _loanPool) external;
@@ -61,6 +72,7 @@ interface PalPoolInterface {
     function getLoansByBorrower(address _borrower) external view returns(address [] memory);
     function getBorrowDataStored(address _loanAddress) external view returns(
         address _borrower,
+        address _delegatee,
         address _loanPool,
         uint _amount,
         address _underlying,
@@ -68,18 +80,21 @@ interface PalPoolInterface {
         uint _feesUsed,
         uint _startBlock,
         uint _closeBlock,
-        bool _closed
+        bool _closed,
+        bool _killed
     );
     function getBorrowData(address _loanAddress) external returns(
-        address borrower,
-        address loanPool,
-        uint amount,
-        address underlying,
-        uint feesAmount,
-        uint feesUsed,
-        uint startBlock,
+        address _borrower,
+        address _delegatee,
+        address _loanPool,
+        uint _amount,
+        address _underlying,
+        uint _feesAmount,
+        uint _feesUsed,
+        uint _startBlock,
         uint _closeBlock,
-        bool closed
+        bool _closed,
+        bool _killed
     );
 
     function borrowRatePerBlock() external view returns (uint);

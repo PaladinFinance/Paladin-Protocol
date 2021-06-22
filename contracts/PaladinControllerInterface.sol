@@ -1,3 +1,11 @@
+//██████╗  █████╗ ██╗      █████╗ ██████╗ ██╗███╗   ██╗
+//██╔══██╗██╔══██╗██║     ██╔══██╗██╔══██╗██║████╗  ██║
+//██████╔╝███████║██║     ███████║██║  ██║██║██╔██╗ ██║
+//██╔═══╝ ██╔══██║██║     ██╔══██║██║  ██║██║██║╚██╗██║
+//██║     ██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║
+//╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
+                                                     
+
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
@@ -25,7 +33,7 @@ interface PaladinControllerInterface {
 
     function depositVerify(address palPool, address dest, uint amount) external view returns(bool);
     function withdrawVerify(address palPool, address dest, uint amount) external view returns(bool);
-    function borrowVerify(address palPool, address borrower, uint amount, uint feesAmount, address loanPool) external view returns(bool);
+    function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view returns(bool);
     function closeBorrowVerify(address palPool, address borrower, address loanPool) external view returns(bool);
     function killBorrowVerify(address palPool, address killer, address loanPool) external view returns(bool);
 

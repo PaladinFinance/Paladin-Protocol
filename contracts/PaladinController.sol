@@ -1,3 +1,11 @@
+//██████╗  █████╗ ██╗      █████╗ ██████╗ ██╗███╗   ██╗
+//██╔══██╗██╔══██╗██║     ██╔══██╗██╔══██╗██║████╗  ██║
+//██████╔╝███████║██║     ███████║██║  ██║██║██╔██╗ ██║
+//██╔═══╝ ██╔══██║██║     ██╔══██║██║  ██║██║██║╚██╗██║
+//██║     ██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║
+//╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
+                                                     
+
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
@@ -161,31 +169,27 @@ contract PaladinController is PaladinControllerInterface {
     * @param loanPool address of the new deployed PalLoan
     * @return bool : Verification Success
     */
-    function borrowVerify(address palPool, address borrower, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
+    function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
         require(_isPalPool(msg.sender), "Call not allowed");
         //Check if the borrow was successful
         PalPoolInterface _palPool = PalPoolInterface(palPool);
         (
             address _borrower,
+            address _delegatee,
             address _loan,
             uint _amount,
             address _underlying,
             uint _feesAmount,
-            uint _feesUsed,
-            uint _startBlock,
-            uint _closeBlock,
-            bool _closed
+            ,
+            ,
+            ,
+            bool _closed,
         ) = _palPool.getBorrowDataStored(loanPool);
 
-        _loan;
-        _amount;
         _underlying;
-        _feesAmount;
-        _feesUsed;
-        _startBlock;
-        _closeBlock;
+        _loan;
 
-        return(borrower == _borrower && amount == _amount && feesAmount == _feesAmount && !_closed);
+        return(borrower == _borrower && delegatee == _delegatee && amount == _amount && feesAmount == _feesAmount && !_closed);
     }
 
 
