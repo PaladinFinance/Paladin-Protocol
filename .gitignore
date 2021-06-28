@@ -13,3 +13,4 @@ typechain/
 flatten/
 coverage*
 .env
+snapTest.py

@@ -2,6 +2,7 @@ import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { PalToken } from "../../typechain/PalToken";
+import { PalLoanToken } from "../../typechain/PalLoanToken";
 import { PalPool } from "../../typechain/PalPool";
 import { PaladinController } from "../../typechain/PaladinController";
 import { InterestCalculator } from "../../typechain/InterestCalculator";
@@ -16,6 +17,7 @@ const { expect } = chai;
 
 let poolFactory: ContractFactory
 let tokenFactory: ContractFactory
+let palLoanTokenFactory: ContractFactory
 let controllerFactory: ContractFactory
 let delegatorFactory: ContractFactory
 let interestFactory: ContractFactory
@@ -28,6 +30,7 @@ describe('PalPool : 1 - constructor and storage tests', () => {
 
     let pool: PalPool
     let token: PalToken
+    let loanToken: PalLoanToken
     let controller: PaladinController
     let delegator: BasicDelegator
     let interest: InterestCalculator
@@ -39,6 +42,7 @@ describe('PalPool : 1 - constructor and storage tests', () => {
     
     before( async () => {
         tokenFactory = await ethers.getContractFactory("PalToken");
+        palLoanTokenFactory = await ethers.getContractFactory("PalLoanToken");
         poolFactory = await ethers.getContractFactory("PalPool");
         controllerFactory = await ethers.getContractFactory("PaladinController");
         delegatorFactory = await ethers.getContractFactory("BasicDelegator");
@@ -59,6 +63,9 @@ describe('PalPool : 1 - constructor and storage tests', () => {
         controller = (await controllerFactory.connect(admin).deploy()) as PaladinController;
         await controller.deployed();
 
+        loanToken = (await palLoanTokenFactory.connect(admin).deploy(controller.address)) as PalLoanToken;
+        await loanToken.deployed();
+
         interest = (await interestFactory.connect(admin).deploy()) as InterestCalculator;
         await interest.deployed();
 
@@ -70,7 +77,8 @@ describe('PalPool : 1 - constructor and storage tests', () => {
             controller.address, 
             underlying.address,
             interest.address,
-            delegator.address
+            delegator.address,
+            loanToken.address
         )) as PalPool;
         await pool.deployed();
 
@@ -89,10 +97,12 @@ describe('PalPool : 1 - constructor and storage tests', () => {
             const pool_token: string = await pool.palToken()
             const pool_underlying: string = await pool.underlying()
             const pool_controller: string = await pool.controller()
+            const pool_loanToken: string = await pool.palLoanToken()
 
             expect(pool_token).to.be.eq(token.address)
             expect(pool_underlying).to.be.eq(underlying.address)
             expect(pool_controller).to.be.eq(controller.address)
+            expect(pool_loanToken).to.be.eq(loanToken.address)
             
         });
 
@@ -148,18 +158,6 @@ describe('PalPool : 1 - constructor and storage tests', () => {
                 const pool_cash: BigNumber = await pool._underlyingBalance()
 
                 expect(pool_cash).to.be.eq(0)
-                
-            });
-    
-        });
-
-        describe('getPalToken', async () => {
-
-            it(' should return the correct palToken', async () => {
-    
-                const pool_token: string = await pool.getPalToken()
-
-                expect(pool_token).to.be.eq(token.address)
                 
             });
     

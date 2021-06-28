@@ -73,7 +73,8 @@ contract BasicDelegator {
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
         uint _returnAmount = feesAmount.sub(_usedAmount);
-        uint _keepAmount = amount.add(_usedAmount);
+        uint _balance = _underlying.balanceOf(address(this));
+        uint _keepAmount = _balance.sub(_returnAmount);
         if(_returnAmount > 0){
             _underlying.safeTransfer(borrower, _returnAmount);
         }
@@ -92,10 +93,26 @@ contract BasicDelegator {
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
         uint _killerAmount = feesAmount.mul(_killerRatio).div(uint(1e18));
-        uint _balance = amount.add(feesAmount);
+        uint _balance = _underlying.balanceOf(address(this));
         uint _poolAmount = _balance.sub(_killerAmount);
         _underlying.safeTransfer(_killer, _killerAmount);
         _underlying.safeTransfer(motherPool, _poolAmount);
+    }
+
+
+    /**
+    * @notice Change the voring power delegatee
+    * @dev Update the delegatee and delegate him the voting power
+    * @param _delegatee Address to delegate the voting power to
+    * @return bool : Power Delagation success
+    */
+    function changeDelegatee(address _delegatee) external returns(bool){
+        delegatee = _delegatee;
+        
+        //Delegate governance power : Governor Alpha version
+        ICompLike govToken = ICompLike(underlying);
+        govToken.delegate(_delegatee);
+        return true;
     }
 
 }

@@ -18,7 +18,7 @@ contract AddressRegistry is Admin {
 
     address private controller;
 
-    address private interest;
+    address private loanToken;
 
     //underlying -> palToken
     mapping(address => address) private palPools;
@@ -31,8 +31,17 @@ contract AddressRegistry is Admin {
 
 
 
-    constructor(address[] memory _underlyings, address[] memory _pools, address[] memory _tokens) {
+    constructor(
+        address _controller,
+        address _loanToken,
+        address[] memory _underlyings,
+        address[] memory _pools,
+        address[] memory _tokens
+    ) {
         admin = msg.sender;
+
+        controller = _controller;
+        loanToken = _loanToken;
 
         for(uint i = 0; i < _pools.length; i++){
             palPools[_underlyings[i]] = _pools[i];
@@ -51,11 +60,11 @@ contract AddressRegistry is Admin {
     }
 
     /**
-    * @notice Get the Interest Module address
-    * @return address : address of the Interest Module
+    * @notice Get the PalLoanToken contract address
+    * @return address : address of the PalLoanToken contract
     */
-    function getInterestModule() external view returns(address){
-        return interest;
+    function getPalLoanToken() external view returns(address){
+        return loanToken;
     }
 
     /**
@@ -91,14 +100,6 @@ contract AddressRegistry is Admin {
     */
     function _setController(address _newAddress) external adminOnly {
         controller = _newAddress;
-    }
-
-    /**
-    * @notice Update the Interest Module address
-    * @param _newAddress Address of the new Interest Module
-    */
-    function _setInterest(address _newAddress) external adminOnly {
-        interest = _newAddress;
     }
 
     /**

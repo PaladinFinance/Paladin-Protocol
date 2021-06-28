@@ -3,6 +3,7 @@ import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { PalToken } from "../../typechain/PalToken";
 import { PalPool } from "../../typechain/PalPool";
+import { PalLoanToken } from "../../typechain/PalLoanToken";
 import { PalLoan } from "../../typechain/PalLoan";
 import { PaladinController } from "../../typechain/PaladinController";
 import { InterestCalculator } from "../../typechain/InterestCalculator";
@@ -24,15 +25,18 @@ let delegatorFactory: ContractFactory
 let interestFactory: ContractFactory
 let erc20Factory: ContractFactory
 let loanFactory: ContractFactory
+let palLoanTokenFactory: ContractFactory
 
 describe('PalPool : 3 - Borrows tests', () => {
     let admin: SignerWithAddress
     let user1: SignerWithAddress
     let user2: SignerWithAddress
+    let user3: SignerWithAddress
     let fake_loan: SignerWithAddress
 
     let pool: PalPool
     let token: PalToken
+    let loanToken: PalLoanToken
     let controller: PaladinController
     let delegator: BasicDelegator
     let interest: InterestCalculator
@@ -44,6 +48,7 @@ describe('PalPool : 3 - Borrows tests', () => {
     
     before( async () => {
         tokenFactory = await ethers.getContractFactory("PalToken");
+        palLoanTokenFactory = await ethers.getContractFactory("PalLoanToken");
         poolFactory = await ethers.getContractFactory("PalPool");
         controllerFactory = await ethers.getContractFactory("PaladinController");
         delegatorFactory = await ethers.getContractFactory("BasicDelegator");
@@ -54,7 +59,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
 
     beforeEach( async () => {
-        [admin, user1, user2, fake_loan] = await ethers.getSigners();
+        [admin, user1, user2, user3, fake_loan] = await ethers.getSigners();
 
         token = (await tokenFactory.connect(admin).deploy(name, symbol)) as PalToken;
         await token.deployed();
@@ -64,6 +69,9 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         controller = (await controllerFactory.connect(admin).deploy()) as PaladinController;
         await controller.deployed();
+
+        loanToken = (await palLoanTokenFactory.connect(admin).deploy(controller.address)) as PalLoanToken;
+        await loanToken.deployed();
 
         interest = (await interestFactory.connect(admin).deploy()) as InterestCalculator;
         await interest.deployed();
@@ -76,7 +84,8 @@ describe('PalPool : 3 - Borrows tests', () => {
             controller.address, 
             underlying.address,
             interest.address,
-            delegator.address
+            delegator.address,
+            loanToken.address
         )) as PalPool;
         await pool.deployed();
 
@@ -124,12 +133,55 @@ describe('PalPool : 3 - Borrows tests', () => {
                 borrow_amount,
                 pool.address,
                 new_loan_address,
+                0,
                 (await borrow_call).blockNumber
             )
 
             const pool_totalBorrowed = await pool.totalBorrowed()
 
             expect(pool_totalBorrowed).to.be.eq(borrow_amount)
+            
+        });
+
+
+        it(' should mint the palLoanToken (with the correct Event & correct data)', async () => {
+
+            const borrow_call = await pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
+
+            const new_loan_address = (await pool.getLoansPools())[0]
+
+            const new_loan_token_id = 0
+
+            await expect(borrow_call)
+                .to.emit(loanToken, 'NewLoanToken')
+                .withArgs(
+                    pool.address,
+                    user1.address,
+                    new_loan_address,
+                    new_loan_token_id
+                )
+
+            expect(await pool.idOfLoan(new_loan_address)).to.be.eq(new_loan_token_id)
+
+            expect(await loanToken.loanOf(new_loan_token_id)).to.be.eq(new_loan_address)
+            expect(await loanToken.poolOf(new_loan_token_id)).to.be.eq(pool.address)
+            expect(await loanToken.balanceOf(user1.address)).to.be.eq(1)
+            
+        });
+
+
+        it(' should list the correct address as owner', async () => {
+
+            await pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
+
+            const new_loan_address = (await pool.getLoansPools())[0]
+
+            expect(await pool.isLoanOwner(new_loan_address, user1.address)).to.be.true
+
+            await loanToken.connect(user1).transferFrom(user1.address, user2.address, 0)
+
+            expect(await pool.isLoanOwner(new_loan_address, user1.address)).to.be.false
+            expect(await pool.isLoanOwner(new_loan_address, user2.address)).to.be.true
             
         });
 
@@ -177,7 +229,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             expect(new_loan_address).to.be.eq(borrower_loans[0])
 
-            const loan_data = await pool.getBorrowDataStored(new_loan_address)
+            const loan_data = await pool.getBorrowData(new_loan_address)
 
             expect(loan_data._borrower).to.be.eq(user1.address)
             expect(loan_data._delegatee).to.be.eq(user2.address)
@@ -210,7 +262,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             const new_loan_address = (await pool.getLoansPools())[0]
 
-            const loan_data = await pool.getBorrowDataStored(new_loan_address)
+            const loan_data = await pool.getBorrowData(new_loan_address)
 
             expect(loan_data._delegatee).to.be.eq(loan_data._borrower)
             expect(loan_data._delegatee).to.be.eq(user1.address)
@@ -273,6 +325,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
     });
 
+
     describe('expandBorrow', async () => {
 
         const deposit = ethers.utils.parseEther('1000')
@@ -301,6 +354,8 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             const loan_address = (await pool.getLoansPools())[0]
 
+            const loan_id = await pool.idOfLoan(loan_address)
+
             await expect(pool.connect(user1).expandBorrow(loan_address, expand_fees_amount))
             .to.emit(pool, 'ExpandLoan')
             .withArgs(
@@ -309,7 +364,8 @@ describe('PalPool : 3 - Borrows tests', () => {
                 underlying.address,
                 pool.address,
                 fees_amount.add(expand_fees_amount),
-                loan_address
+                loan_address,
+                loan_id
             )
             
         });
@@ -321,7 +377,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await pool.connect(user1).expandBorrow(loan_address, expand_fees_amount)
 
-            const loan_data = await pool.getBorrowDataStored(loan_address)
+            const loan_data = await pool.getBorrowData(loan_address)
 
             expect(loan_data._borrower).to.be.eq(user1.address)
             expect(loan_data._feesAmount).to.be.eq(fees_amount.add(expand_fees_amount))
@@ -433,7 +489,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             const close_tx = await pool.connect(user1).closeBorrow(loan_address)
 
-            const loan_data = await pool.getBorrowDataStored(loan_address)
+            const loan_data = await pool.getBorrowData(loan_address)
 
             await expect(close_tx)
             .to.emit(pool, 'CloseLoan')
@@ -445,12 +501,43 @@ describe('PalPool : 3 - Borrows tests', () => {
                 pool.address,
                 loan_data._feesUsed,
                 loan_address,
+                loan_data._palLoanTokenId,
                 false
             )
 
             expect(loan_data._closed).to.be.true
             expect(loan_data._feesUsed).not.to.be.eq(0)
             expect(loan_data._closeBlock).to.be.eq(close_tx.blockNumber)
+            
+        });
+
+
+        it(' should burn the palLoanToken (with the correct Event)', async () => {
+
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+
+            const loan_address = (await pool.getLoansPools())[0]
+            const loan_token_id = await pool.idOfLoan(loan_address)
+            const minBorrowLength = await pool.minBorrowLength()
+
+            await mineBlocks(minBorrowLength.toNumber() + 1)
+
+            const close_tx = await pool.connect(user1).closeBorrow(loan_address)
+
+            await expect(close_tx)
+                .to.emit(loanToken, 'BurnLoanToken')
+                .withArgs(
+                    pool.address,
+                    user1.address,
+                    loan_address,
+                    loan_token_id
+                )
+
+            expect(await pool.isLoanOwner(loan_address, user1.address)).to.be.true
+
+            expect(await loanToken.isBurned(loan_token_id)).to.be.true
+
+            expect(await loanToken.allLoansOfForPool(user1.address, pool.address)).to.contain(loan_address)
             
         });
 
@@ -468,7 +555,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             
             await pool.connect(user1).closeBorrow(loan_address)
 
-            const loan_data = await pool.getBorrowDataStored(loan_address)
+            const loan_data = await pool.getBorrowData(loan_address)
 
             const palLoan_balance = await underlying.balanceOf(loan_address)
             const new_borrower_balance = await underlying.balanceOf(user1.address)
@@ -489,7 +576,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await pool.connect(user1).closeBorrow(loan_address)
 
-            const loan_data = await pool.getBorrowDataStored(loan_address)
+            const loan_data = await pool.getBorrowData(loan_address)
 
             const delta: number = 1e11
 
@@ -589,7 +676,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             const kill_tx = await pool.connect(user2).killBorrow(loan_address)
 
-            const loan_data = await pool.getBorrowDataStored(loan_address)
+            const loan_data = await pool.getBorrowData(loan_address)
 
             await expect(kill_tx)
             .to.emit(pool, 'CloseLoan')
@@ -601,6 +688,7 @@ describe('PalPool : 3 - Borrows tests', () => {
                 pool.address,
                 loan_data._feesUsed,
                 loan_address,
+                loan_data._palLoanTokenId,
                 true
             )
 
@@ -616,6 +704,36 @@ describe('PalPool : 3 - Borrows tests', () => {
         });
 
 
+        it(' should burn the palLoanToken (with the correct Event)', async () => {
+
+            const loan_address = (await pool.getLoansPools())[0]
+            const loan_token_id = await pool.idOfLoan(loan_address)
+
+            await mineBlocks(170)
+
+            await pool._updateInterest()
+            expect(await pool.isKillable(loan_address)).to.be.true
+
+            const kill_tx = await pool.connect(user2).killBorrow(loan_address)
+
+            await expect(kill_tx)
+                .to.emit(loanToken, 'BurnLoanToken')
+                .withArgs(
+                    pool.address,
+                    user1.address,
+                    loan_address,
+                    loan_token_id
+                )
+
+            expect(await pool.isLoanOwner(loan_address, user1.address)).to.be.true
+
+            expect(await loanToken.isBurned(loan_token_id)).to.be.true
+
+            expect(await loanToken.allLoansOfForPool(user1.address, pool.address)).to.contain(loan_address)
+            
+        });
+
+
         it(' should return the funds to the pool', async () => {
 
             const loan_address = (await pool.getLoansPools())[0]
@@ -626,7 +744,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             pool.connect(user2).killBorrow(loan_address)
 
-            const loan_data = await pool.getBorrowDataStored(loan_address)
+            const loan_data = await pool.getBorrowData(loan_address)
 
             const newBalance = await underlying.balanceOf(pool.address)
 
@@ -647,7 +765,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await pool.connect(user2).killBorrow(loan_address)
 
-            const loan_data = await pool.getBorrowDataStored(loan_address)
+            const loan_data = await pool.getBorrowData(loan_address)
 
             expect(loan_data._killed).to.be.true;
             
@@ -685,6 +803,88 @@ describe('PalPool : 3 - Borrows tests', () => {
             await expect(
                 pool.connect(user2).killBorrow(loan_address)
             ).to.be.revertedWith('14')
+            
+        });
+
+    });
+
+    describe('changeBorrowDelegatee', async () => {
+
+        const deposit = ethers.utils.parseEther('1000')
+
+        const borrow_amount = ethers.utils.parseEther('100')
+
+        const fees_amount = ethers.utils.parseEther('5')
+
+        beforeEach(async () => {
+            await underlying.connect(admin).transfer(user2.address, deposit)
+            await underlying.connect(admin).transfer(user1.address, fees_amount)
+
+            await underlying.connect(user1).approve(pool.address, fees_amount)
+            await underlying.connect(user2).approve(pool.address, deposit)
+
+            await pool.connect(user2).deposit(deposit)
+
+            await pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
+        });
+
+
+        it(' should change correctly (with correct Event)', async () => {
+
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            const loan_id = await pool.idOfLoan(loan_address)
+
+            await expect(pool.connect(user1).changeBorrowDelegatee(loan_address, user3.address))
+            .to.emit(pool, 'ChangeLoanDelegatee')
+            .withArgs(
+                user1.address,
+                user3.address,
+                underlying.address,
+                pool.address,
+                loan_address,
+                loan_id
+            )
+            
+        });
+
+
+        it(' should change deelgatee in the PalLoan', async () => {
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            await pool.connect(user1).changeBorrowDelegatee(loan_address, user3.address)
+
+            const loan = loanFactory.attach(loan_address)
+
+            const loan_delegatee: string = await loan.delegatee()
+
+            expect(loan_delegatee).to.be.eq(user3.address)
+            
+        });
+
+
+        it(' should delegate the votes to the new Delegatee', async () => {
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            await pool.connect(user1).changeBorrowDelegatee(loan_address, user3.address)
+
+            const delegated_votes = await underlying.getCurrentVotes(user3.address)
+
+            expect(delegated_votes).to.be.eq(borrow_amount.add(fees_amount))
+            
+        });
+
+
+        it(' should fail if delegatee address is address 0x0', async () => {
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            await expect(
+                pool.connect(user1).changeBorrowDelegatee(loan_address, ethers.constants.AddressZero)
+            ).to.be.revertedWith('22')
             
         });
 

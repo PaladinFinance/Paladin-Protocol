@@ -35,7 +35,7 @@ contract PaladinController is PaladinControllerInterface {
     }
 
     //Check if an address is a valid palPool
-    function _isPalPool(address _pool) internal view returns(bool){
+    function isPalPool(address _pool) public view override returns(bool){
         //Check if the given address is in the palPools list
         for(uint i = 0; i < palPools.length; i++){
             if(palPools[i] == _pool){
@@ -87,7 +87,7 @@ contract PaladinController is PaladinControllerInterface {
     function addNewPool(address _palToken, address _palPool) external override returns(bool){
         //Add a new address to the palToken & palPool list
         require(msg.sender == admin, "Admin function");
-        require(!_isPalPool(_palPool), "Already added");
+        require(!isPalPool(_palPool), "Already added");
         palTokens.push(_palToken);
         palPools.push(_palPool);
         return true;
@@ -130,7 +130,7 @@ contract PaladinController is PaladinControllerInterface {
     * @return bool : Verification Success
     */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(_isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), "Call not allowed");
 
         palPool;
         dest;
@@ -149,7 +149,7 @@ contract PaladinController is PaladinControllerInterface {
     * @return bool : Verification Success
     */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(_isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), "Call not allowed");
         
         palPool;
         dest;
@@ -170,13 +170,14 @@ contract PaladinController is PaladinControllerInterface {
     * @return bool : Verification Success
     */
     function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
-        require(_isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), "Call not allowed");
         //Check if the borrow was successful
         PalPoolInterface _palPool = PalPoolInterface(palPool);
         (
             address _borrower,
             address _delegatee,
             address _loan,
+            uint _tokenId,
             uint _amount,
             address _underlying,
             uint _feesAmount,
@@ -184,10 +185,11 @@ contract PaladinController is PaladinControllerInterface {
             ,
             ,
             bool _closed,
-        ) = _palPool.getBorrowDataStored(loanPool);
+        ) = _palPool.getBorrowData(loanPool);
 
         _underlying;
         _loan;
+        _tokenId;
 
         return(borrower == _borrower && delegatee == _delegatee && amount == _amount && feesAmount == _feesAmount && !_closed);
     }
@@ -201,7 +203,7 @@ contract PaladinController is PaladinControllerInterface {
     * @return bool : Verification Success
     */
     function closeBorrowVerify(address palPool, address borrower, address loanPool) external view override returns(bool){
-        require(_isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), "Call not allowed");
         
         palPool;
         borrower;
@@ -220,7 +222,7 @@ contract PaladinController is PaladinControllerInterface {
     * @return bool : Verification Success
     */
     function killBorrowVerify(address palPool, address killer, address loanPool) external view override returns(bool){
-        require(_isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), "Call not allowed");
         
         palPool;
         killer;
@@ -248,6 +250,7 @@ contract PaladinController is PaladinControllerInterface {
 
 
     function setPoolsNewController(address _newController) external override returns(bool){
+        require(msg.sender == admin, "Admin function");
         for(uint i = 0; i < palPools.length; i++){
             PalPoolInterface _palPool = PalPoolInterface(palPools[i]);
             _palPool.setNewController(_newController);
@@ -257,8 +260,10 @@ contract PaladinController is PaladinControllerInterface {
 
 
     function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override returns(bool){
+        require(msg.sender == admin, "Admin function");
         PalPoolInterface _palPool = PalPoolInterface(_pool);
         _palPool.removeReserve(_amount, _recipient);
+        return true;
     }
 
 

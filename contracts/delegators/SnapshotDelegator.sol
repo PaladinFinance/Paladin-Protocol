@@ -47,7 +47,7 @@ contract SnapshotDelegator{
         
         //Delegate governance power : Snapshot version
         //This is the Delegate Registry for Mainnet & Kovan
-        DelegateRegistry _registry = DelegateRegistry(0x5570fF7334c5B86c10333dec3985197eeB67555F);
+        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
         _registry.setDelegate("", _delegatee);
 
         return true;
@@ -75,7 +75,8 @@ contract SnapshotDelegator{
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
         uint _returnAmount = feesAmount.sub(_usedAmount);
-        uint _keepAmount = amount.add(_usedAmount);
+        uint _balance = _underlying.balanceOf(address(this));
+        uint _keepAmount = _balance.sub(_returnAmount);
         if(_returnAmount > 0){
             _underlying.safeTransfer(borrower, _returnAmount);
         }
@@ -94,9 +95,26 @@ contract SnapshotDelegator{
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
         uint _killerAmount = feesAmount.mul(_killerRatio).div(uint(1e18));
-        uint _balance = amount.add(feesAmount);
+        uint _balance = _underlying.balanceOf(address(this));
         uint _poolAmount = _balance.sub(_killerAmount);
         _underlying.safeTransfer(_killer, _killerAmount);
         _underlying.safeTransfer(motherPool, _poolAmount);
+    }
+
+
+    /**
+    * @notice Change the voring power delegatee
+    * @dev Update the delegatee and delegate him the voting power
+    * @param _delegatee Address to delegate the voting power to
+    * @return bool : Power Delagation success
+    */
+    function changeDelegatee(address _delegatee) external returns(bool){
+        delegatee = _delegatee;
+        
+        //Delegate governance power : Snapshot version
+        //This is the Delegate Registry for Mainnet & Kovan
+        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
+        _registry.setDelegate("", _delegatee);
+        return true;
     }
 }

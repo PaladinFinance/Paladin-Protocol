@@ -2,6 +2,7 @@ import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { PalToken } from "../../typechain/PalToken";
+import { PalLoanToken } from "../../typechain/PalLoanToken";
 import { PalPool } from "../../typechain/PalPool";
 import { PaladinController } from "../../typechain/PaladinController";
 import { InterestCalculator } from "../../typechain/InterestCalculator";
@@ -21,6 +22,7 @@ let controllerFactory: ContractFactory
 let delegatorFactory: ContractFactory
 let interestFactory: ContractFactory
 let erc20Factory: ContractFactory
+let palLoanTokenFactory: ContractFactory
 
 describe('PalPool : 4 - Admin functions tests', () => {
     let admin: SignerWithAddress
@@ -29,6 +31,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
     let pool: PalPool
     let token: PalToken
+    let loanToken: PalLoanToken
     let controller: PaladinController
     let delegator: BasicDelegator
     let interest: InterestCalculator
@@ -40,6 +43,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
     
     before( async () => {
         tokenFactory = await ethers.getContractFactory("PalToken");
+        palLoanTokenFactory = await ethers.getContractFactory("PalLoanToken");
         poolFactory = await ethers.getContractFactory("PalPool");
         controllerFactory = await ethers.getContractFactory("PaladinController");
         delegatorFactory = await ethers.getContractFactory("BasicDelegator");
@@ -60,6 +64,9 @@ describe('PalPool : 4 - Admin functions tests', () => {
         controller = (await controllerFactory.connect(admin).deploy()) as PaladinController;
         await controller.deployed();
 
+        loanToken = (await palLoanTokenFactory.connect(admin).deploy(controller.address)) as PalLoanToken;
+        await loanToken.deployed();
+
         interest = (await interestFactory.connect(admin).deploy()) as InterestCalculator;
         await interest.deployed();
 
@@ -71,7 +78,8 @@ describe('PalPool : 4 - Admin functions tests', () => {
             controller.address, 
             underlying.address,
             interest.address,
-            delegator.address
+            delegator.address,
+            loanToken.address
         )) as PalPool;
         await pool.deployed();
 

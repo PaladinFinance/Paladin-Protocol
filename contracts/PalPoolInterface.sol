@@ -29,6 +29,7 @@ interface PalPoolInterface {
         uint amount,
         address palPool,
         address loanAddress,
+        uint256 palLoanTokenId,
         uint startBlock);
     /** @notice Event when the fee amount in the loan is updated */
     event ExpandLoan(
@@ -37,7 +38,17 @@ interface PalPoolInterface {
         address underlying,
         address palPool,
         uint newFeesAmount,
-        address loanAddress
+        address loanAddress,
+        uint256 palLoanTokenId
+    );
+    /** @notice Event when the delegatee of the loan is updated */
+    event ChangeLoanDelegatee(
+        address borrower,
+        address newDelegatee,
+        address underlying,
+        address palPool,
+        address loanAddress,
+        uint256 palLoanTokenId
     );
     /** @notice Event when a loan is ended */
     event CloseLoan(
@@ -48,6 +59,7 @@ interface PalPoolInterface {
         address palPool,
         uint usedFees,
         address loanAddress,
+        uint256 palLoanTokenId,
         bool wasKilled
     );
 
@@ -59,34 +71,26 @@ interface PalPoolInterface {
     //Functions
     function deposit(uint _amount) external returns(uint);
     function withdraw(uint _amount) external returns(uint);
+    
     function borrow(address _delegatee, uint _amount, uint _feeAmount) external returns(uint);
     function expandBorrow(address _loanPool, uint _feeAmount) external returns(uint);
     function closeBorrow(address _loanPool) external;
     function killBorrow(address _loanPool) external;
+    function changeBorrowDelegatee(address _loanPool, address _newDelegatee) external;
 
-    function getPalToken() external view returns(address);
     function balanceOf(address _account) external view returns(uint);
     function underlyingBalanceOf(address _account) external view returns(uint);
 
+    function isLoanOwner(address _loanAddress, address _user) external view returns(bool);
+    function idOfLoan(address _loanAddress) external view returns(uint256);
+
     function getLoansPools() external view returns(address [] memory);
     function getLoansByBorrower(address _borrower) external view returns(address [] memory);
-    function getBorrowDataStored(address _loanAddress) external view returns(
+    function getBorrowData(address _loanAddress) external view returns(
         address _borrower,
         address _delegatee,
         address _loanPool,
-        uint _amount,
-        address _underlying,
-        uint _feesAmount,
-        uint _feesUsed,
-        uint _startBlock,
-        uint _closeBlock,
-        bool _closed,
-        bool _killed
-    );
-    function getBorrowData(address _loanAddress) external returns(
-        address _borrower,
-        address _delegatee,
-        address _loanPool,
+        uint256 _palLoanTokenId,
         uint _amount,
         address _underlying,
         uint _feesAmount,
@@ -99,7 +103,6 @@ interface PalPoolInterface {
 
     function borrowRatePerBlock() external view returns (uint);
     function supplyRatePerBlock() external view returns (uint);
-    function totalBorrowsCurrent() external returns (uint);
 
     function exchangeRateCurrent() external returns (uint);
     function exchangeRateStored() external view returns (uint);

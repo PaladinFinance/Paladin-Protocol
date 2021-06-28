@@ -104,4 +104,17 @@ contract PalLoan is PalLoanInterface {
         //Destruct the contract (to get gas refund on the transaction)
         selfdestruct(motherPool);
     }
+
+
+    /**
+    * @notice Change the voring power delegatee
+    * @dev Update the delegatee and delegate him the voting power
+    * @param _delegatee Address to delegate the voting power to
+    * @return bool : Power Delagation success
+    */
+    function changeDelegatee(address _delegatee) external override motherPoolOnly returns(bool){
+        (bool success, ) = delegator.delegatecall(msg.data);
+        require(success);
+        return success;
+    }
 }

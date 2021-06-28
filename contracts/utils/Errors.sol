@@ -12,7 +12,9 @@ pragma solidity ^0.7.6;
 library Errors {
     // Admin error
     string public constant CALLER_NOT_ADMIN = '1'; // 'The caller must be the admin'
-    string public constant CALLER_NOT_CONTROLLER = '29'; // 'The caller must be the admin'
+    string public constant CALLER_NOT_CONTROLLER = '29'; // 'The caller must be the admin or the controller'
+    string public constant CALLER_NOT_ALLOWED_POOL = '30';  // 'The caller must be a palPool listed in tle controller'
+    string public constant CALLER_NOT_MINTER = '31';
 
     // ERC20 type errors
     string public constant FAIL_TRANSFER = '2';
@@ -42,5 +44,7 @@ library Errors {
     string public constant FAIL_KILL_BORROW = '26';
     string public constant ZERO_ADDRESS = '22';
     string public constant INVALID_PARAMETERS = '28'; 
+    string public constant FAIL_LOAN_DELEGATEE_CHANGE = '32';
+    string public constant FAIL_LOAN_TOKEN_BURN = '33';
 
 }

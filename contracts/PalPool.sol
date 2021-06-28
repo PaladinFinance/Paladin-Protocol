@@ -18,6 +18,7 @@ import "./PalLoanInterface.sol";
 import "./PalLoan.sol";
 import "./PalToken.sol";
 import "./PaladinControllerInterface.sol";
+import "./PalLoanTokenInterface.sol";
 import "./InterestInterface.sol";
 import "./utils/IERC20.sol";
 import "./utils/Admin.sol";
@@ -57,7 +58,8 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         address _controller, 
         address _underlying,
         address _interestModule,
-        address _delegator
+        address _delegator,
+        address _palLoanToken
     ){
         //Set admin
         admin = msg.sender;
@@ -70,6 +72,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         interestModule = InterestInterface(_interestModule);
         borrowIndex = 1e36;
         delegator = _delegator;
+        palLoanToken = PalLoanTokenInterface(_palLoanToken);
 
         //Set base values
         totalBorrowed = 0;
@@ -92,7 +95,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @param _amount Amount of underlying to deposit
     * @return bool : amount of minted palTokens
     */
-    function deposit(uint _amount) external virtual override preventReentry returns(uint){
+    function deposit(uint _amount) public virtual override preventReentry returns(uint){
         require(_updateInterest());
 
         //Retrieve the current exchange rate palToken:underlying
@@ -125,7 +128,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @param _amount Amount of palToken to return
     * @return uint : amount of underlying returned
     */
-    function withdraw(uint _amount) external virtual override preventReentry returns(uint){
+    function withdraw(uint _amount) public virtual override preventReentry returns(uint){
         require(_updateInterest());
         require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
 
@@ -161,7 +164,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @param _feeAmount Amount of fee to pay to start the loan
     * @return uint : amount of paid fees
     */
-    function borrow(address _delegatee, uint _amount, uint _feeAmount) external virtual override preventReentry returns(uint){
+    function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override preventReentry returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
         require(_amount < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
         require(_delegatee != address(0), Errors.ZERO_ADDRESS);
@@ -179,9 +182,26 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             delegator
         );
 
-        //Create a new Borrow struct for this new Loan
-        Borrow memory _newBorrow = Borrow(
-            _borrower,
+        //Send the borrowed amount of underlying tokens to the Loan
+        underlying.safeTransfer(address(_newLoan), _amount);
+
+        //And transfer the fees from the Borrower to the Loan
+        underlying.safeTransferFrom(_borrower, address(_newLoan), _feeAmount);
+
+        //Start the Loan (and delegate voting power)
+        require(_newLoan.initiate(_delegatee, _amount, _feeAmount), Errors.FAIL_LOAN_INITIATE);
+
+        //Update Total Borrowed, and add the new Loan to mappings
+        totalBorrowed = totalBorrowed.add(_amount);
+
+        loans.push(address(_newLoan));
+
+        //Mint the palLoanToken linked to this new Loan
+        uint256 _newTokenId = palLoanToken.mint(_borrower, address(this), address(_newLoan));
+
+        //New Borrow struct for this Loan
+        loanToBorrow[address(_newLoan)] = Borrow(
+            _newTokenId,
             _delegatee,
             address(_newLoan),
             _amount,
@@ -195,27 +215,23 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             false
         );
 
-
-        //Send the borrowed amount of underlying tokens to the Loan
-        underlying.safeTransfer(address(_newLoan), _amount);
-
-        //And transfer the fees from the Borrower to the Loan
-        underlying.safeTransferFrom(_borrower, address(_newLoan), _feeAmount);
-
-        //Start the Loan (and delegate voting power)
-        require(_newLoan.initiate(_delegatee, _amount, _feeAmount), Errors.FAIL_LOAN_INITIATE);
-
-        //Update Total Borrowed, and add the new Loan to mappings
-        totalBorrowed = totalBorrowed.add(_amount);
-        borrows.push(address(_newLoan));
-        loanToBorrow[address(_newLoan)] = _newBorrow;
-        borrowsByUser[_borrower].push(address(_newLoan));
-
         //Check the borrow succeeded
-        require(controller.borrowVerify(address(this), _borrower, _delegatee, _amount, _feeAmount, address(_newLoan)), Errors.FAIL_BORROW);
+        require(
+            controller.borrowVerify(address(this), _borrower, _delegatee, _amount, _feeAmount, address(_newLoan)), 
+            Errors.FAIL_BORROW
+        );
 
         //Emit the NewLoan Event
-        emit NewLoan(_borrower, _delegatee, address(underlying), _amount, address(this), address(_newLoan), block.number);
+        emit NewLoan(
+            _borrower,
+            _delegatee,
+            address(underlying),
+            _amount,
+            address(this),
+            address(_newLoan),
+            _newTokenId,
+            block.number
+        );
 
         //Return the borrowed amount
         return _amount;
@@ -227,29 +243,37 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @param _feeAmount New amount of fees to pay
     * @return bool : Amount of fees paid
     */
-    function expandBorrow(address _loan, uint _feeAmount) external virtual override preventReentry returns(uint){
+    function expandBorrow(address _loan, uint _feeAmount) public virtual override preventReentry returns(uint){
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
-        Borrow memory _borrow = loanToBorrow[_loan];
+        Borrow storage _borrow = loanToBorrow[_loan];
         require(!_borrow.closed, Errors.LOAN_CLOSED);
-        require(_borrow.borrower == msg.sender, Errors.NOT_LOAN_OWNER);
+        require(isLoanOwner(_loan, msg.sender), Errors.NOT_LOAN_OWNER);
         require(_feeAmount > 0);
         require(_updateInterest());
         
-        //Load the Loan Pool contract
+        //Load the Loan Pool contract & get Loan owner
         PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
+
+        address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
         //Transfer the new fees to the Loan
         //If success, update the Borrow data, and call the expand fucntion of the Loan
-        underlying.safeTransferFrom(_borrow.borrower, _borrow.loan, _feeAmount);
+        underlying.safeTransferFrom(_loanOwner, _borrow.loan, _feeAmount);
 
         require(_palLoan.expand(_feeAmount), Errors.FAIL_LOAN_EXPAND);
 
         _borrow.feesAmount = _borrow.feesAmount.add(_feeAmount);
 
-        loanToBorrow[_loan]= _borrow;
-
-        emit ExpandLoan(_borrow.borrower, _borrow.delegatee, address(underlying), address(this), _borrow.feesAmount, _borrow.loan);
+        emit ExpandLoan(
+            _loanOwner,
+            _borrow.delegatee,
+            address(underlying),
+            address(this),
+            _borrow.feesAmount,
+            _borrow.loan,
+            _borrow.tokenId
+        );
 
         return _feeAmount;
     }
@@ -260,13 +284,16 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @dev Close a Loan, and return the non-used fees to the Borrower
     * @param _loan Address of the Loan
     */
-    function closeBorrow(address _loan) external virtual override preventReentry {
+    function closeBorrow(address _loan) public virtual override preventReentry {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
-        Borrow memory _borrow = loanToBorrow[_loan];
+        Borrow storage _borrow = loanToBorrow[_loan];
         require(!_borrow.closed, Errors.LOAN_CLOSED);
-        require(_borrow.borrower == msg.sender, Errors.NOT_LOAN_OWNER);
+        require(isLoanOwner(_loan, msg.sender), Errors.NOT_LOAN_OWNER);
         require(_updateInterest());
+
+        //Get Loan owner from the ERC721 contract
+        address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
         //Load the Loan contract
         PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
@@ -294,6 +321,9 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Close and destroy the loan
         _palLoan.closeLoan(_totalFees);
 
+        //Burn the palLoanToken for this Loan
+        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
+
         //Set the Borrow as closed
         _borrow.closed = true;
         _borrow.feesUsed = _totalFees;
@@ -304,12 +334,20 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         uint _realPenaltyFees = _totalFees.sub(_feesUsed);
         totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
 
-        loanToBorrow[_loan]= _borrow;
-
-        require(controller.closeBorrowVerify(address(this), _borrow.borrower, _borrow.loan), Errors.FAIL_CLOSE_BORROW);
+        require(controller.closeBorrowVerify(address(this), _loanOwner, _borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(_borrow.borrower, _borrow.delegatee, address(underlying), _borrow.amount, address(this), _totalFees, _loan, false);
+        emit CloseLoan(
+            _loanOwner,
+            _borrow.delegatee,
+            address(underlying),
+            _borrow.amount,
+            address(this),
+            _totalFees,
+            _loan,
+            _borrow.tokenId,
+            false
+        );
     }
 
     /**
@@ -317,14 +355,17 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @dev Kill a non-healthy Loan to collect rewards
     * @param _loan Address of the Loan
     */
-    function killBorrow(address _loan) external virtual override preventReentry {
+    function killBorrow(address _loan) public virtual override preventReentry {
         address killer = msg.sender;
         //Fetch the corresponding Borrow
         //And check that the killer is not the Borrower, and the Loan is still active
-        Borrow memory _borrow = loanToBorrow[_loan];
+        Borrow storage _borrow = loanToBorrow[_loan];
         require(!_borrow.closed, Errors.LOAN_CLOSED);
-        require(_borrow.borrower != killer, Errors.LOAN_OWNER);
+        require(!isLoanOwner(_loan, killer), Errors.LOAN_OWNER);
         require(_updateInterest());
+
+        //Get the owner of the Loan through the ERC721 contract
+        address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
         //Calculate the amount of fee used, and check if the Loan is killable
         uint _feesUsed = (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount);
@@ -337,6 +378,9 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Kill the Loan
         _palLoan.killLoan(killer, killerRatio);
 
+        //Burn the palLoanToken for this Loan
+        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
+
         //Close the Loan, and update storage variables
         _borrow.closed = true;
         _borrow.killed = true;
@@ -347,21 +391,58 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
         totalReserve = totalReserve.sub(_killerFees);
 
-        loanToBorrow[_loan]= _borrow;
-
         require(controller.killBorrowVerify(address(this), killer, _borrow.loan), Errors.FAIL_KILL_BORROW);
 
         //Emit the CloseLoan Event
-        emit CloseLoan(_borrow.borrower, _borrow.delegatee, address(underlying), _borrow.amount, address(this), _borrow.feesAmount, _loan, true);
+        emit CloseLoan(
+            _loanOwner,
+            _borrow.delegatee,
+            address(underlying),
+            _borrow.amount,
+            address(this),
+            _borrow.feesAmount,
+            _loan,
+            _borrow.tokenId,
+            true
+        );
     }
 
 
+
     /**
-    * @notice Get the PalToken contract for this Pool
-    * @return address : Adress for the PalToken
+    * @notice Change the delegatee of a Loan, and delegate him the voting power
+    * @dev Change the delegatee in the Borrow struct and in the palLoan, then change the voting power delegation recipient
+    * @param _loan Address of the Loan
+    * @param _newDelegatee Address of the new voting power recipient
     */
-    function getPalToken() external view override returns(address){
-        return address(palToken);
+    function changeBorrowDelegatee(address _loan, address _newDelegatee) public virtual override preventReentry {
+        //Fetch the corresponding Borrow
+        //And check that the caller is the Borrower, and the Loan is still active
+        Borrow storage _borrow = loanToBorrow[_loan];
+        require(!_borrow.closed, Errors.LOAN_CLOSED);
+        require(_newDelegatee != address(0), Errors.ZERO_ADDRESS);
+        require(isLoanOwner(_loan, msg.sender), Errors.NOT_LOAN_OWNER);
+        require(_updateInterest());
+
+        //Load the Loan Pool contract
+        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
+
+        //Call the delegation logic in the palLoan to change the votong power recipient
+        require(_palLoan.changeDelegatee(_newDelegatee), Errors.FAIL_LOAN_DELEGATEE_CHANGE);
+
+        //Update storage data
+        _borrow.delegatee = _newDelegatee;
+
+        //Emit the Event
+        emit ChangeLoanDelegatee(
+            palLoanToken.ownerOf(_borrow.tokenId),
+            _newDelegatee,
+            address(underlying),
+            address(this),
+            _borrow.loan,
+            _borrow.tokenId
+        );
+
     }
 
 
@@ -391,13 +472,36 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         return _num.div(mantissaScale);
     }
 
+
+    /**
+    * @notice Return true is the given address is the owner of the palLoanToken for the given palLoan
+    * @param _loanAddress Address of the Loan
+    * @param _user User address
+    * @return bool : true if owner
+    */
+    function isLoanOwner(address _loanAddress, address _user) public view override returns(bool){
+        return palLoanToken.allOwnerOf(idOfLoan(_loanAddress)) == _user;
+    }
+
+
+    /**
+    * @notice Return the token Id of the palLoanToken linked to this palLoan
+    * @param _loanAddress Address of the Loan
+    * @return uint256 : palLoanToken token Id
+    */
+    function idOfLoan(address _loanAddress) public view override returns(uint256){
+        return loanToBorrow[_loanAddress].tokenId;
+    }
+
+
+
     /**
     * @notice Return the list of all Loans for this Pool (closed and active)
     * @return address[] : list of Loans
     */
     function getLoansPools() external view override returns(address [] memory){
         //Return the addresses of all loans (old ones and active ones)
-        return borrows;
+        return loans;
     }
     
     /**
@@ -406,61 +510,21 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @return address : list of Loans
     */
     function getLoansByBorrower(address _borrower) external view override returns(address [] memory){
-        return borrowsByUser[_borrower];
+        return palLoanToken.loansOfForPool(_borrower, address(this));
     }
 
+    
     /**
     * @notice Return the stored Borrow data for a given Loan
-    * @param _loanAddress Address of the palLoan
-    * Composants of a Borrow struct
-    */
-    function getBorrowDataStored(address _loanAddress) external view override returns(
-        address _borrower,
-        address _delegatee,
-        address _loan,
-        uint _amount,
-        address _underlying,
-        uint _feesAmount,
-        uint _feesUsed,
-        uint _startBlock,
-        uint _closeBlock,
-        bool _closed,
-        bool _killed
-    ){
-        return _getBorrowData(_loanAddress);
-    }
-
-    /**
-    * @notice Update the Interests & Return the Borrow data for a given Loan
-    * @param _loanAddress Address of the palLoan
-    * Composants of a Borrow struct
-    */
-    function getBorrowData(address _loanAddress) external override returns(
-        address _borrower,
-        address _delegatee,
-        address _loan,
-        uint _amount,
-        address _underlying,
-        uint _feesAmount,
-        uint _feesUsed,
-        uint _startBlock,
-        uint _closeBlock,
-        bool _closed,
-        bool _killed
-    ){
-        _updateInterest();
-        return _getBorrowData(_loanAddress);
-    }
-
-    /**
     * @dev Return the Borrow data for a given Loan
     * @param _loanAddress Address of the palLoan
     * Composants of a Borrow struct
     */
-    function _getBorrowData(address _loanAddress) internal view returns(
+    function getBorrowData(address _loanAddress) external view override returns(
         address _borrower,
         address _delegatee,
         address _loan,
+        uint256 _palLoanTokenId,
         uint _amount,
         address _underlying,
         uint _feesAmount,
@@ -473,9 +537,11 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         //Return the data inside a Borrow struct
         Borrow memory _borrow = loanToBorrow[_loanAddress];
         return (
-            _borrow.borrower,
+            //Get the Loan owner through the ERC721 contract
+            palLoanToken.allOwnerOf(_borrow.tokenId),
             _borrow.delegatee,
             _borrow.loan,
+            _borrow.tokenId,
             _borrow.amount,
             _borrow.underlying,
             _borrow.feesAmount,
@@ -506,15 +572,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     function supplyRatePerBlock() external view override returns (uint){
         return interestModule.getSupplyRate(_underlyingBalance(), totalBorrowed, totalReserve, reserveFactor);
     }
-    
-    /**
-    * @notice Return the total amount of funds borrowed
-    * @return uint : Total amount of token borrowed (scale 1e18)
-    */
-    function totalBorrowsCurrent() external override preventReentry returns (uint){
-        _updateInterest();
-        return totalBorrowed;
-    }
+
     
     /**
     * @dev Calculates the current exchange rate

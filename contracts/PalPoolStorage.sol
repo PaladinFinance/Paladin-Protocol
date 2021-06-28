@@ -10,6 +10,7 @@ pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
 import "./PaladinControllerInterface.sol";
+import "./PalLoanTokenInterface.sol";
 import "./InterestInterface.sol";
 import "./PalPoolInterface.sol";
 import "./PalToken.sol";
@@ -21,8 +22,8 @@ contract PalPoolStorage {
 
     /** @notice Struct of a Borrow */
     struct Borrow {
-        //address of the borrower
-        address borrower;
+        //id of the palLoanToken
+        uint256 tokenId;
         //address of the delegatee
         address delegatee;
         //address of the Loan Pool contract holding the loan
@@ -48,6 +49,9 @@ contract PalPoolStorage {
     }
 
     //palPool variables & Mappings
+
+    /** @notice ERC721 palLoanToken */
+    PalLoanTokenInterface public palLoanToken;
 
     /** @notice Underlying ERC20 token of this Pool */
     IERC20 public underlying;
@@ -84,12 +88,10 @@ contract PalPoolStorage {
     /** @dev Scale used to represent decimal values */
     uint constant internal mantissaScale = 1e18;
 
-    /** @dev Mapping of all borrow contract address for each user */
-    mapping (address => address[]) internal borrowsByUser;
     /** @dev Mapping of Loan Pool contract address to Borrow struct */
     mapping (address => Borrow) internal loanToBorrow;
-    /** @dev List of all borrows (current & closed) */
-    address[] internal borrows;
+    /** @dev List of all loans (current & closed) */
+    address[] internal loans;
 
 
     //Modules

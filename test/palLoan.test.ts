@@ -20,6 +20,7 @@ describe('PalLoan contract tests', () => {
     let admin: SignerWithAddress
     let borrower: SignerWithAddress
     let delegatee: SignerWithAddress
+    let newDelegatee: SignerWithAddress
     let killer: SignerWithAddress
 
     let loan: PalLoan
@@ -37,7 +38,7 @@ describe('PalLoan contract tests', () => {
 
 
     beforeEach( async () => {
-        [pool, admin, borrower, delegatee, killer] = await ethers.getSigners();
+        [pool, admin, borrower, delegatee, newDelegatee, killer] = await ethers.getSigners();
 
         delegator = (await delegatorFactory.connect(admin).deploy()) as BasicDelegator;
         await delegator.deployed();
@@ -69,11 +70,9 @@ describe('PalLoan contract tests', () => {
         let borrowAmount = ethers.utils.parseEther('100')
         let feesAmount = ethers.utils.parseEther('10')
 
-        beforeEach(async () => {
-            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
-        });
-
         it(' should delegate the right parameters', async () => {
+
+            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
             const loan_borrowAmount: BigNumber = await loan.amount()
             const loan_feesAmount: BigNumber = await loan.feesAmount()
@@ -89,6 +88,8 @@ describe('PalLoan contract tests', () => {
 
             await comp.connect(admin).transfer(loan.address, borrowAmount)
             await comp.connect(admin).transfer(loan.address, feesAmount)
+
+            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
             const votes: BigNumber = await comp.getCurrentVotes(delegatee.address)
 
@@ -191,6 +192,65 @@ describe('PalLoan contract tests', () => {
             expect(newBalance.sub(oldBalance)).to.be.eq(borrowAmount.add(feesAmount).sub(killerAmount))
         });
     
+    });
+
+
+    describe('changeDelegatee', async () => {
+
+        let borrowAmount = ethers.utils.parseEther('100')
+        let feesAmount = ethers.utils.parseEther('10')
+
+        beforeEach(async () => {
+            await comp.connect(admin).transfer(loan.address, borrowAmount)
+            await comp.connect(admin).transfer(loan.address, feesAmount)
+
+            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
+        });
+
+        it(' should update the delegatee', async () => {
+            await loan.changeDelegatee(newDelegatee.address)
+
+            const loan_delegatee: string = await loan.delegatee()
+
+            expect(loan_delegatee).to.be.eq(newDelegatee.address)
+        });
+
+
+        it(' should move the voting power to the new delegatee', async () => {
+            await loan.changeDelegatee(newDelegatee.address)
+
+            const votes: BigNumber = await comp.getCurrentVotes(newDelegatee.address)
+
+            expect(votes).to.be.eq(borrowAmount.add(feesAmount))
+        });
+
+
+        it(' should not change the other values', async () => {
+
+            const old_loan_pool: string = await loan.motherPool()
+            const old_loan_underlying: string = await loan.underlying()
+            const old_loan_borrower: string = await loan.borrower()
+            const old_loan_delegator: string = await loan.delegator()
+            const old_loan_borrowAmount: BigNumber = await loan.amount()
+            const old_loan_feesAmount: BigNumber = await loan.feesAmount()
+
+            await loan.changeDelegatee(newDelegatee.address)
+
+            const loan_pool: string = await loan.motherPool()
+            const loan_underlying: string = await loan.underlying()
+            const loan_borrower: string = await loan.borrower()
+            const loan_delegator: string = await loan.delegator()
+            const loan_borrowAmount: BigNumber = await loan.amount()
+            const loan_feesAmount: BigNumber = await loan.feesAmount()
+
+            expect(loan_borrowAmount).to.be.eq(old_loan_borrowAmount)
+            expect(loan_feesAmount).to.be.eq(old_loan_feesAmount)
+            expect(loan_pool).to.be.eq(old_loan_pool)
+            expect(loan_underlying).to.be.eq(old_loan_underlying)
+            expect(loan_borrower).to.be.eq(old_loan_borrower)
+            expect(loan_delegator).to.be.eq(old_loan_delegator)
+        });
+
     });
     
 

@@ -17,4 +17,5 @@ interface PalLoanInterface {
     function expand(uint _newFeesAmount) external returns(bool);
     function closeLoan(uint _usedAmount) external;
     function killLoan(address _killer, uint _killerRatio) external;
+    function changeDelegatee(address _delegatee) external returns(bool);
 }
