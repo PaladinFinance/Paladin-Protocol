@@ -3,6 +3,9 @@ import { HardhatUserConfig } from "hardhat/types";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-contract-sizer";
+import "@nomiclabs/hardhat-etherscan";
+
+require("dotenv").config();
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -21,7 +24,7 @@ const config: HardhatUserConfig = {
   },
   contractSizer: {
     alphaSort: true,
-    runOnCompile: true,
+    runOnCompile: false,
     disambiguatePaths: false,
   },
   networks: {
@@ -31,13 +34,21 @@ const config: HardhatUserConfig = {
       blockGasLimit: 25000000
     },
     localhost: {},
-    /*kovan: {
-      url: `https://kovan.infura.io/v3/${INFURA_API_KEY}`,
-      accounts: [KOVAN_PRIVATE_KEY],
-    },*/
+    kovan: {
+      url: process.env.KOVAN_URI,
+      accounts: [process.env.KOVAN_PRIVATE_KEY || ''],
+      /*accounts: {
+        mnemonic: process.env.KOVAN_MNEMONIC,
+      },*/
+    },
     coverage: {
       url: "http://127.0.0.1:8555", // Coverage launches its own ganache-cli client
-    },
+    }
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: process.env.ETHERSCAN_API_KEY || ''
   }
 };
 

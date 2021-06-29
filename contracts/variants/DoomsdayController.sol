@@ -9,14 +9,14 @@
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
-import "./utils/SafeMath.sol";
-import "./PaladinControllerInterface.sol";
-import "./PalPool.sol";
-import "./utils/IERC20.sol";
+import "../utils/SafeMath.sol";
+import "../PaladinControllerInterface.sol";
+import "../PalPool.sol";
+import "../utils/IERC20.sol";
 
-/** @title Paladin Controller contract  */
+/** @title DoomsdayController contract -> blocks any transaction from the PalPools  */
 /// @author Paladin
-contract PaladinController is PaladinControllerInterface {
+contract DoomsdayController is PaladinControllerInterface {
     using SafeMath for uint;
     
 
@@ -83,13 +83,10 @@ contract PaladinController is PaladinControllerInterface {
     * @param _palPool address of the PalPool contract
     * @return bool : Success
     */ 
-    function addNewPool(address _palToken, address _palPool) external override returns(bool){
-        //Add a new address to the palToken & palPool list
-        require(msg.sender == admin, "Admin function");
-        require(!isPalPool(_palPool), "Already added");
-        palTokens.push(_palToken);
-        palPools.push(_palPool);
-        return true;
+    function addNewPool(address _palToken, address _palPool) external pure override returns(bool){
+        _palToken;
+        _palPool;
+        revert();
     }
 
 
@@ -99,11 +96,10 @@ contract PaladinController is PaladinControllerInterface {
     * @param amount amount withdrawn
     * @return bool : true if possible
     */
-    function withdrawPossible(address palPool, uint amount) external view override returns(bool){
-        //Get the underlying balance of the palPool contract to check if the action is possible
-        PalPool _palPool = PalPool(palPool);
-        IERC20 underlying = _palPool.underlying();
-        return(underlying.balanceOf(palPool) >= amount);
+    function withdrawPossible(address palPool, uint amount) external pure override returns(bool){
+        palPool;
+        amount;
+        return false;
     }
     
 
@@ -113,11 +109,10 @@ contract PaladinController is PaladinControllerInterface {
     * @param amount amount ot borrow
     * @return bool : true if possible
     */
-    function borrowPossible(address palPool, uint amount) external view override returns(bool){
-        //Get the underlying balance of the palPool contract to check if the action is possible
-        PalPool _palPool = PalPool(palPool);
-        IERC20 underlying = _palPool.underlying();
-        return(underlying.balanceOf(palPool) >= amount);
+    function borrowPossible(address palPool, uint amount) external pure override returns(bool){
+        palPool;
+        amount;
+        return false;
     }
     
 
@@ -155,7 +150,7 @@ contract PaladinController is PaladinControllerInterface {
         amount;
 
         //no method yet 
-        return true;
+        return false;
     }
     
 
@@ -170,27 +165,15 @@ contract PaladinController is PaladinControllerInterface {
     */
     function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
         require(isPalPool(msg.sender), "Call not allowed");
-        //Check if the borrow was successful
-        PalPoolInterface _palPool = PalPoolInterface(palPool);
-        (
-            address _borrower,
-            address _delegatee,
-            address _loan,
-            uint _tokenId,
-            uint _amount,
-            address _underlying,
-            uint _feesAmount,
-            ,
-            ,
-            ,
-            bool _closed,
-        ) = _palPool.getBorrowData(loanPool);
+        
+        palPool;
+        borrower;
+        delegatee;
+        amount;
+        feesAmount;
+        loanPool;
 
-        _underlying;
-        _loan;
-        _tokenId;
-
-        return(borrower == _borrower && delegatee == _delegatee && amount == _amount && feesAmount == _feesAmount && !_closed);
+        return false;
     }
 
 
@@ -209,7 +192,7 @@ contract PaladinController is PaladinControllerInterface {
         loanPool;
         
         //no method yet 
-        return true;
+        return false;
     }
 
 
@@ -228,7 +211,7 @@ contract PaladinController is PaladinControllerInterface {
         loanPool;
         
         //no method yet 
-        return true;
+        return false;
     }
 
         
