@@ -87,7 +87,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
         index = 0;
 
         //Create the Burned version of this ERC721
-        burnedToken = new BurnedPalLoanToken("Burned PalLoanToken", "bPLT");
+        burnedToken = new BurnedPalLoanToken("burnedPalLoan Token", "bPLT");
     }
 
 
