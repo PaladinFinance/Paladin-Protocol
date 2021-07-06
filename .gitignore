@@ -1,7 +1,7 @@
 .vscode/
 temp.py
-private-key.txt
 deploy.py
+snapTest.py
 **/.DS_Store
 .DS_Store
 node_modules
@@ -13,4 +13,3 @@ typechain/
 flatten/
 coverage*
 .env
-snapTest.py

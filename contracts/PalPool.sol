@@ -162,7 +162,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @param _delegatee Address to delegate the voting power to
     * @param _amount Amount of underlying to borrow
     * @param _feeAmount Amount of fee to pay to start the loan
-    * @return uint : amount of paid fees
+    * @return uint : new PalLoanToken Id
     */
     function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override preventReentry returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
@@ -233,8 +233,8 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
             block.number
         );
 
-        //Return the borrowed amount
-        return _amount;
+        //Return the PalLoanToken Id
+        return _newTokenId;
     }
 
     /**

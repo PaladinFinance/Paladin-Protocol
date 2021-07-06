@@ -78,7 +78,7 @@ describe('PalLoanToken contract tests', () => {
         const burned_supply = await deployed_burnedToken.totalSupply()
         const burned_minter = await deployed_burnedToken.minter()
 
-        expect(burned_name).to.be.eq("Burned PalLoanToken")
+        expect(burned_name).to.be.eq("burnedPalLoan Token")
         expect(burned_symbol).to.be.eq("bPLT")
         expect(burned_supply).to.be.eq(0)
         expect(burned_minter).to.be.eq(token.address)

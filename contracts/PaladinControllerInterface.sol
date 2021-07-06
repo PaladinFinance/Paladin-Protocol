@@ -23,11 +23,11 @@ interface PaladinControllerInterface {
 
 
     //Functions
-    function isPalPool(address _pool) external view returns(bool);
+    function isPalPool(address pool) external view returns(bool);
     function getPalTokens() external view returns(address[] memory);
     function getPalPools() external view returns(address[] memory);
-    function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external returns(bool);
-    function addNewPool(address _palToken, address _palPool) external returns(bool);
+    function setInitialPools(address[] memory palTokens, address[] memory palPools) external returns(bool);
+    function addNewPool(address palToken, address palPool) external returns(bool);
 
     function withdrawPossible(address palPool, uint amount) external view returns(bool);
     function borrowPossible(address palPool, uint amount) external view returns(bool);
