@@ -768,6 +768,8 @@ describe('PalPool : 3 - Borrows tests', () => {
             const loan_data = await pool.getBorrowData(loan_address)
 
             expect(loan_data._killed).to.be.true;
+
+            expect(await pool.isKillable(loan_address)).to.be.false;
             
         });
 
@@ -915,7 +917,8 @@ describe('PalPool : 3 - Borrows tests', () => {
             const pool_borrow_rate: BigNumber = await interest.getBorrowRate(
                 pool_cash.sub(borrow_amount),
                 pool_borrowed.add(borrow_amount),
-                pool_reserves)
+                pool_reserves
+            )
 
             const estimated_borrow_fees: BigNumber = pool_min_borrow_length.mul(borrow_amount.mul(pool_borrow_rate).div(mantissaScale))
             

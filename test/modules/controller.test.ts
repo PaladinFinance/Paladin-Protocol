@@ -20,6 +20,8 @@ describe('Paladin Controller contract tests', () => {
     const fakeTokenAddress = ethers.utils.getAddress("0x39294e759f88250456d2Bb53567682951b362Da0");
     const fakeTokenAddress2 = ethers.utils.getAddress("0x3ec20DD2dD5de4e29C1BF83B24F5C2255DA39d27");
 
+    const fakeLoanAddress = ethers.utils.getAddress("0xac0afd1b1365cd5796642BaA1741fcfF65A38035");
+
     beforeEach( async () => {
         [admin, user1] = await ethers.getSigners();
 
@@ -65,13 +67,39 @@ describe('Paladin Controller contract tests', () => {
         ).to.be.revertedWith('Admin function')
     });
 
+    it(' should block non-admin to initialize', async () => {
+        await expect(
+            controller.connect(user1).setInitialPools([fakeTokenAddress], [fakePoolAddress])
+        ).to.be.revertedWith('Admin function')
+    });
+
+    it(' should block 2nd initialize', async () => {
+        await controller.connect(admin).setInitialPools([fakeTokenAddress], [fakePoolAddress]);
+
+        await expect(
+            controller.connect(admin).setInitialPools([fakeTokenAddress], [fakePoolAddress])
+        ).to.be.revertedWith('Lists already set')
+    });
+
     it(' should block Pool functions to be called', async () => {
         await expect(
             controller.depositVerify(fakePoolAddress, user1.address, 10)
         ).to.be.revertedWith('Call not allowed')
 
         await expect(
-            controller.borrowVerify(fakePoolAddress, user1.address, user1.address, 10, 5, fakePoolAddress)
+            controller.withdrawVerify(fakePoolAddress, user1.address, 10)
+        ).to.be.revertedWith('Call not allowed')
+
+        await expect(
+            controller.borrowVerify(fakePoolAddress, user1.address, user1.address, 10, 5, fakeLoanAddress)
+        ).to.be.revertedWith('Call not allowed')
+
+        await expect(
+            controller.closeBorrowVerify(fakePoolAddress, user1.address, fakeLoanAddress)
+        ).to.be.revertedWith('Call not allowed')
+
+        await expect(
+            controller.killBorrowVerify(fakePoolAddress, user1.address, fakeLoanAddress)
         ).to.be.revertedWith('Call not allowed')
     });
 

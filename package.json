@@ -8,7 +8,7 @@
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
-    "coverage": "npm run build && npx hardhat coverage --temp artifacts --network coverage",
+    "coverage": "npx hardhat coverage --network coverage --solcoverjs .solcover.js",
     "deploy_kovan": "npx hardhat run --network kovan scripts/deploy/all_deploy.ts"
   },
   "author": "",
@@ -28,6 +28,7 @@
     "ethers": "^5.1.4",
     "hardhat": "^2.2.1",
     "hardhat-contract-sizer": "^2.0.3",
+    "solidity-coverage": "^0.7.16",
     "ts-generator": "^0.1.1",
     "ts-node": "^9.1.1",
     "typechain": "^5.0.0",

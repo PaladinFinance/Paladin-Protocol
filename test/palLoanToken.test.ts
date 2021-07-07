@@ -531,6 +531,17 @@ describe('PalLoanToken contract tests', () => {
             ).to.be.reverted
         });
 
+
+        it(' should block minting of burned tokens if not the Minter', async () => {
+
+            const deployed_burnedToken_address = await token.burnedToken()
+            const deployed_burnedToken = burnedTokenFactory.attach(deployed_burnedToken_address)
+
+            await expect(
+                deployed_burnedToken.connect(user1).mint(0)
+            ).to.be.reverted
+        });
+
     });
 
 });

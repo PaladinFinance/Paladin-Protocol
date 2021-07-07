@@ -4,6 +4,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-contract-sizer";
 import "@nomiclabs/hardhat-etherscan";
+import "solidity-coverage";
 
 require("dotenv").config();
 
@@ -42,7 +43,7 @@ const config: HardhatUserConfig = {
       },*/
     },
     coverage: {
-      url: "http://127.0.0.1:8555", // Coverage launches its own ganache-cli client
+      url: 'http://127.0.0.1:8555' // Coverage launches its own ganache-cli client
     }
   },
   etherscan: {

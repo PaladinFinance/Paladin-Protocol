@@ -104,7 +104,6 @@ describe('Interest Calculator contract tests', () => {
             let simu :number = simuBorrowRate(v['c'],v['b'],v['r'])
             let val: number = +(ethers.utils.formatEther(res))
             simu = Math.round(simu * 1e18) / 1e18
-            //expect(val).to.be.eq(simu)
             expect(closeEnough(val, simu))
             
         });
@@ -118,7 +117,6 @@ describe('Interest Calculator contract tests', () => {
             let simu :number = simuSupplyRate(v['c'],v['b'],v['r'])
             let val: number = +(ethers.utils.formatEther(res))
             simu = Math.round(simu * 1e18) / 1e18
-            //expect(val).to.be.eq(simu)
             expect(closeEnough(val, simu))
             
         });

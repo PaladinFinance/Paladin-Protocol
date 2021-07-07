@@ -163,6 +163,38 @@ describe('PalPool : 1 - constructor and storage tests', () => {
     
         });
 
+
+        describe('borrowRatePerBlock', async () => {
+
+            it(' should have the same value as the Interest module', async () => {
+    
+                const pool_borrows: BigNumber = await pool.totalBorrowed()
+                const pool_reserves: BigNumber = await pool.totalReserve()
+                const pool_cash: BigNumber = await pool._underlyingBalance()
+
+                expect(await pool.borrowRatePerBlock()).to.be.eq(await interest.getBorrowRate(pool_cash, pool_borrows, pool_reserves))
+                
+            });
+    
+        });
+
+
+        describe('supplyRatePerBlock', async () => {
+
+            it(' should have the same value as the Interest module', async () => {
+    
+                const pool_borrows: BigNumber = await pool.totalBorrowed()
+                const pool_reserves: BigNumber = await pool.totalReserve()
+                const pool_cash: BigNumber = await pool._underlyingBalance()
+                const pool_reserveFactor: BigNumber = await pool.reserveFactor()
+
+                expect(await pool.supplyRatePerBlock()).to.be.eq(await interest.getSupplyRate(pool_cash, pool_borrows, pool_reserves, pool_reserveFactor))
+                
+            });
+    
+        });
+
+
         describe('exchangeRateStored', async () => {
 
             it(' should have the correct base value', async () => {
@@ -176,6 +208,7 @@ describe('PalPool : 1 - constructor and storage tests', () => {
     
         });
 
+
         describe('exchangeRateCurrent', async () => {
 
             it(' should have the correct base value', async () => {
@@ -188,6 +221,7 @@ describe('PalPool : 1 - constructor and storage tests', () => {
             });
     
         });
+
 
         describe('balanceof & underlyingBalanceOf', async () => {
 
@@ -212,6 +246,7 @@ describe('PalPool : 1 - constructor and storage tests', () => {
             });
     
         });
+
 
         describe('getLoanPools', async () => {
 
