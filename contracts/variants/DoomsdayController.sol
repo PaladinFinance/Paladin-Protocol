@@ -192,7 +192,7 @@ contract DoomsdayController is PaladinControllerInterface {
         loanPool;
         
         //no method yet 
-        return false;
+        return true;
     }
 
 
@@ -211,7 +211,7 @@ contract DoomsdayController is PaladinControllerInterface {
         loanPool;
         
         //no method yet 
-        return false;
+        return true;
     }
 
         
