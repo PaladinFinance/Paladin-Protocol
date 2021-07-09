@@ -21,7 +21,7 @@ import {Errors} from  "../utils/Errors.sol";
 
 /** @title palStkAave Pool contract  */
 /// @author Paladin
-contract PalStkAave is PalPool {
+contract PalPoolStkAave is PalPool {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 

@@ -49,7 +49,7 @@ describe('PalLoanToken contract tests', () => {
         //let's put the same address for palPool & palToken for the controller
         await controller.connect(admin).setInitialPools([pool1.address, pool2.address], [pool1.address, pool2.address]);
 
-        token = (await tokenFactory.connect(admin).deploy(controller.address)) as PalLoanToken;
+        token = (await tokenFactory.connect(admin).deploy(controller.address, "about:blank")) as PalLoanToken;
         await token.deployed();
     });
 

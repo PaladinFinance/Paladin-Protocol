@@ -13,6 +13,7 @@ pragma abicoder v2;
 import "./PalLoanTokenInterface.sol";
 import "./utils/ERC165.sol";
 import "./utils/SafeMath.sol";
+import "./utils/Strings.sol";
 import "./utils/Admin.sol";
 import "./PaladinControllerInterface.sol";
 import "./BurnedPalLoanToken.sol";
@@ -22,6 +23,7 @@ import {Errors} from  "./utils/Errors.sol";
 /// @author Paladin
 contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
     using SafeMath for uint;
+    using Strings for uint;
 
     //Storage
 
@@ -30,6 +32,9 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
 
     // Token symbol
     string public symbol;
+
+    // Token base URI
+    string public baseURI;
 
     //Incremental index for next token ID
     uint256 private index;
@@ -77,7 +82,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
 
 
     //Constructor
-    constructor(address _controller) {
+    constructor(address _controller, string memory _baseURI) {
         admin = msg.sender;
 
         // ERC721 parameters + storage data
@@ -85,6 +90,8 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
         symbol = "PLT";
         controller = PaladinControllerInterface(_controller);
         index = 0;
+
+        baseURI = _baseURI;
 
         //Create the Burned version of this ERC721
         burnedToken = new BurnedPalLoanToken("burnedPalLoan Token", "bPLT");
@@ -100,6 +107,13 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
             super.supportsInterface(interfaceId);
     }
 
+
+    //URI method
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+
+        return string(abi.encodePacked(baseURI, tokenId.toString()));
+    }
 
 
     /**
@@ -507,7 +521,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
     /**
     * @notice Check if a token exists
     * @param tokenId Id of the token
-    * @return bool : treu if token exists (active or burned)
+    * @return bool : true if token exists (active or burned)
     */
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
         return owners[tokenId] != address(0) || burnedToken.ownerOf(tokenId) != address(0);
@@ -623,6 +637,11 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
     */
     function setNewController(address _newController) external override controllerOnly {
         controller = PaladinControllerInterface(_newController);
+    }
+
+
+    function setNewBaseURI(string memory _newBaseURI) external override controllerOnly {
+        baseURI = _newBaseURI;
     }
 
 }

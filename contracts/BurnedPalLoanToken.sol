@@ -12,6 +12,7 @@ pragma abicoder v2;
 
 import {Errors} from  "./utils/Errors.sol";
 import "./utils/SafeMath.sol";
+import "./PalLoanTokenInterface.sol";
 
 
 
@@ -27,6 +28,7 @@ contract BurnedPalLoanToken{
     // Token symbol
     string public symbol;
 
+    //Token Minter contract : PalLoanToken
     address public minter;
 
     uint256 public totalSupply;
@@ -64,6 +66,11 @@ contract BurnedPalLoanToken{
 
     //Functions
 
+
+    //URI method
+    function tokenURI(uint256 tokenId) public view returns (string memory) {
+        return PalLoanTokenInterface(minter).tokenURI(tokenId);
+    }
 
     /**
     * @notice Return the user balance (total number of token owned)

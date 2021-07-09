@@ -28,6 +28,8 @@ interface PalLoanTokenInterface is IERC721 {
     function mint(address to, address palPool, address palLoan) external returns(uint256);
     function burn(uint256 tokenId) external returns(bool);
 
+    function tokenURI(uint256 tokenId) external view returns (string memory);
+
     function loanOf(uint256 tokenId) external view returns(address);
     function poolOf(uint256 tokenId) external view returns(address);
     function loansOf(address owner) external view returns(address[] memory);
@@ -42,5 +44,6 @@ interface PalLoanTokenInterface is IERC721 {
 
     //Admin functions
     function setNewController(address _newController) external;
+    function setNewBaseURI(string memory _newBaseURI) external;
 
 }

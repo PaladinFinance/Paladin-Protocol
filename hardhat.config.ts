@@ -8,20 +8,22 @@ import "solidity-coverage";
 
 require("dotenv").config();
 
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   solidity: {
     compilers: [
-      { version: "0.7.6", 
-      settings: {
-        optimizer: {
-          enabled: true,
-          //runs: 9999,
-          runs: 25000,
-        },
-      } 
-    }
-  ],
+      {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            //runs: 9999,
+            runs: 25000,
+          },
+        }
+      }
+    ],
   },
   contractSizer: {
     alphaSort: true,
@@ -49,7 +51,11 @@ const config: HardhatUserConfig = {
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: process.env.ETHERSCAN_API_KEY || ''
+    apiKey: process.env.ETHERSCAN_API_KEY || ''
+  },
+  typechain: {
+    outDir: "typechain",
+    target: "ethers-v5"
   }
 };
 

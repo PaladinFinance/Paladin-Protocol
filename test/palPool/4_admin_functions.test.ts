@@ -64,7 +64,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
         controller = (await controllerFactory.connect(admin).deploy()) as PaladinController;
         await controller.deployed();
 
-        loanToken = (await palLoanTokenFactory.connect(admin).deploy(controller.address)) as PalLoanToken;
+        loanToken = (await palLoanTokenFactory.connect(admin).deploy(controller.address, "about:blank")) as PalLoanToken;
         await loanToken.deployed();
 
         interest = (await interestFactory.connect(admin).deploy()) as InterestCalculator;
