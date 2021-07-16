@@ -1,14 +1,26 @@
-export {};
+export { };
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
 const network = hre.network.name;
-const param_file_path = network === 'kovan' ? '../utils/kovan_params' : '../utils/main_params'
+const params_path = () => {
+  if (network === 'kovan') {
+    return '../utils/kovan_params'
+  }
+  else if (network === 'rinkeby') {
+    return '../utils/rinkeby_params'
+  }
+  else {
+    return '../utils/main_params'
+  }
+}
+
+const param_file_path = params_path();
 
 const { POOLS_PARAMS, TOKENS, DELEGATORS, CONTROLLER, INTEREST_MODULE, PAL_LOAN_TOKEN } = require(param_file_path);
 
 
-const NAME = ''
+const KEY = 'COMP'
 
 
 async function main() {
@@ -19,11 +31,11 @@ async function main() {
   const PalToken = await ethers.getContractFactory("PalToken");
 
   //variant pools :
-  const stkAavePalPool = await ethers.getContractFactory("PalStkAave");
+  const stkAavePalPool = await ethers.getContractFactory("PalPoolStkAave");
 
-  
-  
-  const params = POOLS_PARAMS[NAME];
+
+
+  const params = POOLS_PARAMS[KEY];
 
   console.log('Deploying PalToken ' + params.SYMBOL + ' ...')
   const palToken = await PalToken.deploy(params.NAME, params.SYMBOL);
@@ -32,7 +44,7 @@ async function main() {
 
   let palPool;
   console.log('Deploying PalPool ' + params.SYMBOL + ' ...')
-  if(params.SYMBOL === 'palStkAAVE'){
+  if (params.SYMBOL === 'palStkAAVE') {
     palPool = await stkAavePalPool.deploy(
       palToken.address,
       CONTROLLER,
@@ -43,7 +55,7 @@ async function main() {
       TOKENS.AAVE
     );
   }
-  else{
+  else {
     palPool = await PalPool.deploy(
       palToken.address,
       CONTROLLER,
@@ -59,15 +71,17 @@ async function main() {
   await palToken.initiate(palPool.address)
 
 
+  await palPool.deployTransaction.wait(30);
+
   await hre.run("verify:verify", {
     address: palToken.address,
     constructorArguments: [
-      POOLS_PARAMS[NAME].NAME,
-      POOLS_PARAMS[NAME].SYMBOL
+      params.NAME,
+      params.SYMBOL
     ],
   });
   console.log()
-  if(POOLS_PARAMS[NAME].SYMBOL === 'palStkAAVE'){
+  if (params.SYMBOL === 'palStkAAVE') {
     await hre.run("verify:verify", {
       address: palPool.address,
       constructorArguments: [
@@ -81,7 +95,7 @@ async function main() {
       ],
     });
   }
-  else{
+  else {
     await hre.run("verify:verify", {
       address: palPool.address,
       constructorArguments: [
@@ -94,6 +108,11 @@ async function main() {
       ],
     });
   }
+
+
+  console.log()
+  console.log('---------------------------------------------')
+  console.log()
 
   console.log('PalPool :  ' + palPool.address)
   console.log('PalToken :  ' + palToken.address)

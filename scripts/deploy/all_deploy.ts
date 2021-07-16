@@ -3,9 +3,22 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 const network = hre.network.name;
-const param_file_path = network === 'kovan' ? '../utils/kovan_params' : '../utils/main_params'
 
-const { POOLS_PARAMS, TOKENS, DELEGATOR_NAMES } = require(param_file_path);
+const params_path = () => {
+  if (network === 'kovan') {
+    return '../utils/kovan_params'
+  }
+  else if (network === 'rinkeby') {
+    return '../utils/rinkeby_params'
+  }
+  else {
+    return '../utils/main_params'
+  }
+}
+
+const param_file_path = params_path();
+
+const { POOLS_PARAMS, TOKENS, DELEGATOR_NAMES, PAL_LOAN_TOKEN_URI } = require(param_file_path);
 
 let pools: String[] = [];
 let tokens: String[] = [];
@@ -13,12 +26,12 @@ let underlyings: String[] = [];
 
 let delegators: { [name: string]: string } = {};
 
-let palPools: { [name: string]: {[name: string]: string} } = {};
+let palPools: { [name: string]: { [name: string]: string } } = {};
 
 async function main() {
 
   const deployer = (await hre.ethers.getSigners())[0];
-  
+
 
 
   const Controller = await ethers.getContractFactory("PaladinController");
@@ -29,7 +42,7 @@ async function main() {
   const PalToken = await ethers.getContractFactory("PalToken");
 
   //variant pools :
-  const stkAavePalPool = await ethers.getContractFactory("PalStkAave");
+  const stkAavePalPool = await ethers.getContractFactory("PalPoolStkAave");
 
 
 
@@ -39,7 +52,7 @@ async function main() {
   console.log('Deploying the Interest Calculator Module ...')
   const interest = await Interest.deploy();
 
-  
+
 
   await Promise.all([
     controller.deployed(),
@@ -49,12 +62,12 @@ async function main() {
 
 
   console.log('Deploying PalLoanToken (ERC721) contract ...')
-  const loanToken = await PalLoanToken.deploy(controller.address);
+  const loanToken = await PalLoanToken.deploy(controller.address, PAL_LOAN_TOKEN_URI);
   await loanToken.deployed();
 
 
 
-  for(let d in DELEGATOR_NAMES){
+  for (let d in DELEGATOR_NAMES) {
     let Delegator = await ethers.getContractFactory(DELEGATOR_NAMES[d]);
     console.log('Deploying Delegator ' + DELEGATOR_NAMES[d] + ' ...')
     const delegator = await Delegator.deploy();
@@ -65,7 +78,7 @@ async function main() {
 
 
 
-  for(let p in POOLS_PARAMS){
+  for (let p in POOLS_PARAMS) {
     let params = POOLS_PARAMS[p];
 
     console.log('Deploying PalToken ' + params.SYMBOL + ' ...')
@@ -75,7 +88,7 @@ async function main() {
 
     let palPool;
     console.log('Deploying PalPool ' + params.SYMBOL + ' ...')
-    if(params.SYMBOL === 'palStkAAVE'){
+    if (params.SYMBOL === 'palStkAAVE') {
       palPool = await stkAavePalPool.deploy(
         palToken.address,
         controller.address,
@@ -86,7 +99,7 @@ async function main() {
         TOKENS.AAVE
       );
     }
-    else{
+    else {
       palPool = await PalPool.deploy(
         palToken.address,
         controller.address,
@@ -147,7 +160,7 @@ async function main() {
   await loanToken.deployTransaction.wait(5);
   await hre.run("verify:verify", {
     address: loanToken.address,
-    constructorArguments: [controller.address],
+    constructorArguments: [controller.address, PAL_LOAN_TOKEN_URI],
   });
   console.log()
   await registry.deployTransaction.wait(5);
@@ -162,7 +175,7 @@ async function main() {
     ],
   });
   console.log()
-  for(let p in palPools){
+  for (let p in palPools) {
     await hre.run("verify:verify", {
       address: palPools[p]['token'],
       constructorArguments: [
@@ -171,7 +184,7 @@ async function main() {
       ],
     });
     console.log()
-    if(palPools[p]['symbol'] === 'palStkAAVE'){
+    if (palPools[p]['symbol'] === 'palStkAAVE') {
       await hre.run("verify:verify", {
         address: palPools[p]['pool'],
         constructorArguments: [
@@ -186,7 +199,7 @@ async function main() {
       });
       console.log()
     }
-    else{
+    else {
       await hre.run("verify:verify", {
         address: palPools[p]['pool'],
         constructorArguments: [
@@ -214,12 +227,12 @@ async function main() {
   console.log('Address Registry : ')
   console.log(registry.address)
   console.log()
-  for(let d in delegators){
+  for (let d in delegators) {
     console.log(DELEGATOR_NAMES[d] + ' : ')
     console.log(delegators[d])
   }
   console.log()
-  for(let p in palPools){
+  for (let p in palPools) {
     console.log(palPools[p]['symbol'])
     console.log('PalPool :  ' + palPools[p]['pool'])
     console.log('PalToken :  ' + palPools[p]['token'])

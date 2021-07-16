@@ -19,7 +19,7 @@ import {Errors} from  "../utils/Errors.sol";
 
 
 
-/** @title palStkAave Pool contract  */
+/** @title PalPoolStkAave Pool contract  */
 /// @author Paladin
 contract PalPoolStkAave is PalPool {
     using SafeMath for uint;

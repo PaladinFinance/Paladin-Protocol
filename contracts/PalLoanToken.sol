@@ -640,7 +640,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
     }
 
 
-    function setNewBaseURI(string memory _newBaseURI) external override controllerOnly {
+    function setNewBaseURI(string memory _newBaseURI) external override adminOnly {
         baseURI = _newBaseURI;
     }
 

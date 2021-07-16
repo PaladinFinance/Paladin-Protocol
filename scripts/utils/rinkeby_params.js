@@ -1,0 +1,79 @@
+const { ethers } = require("hardhat");
+
+// Addresses for all_deploy :
+
+const TOKENS = {
+    UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    COMP: "0xA114F91be7829E6B4945f3D35abFD98dDD7b311C"
+}
+
+const DELEGATOR_NAMES = {
+    BASIC_DELEGATOR: 'BasicDelegator'
+}
+
+const POOLS_PARAMS = {
+    UNI: {
+        UNDERLYING: TOKENS.UNI,
+        DELEGATOR: 'BASIC_DELEGATOR',
+        NAME: 'Paladin UNI',
+        SYMBOL: 'UNI'
+    },
+    UNI2: {
+        UNDERLYING: TOKENS.UNI,
+        DELEGATOR: 'BASIC_DELEGATOR',
+        NAME: 'Paladin UNI2',
+        SYMBOL: 'palUNI2'
+    },
+    COMP: {
+        UNDERLYING: TOKENS.COMP,
+        DELEGATOR: 'BASIC_DELEGATOR',
+        NAME: 'Paladin COMP',
+        SYMBOL: 'palCOMP'
+    }
+}
+
+const PAL_LOAN_TOKEN_URI = "about:blank"
+
+
+//Already deployed contracts : 
+const POOLS = {
+    UNI: {
+        POOL: "0x69fEBCD9D53d95E2d5f7A9115a6174511A2249B0",
+        TOKEN: "0xcf915Cdd6e0023e6F01e98f7560543e466B123eE"
+    },
+    UNI2: {
+        POOL: "0xA27281C5a272aEc7764759593D19fa07d1eeb9F2",
+        TOKEN: "0x5Fc701aCFce935DEcFCFE85D9658B3C00b1b8936"
+    },
+    COMP: {
+        POOL: "0xe181A1861121247b42030BAcb476E30345C54228",
+        TOKEN: "0x2d946acCD16c746C053Ad28a9E1b5f976F5736CA"
+    }
+}
+
+const PAL_LOAN_TOKEN = "0x1C6b05dDed5b00DeF0dA53D6e8b70d65f8eaAeeD";
+
+const CONTROLLER = "0x97ac33eBEf5AF852120Af2982781c29014f75413";
+
+const INTEREST_MODULE = "0xdD97EC59E5373fA4bdf219231130dB9BF8AA531d";
+
+const ADDRESS_REGISTRY = "0x1008769b4ED97B6d9542ec08a43471297Da4117B";
+
+const DELEGATORS = {
+    BASIC_DELEGATOR: "0xfF1bAeEF9a24F29E792CcF008bCe18cA3463614e"
+}
+
+
+
+module.exports = {
+    TOKENS,
+    DELEGATOR_NAMES,
+    POOLS_PARAMS,
+    POOLS,
+    PAL_LOAN_TOKEN,
+    CONTROLLER,
+    INTEREST_MODULE,
+    ADDRESS_REGISTRY,
+    DELEGATORS,
+    PAL_LOAN_TOKEN_URI
+};

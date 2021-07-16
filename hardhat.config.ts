@@ -44,6 +44,10 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.KOVAN_MNEMONIC,
       },*/
     },
+    rinkeby: {
+      url: process.env.RINKEBY_URI,
+      accounts: [process.env.RINKEBY_PRIVATE_KEY || ''],
+    },
     coverage: {
       url: 'http://127.0.0.1:8555' // Coverage launches its own ganache-cli client
     }
