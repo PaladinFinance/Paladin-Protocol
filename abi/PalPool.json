@@ -25,6 +25,11 @@
                 "internalType": "address",
                 "name": "_delegator",
                 "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_palLoanToken",
+                "type": "address"
             }
         ],
         "stateMutability": "nonpayable",
@@ -35,8 +40,70 @@
         "inputs": [
             {
                 "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "AddReserve",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
                 "internalType": "address",
                 "name": "borrower",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "newDelegatee",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "underlying",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "palPool",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "loanAddress",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "palLoanTokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "ChangeLoanDelegatee",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "borrower",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "delegatee",
                 "type": "address"
             },
             {
@@ -68,6 +135,12 @@
                 "internalType": "address",
                 "name": "loanAddress",
                 "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "palLoanTokenId",
+                "type": "uint256"
             },
             {
                 "indexed": false,
@@ -116,6 +189,12 @@
             {
                 "indexed": false,
                 "internalType": "address",
+                "name": "delegatee",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
                 "name": "underlying",
                 "type": "address"
             },
@@ -136,6 +215,12 @@
                 "internalType": "address",
                 "name": "loanAddress",
                 "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "palLoanTokenId",
+                "type": "uint256"
             }
         ],
         "name": "ExpandLoan",
@@ -147,7 +232,32 @@
             {
                 "indexed": false,
                 "internalType": "address",
+                "name": "oldAdmin",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "newAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "NewAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
                 "name": "borrower",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "delegatee",
                 "type": "address"
             },
             {
@@ -177,11 +287,30 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
+                "name": "palLoanTokenId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
                 "name": "startBlock",
                 "type": "uint256"
             }
         ],
         "name": "NewLoan",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "RemoveReserve",
         "type": "event"
     },
     {
@@ -207,25 +336,6 @@
             }
         ],
         "name": "Withdraw",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "oldAdmin",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "newAdmin",
-                "type": "address"
-            }
-        ],
-        "name": "newAdmin",
         "type": "event"
     },
     {
@@ -302,6 +412,11 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "_delegatee",
+                "type": "address"
+            },
+            {
                 "internalType": "uint256",
                 "name": "_amount",
                 "type": "uint256"
@@ -353,7 +468,25 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "loan",
+                "name": "_loan",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_newDelegatee",
+                "type": "address"
+            }
+        ],
+        "name": "changeBorrowDelegatee",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_loan",
                 "type": "address"
             }
         ],
@@ -379,7 +512,7 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "amount",
+                "name": "_amount",
                 "type": "uint256"
             }
         ],
@@ -424,12 +557,12 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "loan",
+                "name": "_loan",
                 "type": "address"
             },
             {
                 "internalType": "uint256",
-                "name": "feeAmount",
+                "name": "_feeAmount",
                 "type": "uint256"
             }
         ],
@@ -448,7 +581,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "__loan",
+                "name": "_loanAddress",
                 "type": "address"
             }
         ],
@@ -461,8 +594,18 @@
             },
             {
                 "internalType": "address",
+                "name": "_delegatee",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
                 "name": "_loan",
                 "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_palLoanTokenId",
+                "type": "uint256"
             },
             {
                 "internalType": "uint256",
@@ -487,65 +630,21 @@
             {
                 "internalType": "uint256",
                 "name": "_startBlock",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_closeBlock",
                 "type": "uint256"
             },
             {
                 "internalType": "bool",
                 "name": "_closed",
                 "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "__loan",
-                "type": "address"
-            }
-        ],
-        "name": "getBorrowDataStored",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "_borrower",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "_loan",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_amount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "_underlying",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_feesAmount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_feesUsed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_startBlock",
-                "type": "uint256"
             },
             {
                 "internalType": "bool",
-                "name": "_closed",
+                "name": "_killed",
                 "type": "bool"
             }
         ],
@@ -556,7 +655,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "borrower",
+                "name": "_borrower",
                 "type": "address"
             }
         ],
@@ -585,13 +684,19 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "getPalToken",
-        "outputs": [
+        "inputs": [
             {
                 "internalType": "address",
-                "name": "",
+                "name": "_loanAddress",
                 "type": "address"
+            }
+        ],
+        "name": "idOfLoan",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
@@ -620,7 +725,31 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "loan",
+                "name": "_loanAddress",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_user",
+                "type": "address"
+            }
+        ],
+        "name": "isLoanOwner",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_loan",
                 "type": "address"
             }
         ],
@@ -689,6 +818,19 @@
     },
     {
         "inputs": [],
+        "name": "palLoanToken",
+        "outputs": [
+            {
+                "internalType": "contract PalLoanTokenInterface",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "palToken",
         "outputs": [
             {
@@ -706,6 +848,11 @@
                 "internalType": "uint256",
                 "name": "_amount",
                 "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_recipient",
+                "type": "address"
             }
         ],
         "name": "removeReserve",
@@ -806,19 +953,6 @@
     },
     {
         "inputs": [],
-        "name": "totalBorrowsCurrent",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
         "name": "totalReserve",
         "outputs": [
             {
@@ -879,7 +1013,25 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "amount",
+                "name": "_reserveFactor",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_killerRatio",
+                "type": "uint256"
+            }
+        ],
+        "name": "updatePoolFactors",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_amount",
                 "type": "uint256"
             }
         ],

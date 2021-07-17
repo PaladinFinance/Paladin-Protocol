@@ -44,7 +44,7 @@
                 "type": "address"
             }
         ],
-        "name": "addNewPalToken",
+        "name": "addNewPool",
         "outputs": [
             {
                 "internalType": "bool",
@@ -89,6 +89,11 @@
             {
                 "internalType": "address",
                 "name": "borrower",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "delegatee",
                 "type": "address"
             },
             {
@@ -206,6 +211,25 @@
         "inputs": [
             {
                 "internalType": "address",
+                "name": "pool",
+                "type": "address"
+            }
+        ],
+        "name": "isPalPool",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
                 "name": "palPool",
                 "type": "address"
             },
@@ -234,12 +258,103 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "_recipient",
+                "type": "address"
+            }
+        ],
+        "name": "removeReserveFromAllPools",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_pool",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_recipient",
+                "type": "address"
+            }
+        ],
+        "name": "removeReserveFromPool",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "palTokens",
+                "type": "address[]"
+            },
+            {
+                "internalType": "address[]",
+                "name": "palPools",
+                "type": "address[]"
+            }
+        ],
+        "name": "setInitialPools",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "address payable",
-                "name": "newAdmin",
+                "name": "_newAdmin",
                 "type": "address"
             }
         ],
         "name": "setNewAdmin",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_newController",
+                "type": "address"
+            }
+        ],
+        "name": "setPoolsNewController",
         "outputs": [
             {
                 "internalType": "bool",

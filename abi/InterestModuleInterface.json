@@ -15,14 +15,9 @@
         "internalType": "uint256",
         "name": "reserves",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "reserveFactor",
-        "type": "uint256"
       }
     ],
-    "name": "getSupplyRate",
+    "name": "getBorrowRate",
     "outputs": [
       {
         "internalType": "uint256",
@@ -49,9 +44,14 @@
         "internalType": "uint256",
         "name": "reserves",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "reserveFactor",
+        "type": "uint256"
       }
     ],
-    "name": "getBorrowRate",
+    "name": "getSupplyRate",
     "outputs": [
       {
         "internalType": "uint256",
