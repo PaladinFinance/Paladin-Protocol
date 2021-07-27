@@ -3,8 +3,6 @@ module.exports = {
       'mock',
       'utils',
       'tokens',
-      'delegators/utils/AddressRegistry.sol',
-      'variants',
-      'AddressRegistry.sol'
+      'delegators/utils/AddressRegistry.sol'
     ]
   };
