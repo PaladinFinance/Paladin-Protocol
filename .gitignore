@@ -11,5 +11,6 @@ cache/
 artifacts/
 typechain/
 flatten/
+bin/
 coverage*
 .env

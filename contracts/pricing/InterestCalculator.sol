@@ -11,7 +11,7 @@ pragma solidity ^0.7.6;
 
 import "./InterestInterface.sol";
 
-import "./utils/SafeMath.sol";
+import "../utils/SafeMath.sol";
 
 /** @title Interest Module for Paladin PalPools  */
 /// @author Paladin

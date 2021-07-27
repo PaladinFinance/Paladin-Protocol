@@ -19,7 +19,7 @@ import "./PalLoan.sol";
 import "./PalToken.sol";
 import "./PaladinControllerInterface.sol";
 import "./PalLoanTokenInterface.sol";
-import "./InterestInterface.sol";
+import "./pricing/InterestInterface.sol";
 import "./utils/IERC20.sol";
 import "./utils/Admin.sol";
 import {Errors} from  "./utils/Errors.sol";
@@ -510,7 +510,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @return address : list of Loans
     */
     function getLoansByBorrower(address _borrower) external view override returns(address [] memory){
-        return palLoanToken.loansOfForPool(_borrower, address(this));
+        return palLoanToken.allLoansOfForPool(_borrower, address(this));
     }
 
     

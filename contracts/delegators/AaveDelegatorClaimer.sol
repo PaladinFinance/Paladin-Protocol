@@ -9,26 +9,15 @@
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
-import "../utils/IERC20.sol";
+import "./AaveDelegator.sol";
+import "../tokens/AAVE/IStakedAave.sol";
 import "../utils/SafeERC20.sol";
 import "../utils/SafeMath.sol";
-import "../tokens/AAVE/IGovernancePowerDelegationToken.sol";
-import {Errors} from  "../utils/Errors.sol";
-
-/** @title Aave Governance token Delegator  */
+/** @title Aave Governance token Delegator that claims rewards for the stkAave token */
 /// @author Paladin
-contract AaveDelegator {
+contract AaveDelegatorClaimer is AaveDelegator {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
-
-    //Mock Variables for DelegateCall
-
-    address internal underlying;
-    uint internal amount;
-    address internal borrower;
-    address internal delegatee;
-    address payable internal motherPool;
-    uint internal feesAmount;
 
 
     /**
@@ -39,16 +28,8 @@ contract AaveDelegator {
     * @param _feesAmount Amount of fees (in the underlying token) paid by the borrower
     * @return bool : Power Delagation success
     */
-    function initiate(address _delegatee, uint _amount, uint _feesAmount) public virtual returns(bool){
-        //Set up the borrowed amount and the amount of fees paid
-        amount = _amount;
-        feesAmount = _feesAmount;
-        delegatee = _delegatee;
-        
-        //Delegate governance power : AAVE version
-        IGovernancePowerDelegationToken govToken = IGovernancePowerDelegationToken(underlying);
-        govToken.delegate(_delegatee);
-        return true;
+    function initiate(address _delegatee, uint _amount, uint _feesAmount) public override(AaveDelegator) returns(bool){
+        return super.initiate(_delegatee, _amount, _feesAmount);
     }
 
     /**
@@ -57,9 +38,8 @@ contract AaveDelegator {
     * @param _newFeesAmount new Amount of fees paid by the Borrower
     * @return bool : Expand success
     */
-    function expand(uint _newFeesAmount) public virtual returns(bool){
-        feesAmount = feesAmount.add(_newFeesAmount);
-        return true;
+    function expand(uint _newFeesAmount) public override(AaveDelegator) returns(bool){
+        return super.expand(_newFeesAmount);
     }
 
     /**
@@ -67,18 +47,13 @@ contract AaveDelegator {
     * @dev Return the non-used fees to the Borrower, the loaned tokens and the used fees to the PalPool, then destroy the contract
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
-    function closeLoan(uint _usedAmount) public virtual {
-        IERC20 _underlying = IERC20(underlying);
-        
-        //Return the remaining amount to the borrower
-        //Then return the borrowed amount and the used fees to the pool
-        uint _returnAmount = feesAmount.sub(_usedAmount);
-        uint _balance = _underlying.balanceOf(address(this));
-        uint _keepAmount = _balance.sub(_returnAmount);
-        if(_returnAmount > 0){
-            _underlying.safeTransfer(borrower, _returnAmount);
-        }
-        _underlying.safeTransfer(motherPool, _keepAmount);
+    function closeLoan(uint _usedAmount) public override(AaveDelegator) {
+        //Claim the reward from the StkAave contract and send them to the PalPool
+        IStakedAave _stkAave = IStakedAave(underlying);
+        uint _pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
+        _stkAave.claimRewards(motherPool, _pendingRewards);
+
+        super.closeLoan(_usedAmount);
     }
 
     /**
@@ -87,16 +62,13 @@ contract AaveDelegator {
     * @param _killer Address of the Loan Killer
     * @param _killerRatio Percentage of the fees to reward to the killer (scale 1e18)
     */
-    function killLoan(address _killer, uint _killerRatio) public virtual {
-        IERC20 _underlying = IERC20(underlying);
-        
-        //Send the killer reward to the killer
-        //Then return the borrowed amount and the fees to the pool
-        uint _killerAmount = feesAmount.mul(_killerRatio).div(uint(1e18));
-        uint _balance = _underlying.balanceOf(address(this));
-        uint _poolAmount = _balance.sub(_killerAmount);
-        _underlying.safeTransfer(_killer, _killerAmount);
-        _underlying.safeTransfer(motherPool, _poolAmount);
+    function killLoan(address _killer, uint _killerRatio) public override(AaveDelegator) {
+        //Claim the reward from the StkAave contract and send them to the PalPool
+        IStakedAave _stkAave = IStakedAave(underlying);
+        uint _pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
+        _stkAave.claimRewards(motherPool, _pendingRewards);
+
+        super.killLoan(_killer, _killerRatio);
     }
 
 
@@ -106,12 +78,7 @@ contract AaveDelegator {
     * @param _delegatee Address to delegate the voting power to
     * @return bool : Power Delagation success
     */
-    function changeDelegatee(address _delegatee) public virtual returns(bool){
-        delegatee = _delegatee;
-        
-        //Delegate governance power : AAVE version
-        IGovernancePowerDelegationToken govToken = IGovernancePowerDelegationToken(underlying);
-        govToken.delegate(_delegatee);
-        return true;
+    function changeDelegatee(address _delegatee) public override(AaveDelegator) returns(bool){
+        return super.changeDelegatee(_delegatee);
     }
 }

@@ -32,19 +32,18 @@ interface IGovernancePowerDelegationToken {
    * @param delegatee the user which delegated power has changed
    * @param delegationType the type of delegation (VOTING_POWER, PROPOSITION_POWER)
    **/
-  function delegateByType(address delegatee, DelegationType delegationType) external virtual;
+  function delegateByType(address delegatee, DelegationType delegationType) external;
   /**
    * @dev delegates all the powers to a specific user
    * @param delegatee the user to which the power will be delegated
    **/
-  function delegate(address delegatee) external virtual;
+  function delegate(address delegatee) external;
   /**
    * @dev returns the delegatee of an user
    * @param delegator the address of the delegator
    **/
   function getDelegateeByType(address delegator, DelegationType delegationType)
     external
-    virtual
     view
     returns (address);
 
@@ -55,7 +54,6 @@ interface IGovernancePowerDelegationToken {
    **/
   function getPowerCurrent(address user, DelegationType delegationType)
     external
-    virtual
     view
     returns (uint256);
 
@@ -67,10 +65,10 @@ interface IGovernancePowerDelegationToken {
     address user,
     uint256 blockNumber,
     DelegationType delegationType
-  ) external virtual view returns (uint256);
+  ) external view returns (uint256);
  
   /**
   * @dev returns the total supply at a certain block number
   **/
-  function totalSupplyAt(uint256 blockNumber) external virtual view returns (uint256);
+  function totalSupplyAt(uint256 blockNumber) external view returns (uint256);
 }

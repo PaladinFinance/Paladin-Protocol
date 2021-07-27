@@ -74,8 +74,9 @@ contract PalPoolStkAave is PalPool {
             _stkAave.claimRewards(address(this), _pendingRewards);
 
             //Stake the AAVE tokens to get stkAAVE tokens
-            _aave.safeApprove(stkAaveAddress, _pendingRewards);
-            _stkAave.stake(address(this), _pendingRewards);
+            uint _toStakeAmount = _aave.balanceOf(address(this));
+            _aave.safeApprove(stkAaveAddress, _toStakeAmount);
+            _stkAave.stake(address(this), _toStakeAmount);
 
             //update the block number
             claimBlockNumber = block.number;

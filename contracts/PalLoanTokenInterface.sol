@@ -30,6 +30,7 @@ interface PalLoanTokenInterface is IERC721 {
 
     function tokenURI(uint256 tokenId) external view returns (string memory);
 
+    function tokenOfByIndex(address owner, uint256 tokenIdex) external view returns (uint256);
     function loanOf(uint256 tokenId) external view returns(address);
     function poolOf(uint256 tokenId) external view returns(address);
     function loansOf(address owner) external view returns(address[] memory);

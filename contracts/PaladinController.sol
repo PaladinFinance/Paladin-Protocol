@@ -268,7 +268,7 @@ contract PaladinController is PaladinControllerInterface {
 
     function removeReserveFromAllPools(address _recipient) external override returns(bool){
         //TO DO
-        //Do we swap all the funds into 1 coin ?
+        //Do we swap all the funds into 1 token ?
         //Do we send each of them, and another contract takes care of that ?
     }
 

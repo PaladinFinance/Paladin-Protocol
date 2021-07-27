@@ -11,7 +11,7 @@ pragma solidity ^0.7.6;
 
 import "./PaladinControllerInterface.sol";
 import "./PalLoanTokenInterface.sol";
-import "./InterestInterface.sol";
+import "./pricing/InterestInterface.sol";
 import "./PalPoolInterface.sol";
 import "./PalToken.sol";
 import "./utils/IERC20.sol";
