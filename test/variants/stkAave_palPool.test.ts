@@ -1,0 +1,269 @@
+import { ethers, waffle } from "hardhat";
+import chai from "chai";
+import { solidity } from "ethereum-waffle";
+import { PalToken } from "../../typechain/PalToken";
+import { PalPoolStkAave } from "../../typechain/PalPoolStkAave";
+import { PalLoanToken } from "../../typechain/PalLoanToken";
+import { PaladinController } from "../../typechain/PaladinController";
+import { InterestCalculator } from "../../typechain/InterestCalculator";
+import { IERC20 } from "../../typechain/IERC20";
+import { IStakedAave } from "../../typechain/IStakedAave";
+import { IGovernancePowerDelegationToken } from "../../typechain/IGovernancePowerDelegationToken";
+import { IERC20__factory } from "../../typechain/factories/IERC20__factory";
+import { IStakedAave__factory } from "../../typechain/factories/IStakedAave__factory";
+import { IGovernancePowerDelegationToken__factory } from "../../typechain/factories/IGovernancePowerDelegationToken__factory";
+import { AaveDelegatorClaimer } from "../../typechain/AaveDelegatorClaimer";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { ContractFactory } from "@ethersproject/contracts";
+import { BigNumber } from "@ethersproject/bignumber";
+import { getAAVE } from "../utils/getERC20";
+
+chai.use(solidity);
+const { expect } = chai;
+const { provider } = ethers;
+
+const mantissaScale = ethers.utils.parseEther('1')
+
+let poolFactory: ContractFactory
+let tokenFactory: ContractFactory
+let controllerFactory: ContractFactory
+let delegatorFactory: ContractFactory
+let interestFactory: ContractFactory
+let palLoanTokenFactory: ContractFactory
+
+const AAVE_address = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9" //AAVE contract on mainnet
+const stkAAVE_address = "0x4da27a545c0c5B758a6BA100e3a049001de870f5" //AAVE contract on mainnet
+
+describe('PalPool - stkAAVE version', () => {
+    let admin: SignerWithAddress
+    let user1: SignerWithAddress
+    let user2: SignerWithAddress
+
+    let pool: PalPoolStkAave
+    let token: PalToken
+    let loanToken: PalLoanToken
+    let controller: PaladinController
+    let interest: InterestCalculator
+    let delegator: AaveDelegatorClaimer
+    let aave: IERC20
+    let stkAave: IERC20
+    let stkAaveDeposit: IStakedAave
+    let stkAavePower: IGovernancePowerDelegationToken
+
+    let name: string = "Paladin MOCK"
+    let symbol: string = "palMOCK"
+
+
+
+    const mineBlocks = async (n: number): Promise<any> => {
+        for(let i = 0; i < n; i++){
+            await ethers.provider.send("evm_mine", [])
+        }
+        return Promise.resolve()
+    }
+
+    
+    before( async () => {
+        tokenFactory = await ethers.getContractFactory("PalToken");
+        palLoanTokenFactory = await ethers.getContractFactory("PalLoanToken");
+        poolFactory = await ethers.getContractFactory("PalPoolStkAave");
+        controllerFactory = await ethers.getContractFactory("PaladinController");
+        delegatorFactory = await ethers.getContractFactory("AaveDelegatorClaimer");
+        interestFactory = await ethers.getContractFactory("InterestCalculator");
+
+
+        [admin, user1, user2] = await ethers.getSigners();
+
+
+        aave = IERC20__factory.connect(AAVE_address, provider);
+        stkAave = IERC20__factory.connect(stkAAVE_address, provider);
+        stkAavePower = IGovernancePowerDelegationToken__factory.connect(stkAAVE_address, provider);
+        stkAaveDeposit = IStakedAave__factory.connect(stkAAVE_address, provider);
+
+
+        const staking_amount = ethers.utils.parseEther('100000')
+
+        await getAAVE(admin, aave, admin.address, staking_amount);
+
+        await aave.connect(admin).approve(stkAAVE_address, staking_amount)
+
+        await stkAaveDeposit.connect(admin).stake(admin.address, staking_amount)
+    })
+
+
+    beforeEach( async () => {
+
+        token = (await tokenFactory.connect(admin).deploy(name, symbol)) as PalToken;
+        await token.deployed();
+
+        controller = (await controllerFactory.connect(admin).deploy()) as PaladinController;
+        await controller.deployed();
+
+        loanToken = (await palLoanTokenFactory.connect(admin).deploy(controller.address, "about:blank")) as PalLoanToken;
+        await loanToken.deployed();
+
+        interest = (await interestFactory.connect(admin).deploy()) as InterestCalculator;
+        await interest.deployed();
+
+        delegator = (await delegatorFactory.connect(admin).deploy()) as AaveDelegatorClaimer;
+        await delegator.deployed();
+
+        pool = (await poolFactory.connect(admin).deploy(
+            token.address,
+            controller.address, 
+            stkAave.address,
+            interest.address,
+            delegator.address,
+            loanToken.address,
+            AAVE_address
+        )) as PalPoolStkAave;
+        await pool.deployed();
+
+        await token.initiate(pool.address);
+
+        await controller.addNewPool(token.address, pool.address);
+    });
+
+    describe('claim rewards generated by stkAave', async () => {
+
+        const deposit_amount = ethers.utils.parseEther('1000')
+        const deposit2_amount = ethers.utils.parseEther('500')
+        const withdraw_amount = ethers.utils.parseEther('500')
+        const borrow_amount = ethers.utils.parseEther('100')
+        const expand_amount = ethers.utils.parseEther('50')
+        const fees_amount = ethers.utils.parseEther('10')
+
+        beforeEach(async () => {
+            await stkAave.connect(admin).transfer(user1.address, ethers.utils.parseEther('1500'))
+
+            await stkAave.connect(user1).approve(pool.address, ethers.utils.parseEther('1500'))
+        });
+
+
+        it(' deposit only scenario ', async () => {
+            await pool.connect(user1).deposit(deposit_amount)
+            
+            await mineBlocks(50)
+
+            await pool.connect(user1).deposit(deposit2_amount)
+
+            //Pool should hold more stkAave than what's been deposited (twice) : claimed->restaked rewards
+            expect(await pool._underlyingBalance()).to.be.gt(deposit_amount.add(deposit2_amount))
+        });
+
+
+        it(' deposit - withdraw scenario ', async () => {
+            await pool.connect(user1).deposit(deposit_amount)
+            
+            await mineBlocks(50)
+
+            await pool.connect(user1).withdraw(withdraw_amount)
+
+            //Pool should hold more stkAave than what's been (deposited - withdrawn) : claimed->restaked rewards
+            expect(await pool._underlyingBalance()).to.be.gt(deposit_amount.sub(withdraw_amount))
+        });
+
+
+        it(' borrow scenario ', async () => {
+            await pool.connect(user1).deposit(deposit_amount)
+            
+            await mineBlocks(50)
+
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+
+            //Pool should hold more stkAave than what's been (deposited - borrowed) : claimed->restaked rewards
+            expect(await pool._underlyingBalance()).to.be.gt(deposit_amount.sub(borrow_amount))
+        });
+
+
+        it(' borrow - expandBorrow scenario ', async () => {
+            await pool.connect(user1).deposit(deposit_amount)
+
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+            
+            const before_pool_underlying_balance = await pool._underlyingBalance()
+
+            await mineBlocks(50)
+
+            const loan_address = (await pool.getLoansPools())[0]
+            await pool.connect(user1).expandBorrow(loan_address, expand_amount)
+
+            const after_pool_underlying_balance = await pool._underlyingBalance()
+
+            expect(after_pool_underlying_balance).to.be.gt(before_pool_underlying_balance)
+        });
+
+        it(' borrow - changeDelegatee scenario ', async () => {
+            await pool.connect(user1).deposit(deposit_amount)
+
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+            
+            const before_pool_underlying_balance = await pool._underlyingBalance()
+
+            await mineBlocks(50)
+
+            const loan_address = (await pool.getLoansPools())[0]
+            await pool.connect(user1).changeBorrowDelegatee(loan_address, user2.address)
+
+            const after_pool_underlying_balance = await pool._underlyingBalance()
+
+            expect(after_pool_underlying_balance).to.be.gt(before_pool_underlying_balance)
+        });
+
+    });
+
+
+    describe('palLoan returns generated rewards to the Pool', async () => {
+
+        const deposit = ethers.utils.parseEther('1000')
+
+        const borrow_amount = ethers.utils.parseEther('100')
+
+        const fees_amount = ethers.utils.parseEther('5')
+
+        const kill_fees_amount = ethers.utils.parseEther('0.004')
+
+
+        beforeEach(async () => {
+            await stkAave.connect(admin).transfer(user2.address, deposit)
+            await stkAave.connect(admin).transfer(user1.address, fees_amount)
+
+            await stkAave.connect(user1).approve(pool.address, fees_amount)
+            await stkAave.connect(user2).approve(pool.address, deposit)
+
+            await pool.connect(admin).updateMinBorrowLength(100)
+
+            await pool.connect(user2).deposit(deposit)
+        });
+
+
+        it(' should receive AAVE tokens from rewards - CloseBorrow ', async () => {
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+
+            const loan_address = (await pool.getLoansPools())[0]
+            const minBorrowLength = await pool.minBorrowLength()
+
+            await mineBlocks(minBorrowLength.toNumber() + 1)
+
+            await pool.connect(user1).closeBorrow(loan_address)
+
+            expect(await aave.balanceOf(pool.address)).not.to.be.eq(0)
+            
+        });
+
+
+        it(' should receive AAVE tokens from rewards - KillBorrow ', async () => {
+            await pool.connect(user1).borrow(user1.address, borrow_amount, kill_fees_amount)
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            await mineBlocks(170)
+
+            await pool.connect(user2).killBorrow(loan_address)
+
+            expect(await aave.balanceOf(pool.address)).not.to.be.eq(0)
+        });
+
+    });
+
+});

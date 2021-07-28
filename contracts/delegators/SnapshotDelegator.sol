@@ -71,6 +71,9 @@ contract SnapshotDelegator{
     */
     function closeLoan(uint _usedAmount) external {
         IERC20 _underlying = IERC20(underlying);
+
+        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
+        _registry.clearDelegate("");
         
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
@@ -91,6 +94,9 @@ contract SnapshotDelegator{
     */
     function killLoan(address _killer, uint _killerRatio) external {
         IERC20 _underlying = IERC20(underlying);
+
+        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
+        _registry.clearDelegate("");
         
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool

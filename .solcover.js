@@ -1,8 +1,9 @@
 module.exports = {
     skipFiles: [
-      'mock',
       'utils',
       'tokens',
-      'delegators/utils/AddressRegistry.sol'
+      'tests',
+      'delegators/utils/DelegateRegistry.sol.sol',
+      'AddressRegistry.sol.sol'
     ]
   };

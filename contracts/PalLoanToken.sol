@@ -321,7 +321,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
         for(uint256 j = tokenCount; j < totalCount; j++){
-            if(pools[ownedTokens[owner][j]] == palPool){
+            if(pools[burned[j.sub(tokenCount)]] == palPool){
                 result[m] = loans[burned[j.sub(tokenCount)]];
                 m++;
             }
@@ -548,8 +548,8 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
 
 
     function _removeTokenToOwner(address from, uint tokenId) internal {
-        // To prevent any gap in the array, we subsitute the last token wit hthe one to remove, 
-        // and delete the last element in the array
+        // To prevent any gap in the array, we subsitute the last token with the one to remove, 
+        // and pop the last element in the array
         uint256 lastTokenIndex = balances[from].sub(1);
         uint256 tokenIndex = ownedTokensIndex[tokenId];
         if (tokenIndex != lastTokenIndex) {
@@ -558,7 +558,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
             ownedTokensIndex[lastTokenId] = tokenIndex;
         }
         delete ownedTokensIndex[tokenId];
-        delete ownedTokens[from][lastTokenIndex];
+        ownedTokens[from].pop();
     }
 
 
@@ -599,7 +599,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
         //Update data in storage
         _removeTokenToOwner(owner, tokenId);
         balances[owner] = balances[owner].sub(1);
-        delete owners[tokenId];
+        owners[tokenId] = address(0);
 
         emit Transfer(owner, address(0), tokenId);
 

@@ -1,21 +1,30 @@
 import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { PalLoan } from "../typechain/PalLoan";
-import { Comp } from "../typechain/Comp"
+import { PalLoan } from "../../typechain/PalLoan";
+import { IERC20 } from "../../typechain/IERC20";
+import { IStakedAave } from "../../typechain/IStakedAave";
+import { IGovernancePowerDelegationToken } from "../../typechain/IGovernancePowerDelegationToken";
+import { IERC20__factory } from "../../typechain/factories/IERC20__factory";
+import { IStakedAave__factory } from "../../typechain/factories/IStakedAave__factory";
+import { IGovernancePowerDelegationToken__factory } from "../../typechain/factories/IGovernancePowerDelegationToken__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BasicDelegator } from "../typechain/BasicDelegator";
+import { AaveDelegatorClaimer } from "../../typechain/AaveDelegatorClaimer";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
+import { getAAVE } from "../utils/getERC20";
 
 chai.use(solidity);
 const { expect } = chai;
+const { provider } = ethers;
 
 let delegatorFactory: ContractFactory
-let compFactory: ContractFactory
 let loanFactory: ContractFactory
 
-describe('PalLoan contract tests', () => {
+const AAVE_address = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9" //AAVE contract on mainnet
+const stkAAVE_address = "0x4da27a545c0c5B758a6BA100e3a049001de870f5" //AAVE contract on mainnet
+
+describe('PalLoan contract tests (using the Aave Delegator Claimer for stkAave)', () => {
     let pool: SignerWithAddress
     let admin: SignerWithAddress
     let borrower: SignerWithAddress
@@ -24,30 +33,43 @@ describe('PalLoan contract tests', () => {
     let killer: SignerWithAddress
 
     let loan: PalLoan
-    let delegator: BasicDelegator
-    let comp: Comp
+    let delegator: AaveDelegatorClaimer
+    let aave: IERC20
+    let stkAave: IERC20
+    let stkAaveDeposit: IStakedAave
+    let stkAavePower: IGovernancePowerDelegationToken
 
     
     before( async () => {
-        delegatorFactory = await ethers.getContractFactory("BasicDelegator");
-
-        compFactory = await ethers.getContractFactory("Comp");
+        delegatorFactory = await ethers.getContractFactory("AaveDelegatorClaimer");
 
         loanFactory = await ethers.getContractFactory("PalLoan");
+
+        [pool, admin, borrower, delegatee, newDelegatee, killer] = await ethers.getSigners();
+
+        aave = IERC20__factory.connect(AAVE_address, provider);
+        stkAave = IERC20__factory.connect(stkAAVE_address, provider);
+        stkAavePower = IGovernancePowerDelegationToken__factory.connect(stkAAVE_address, provider);
+        stkAaveDeposit = IStakedAave__factory.connect(stkAAVE_address, provider);
+
+        const staking_amount = ethers.utils.parseEther('100000')
+
+        await getAAVE(admin, aave, admin.address, staking_amount);
+
+        await aave.connect(admin).approve(stkAAVE_address, staking_amount)
+
+        await stkAaveDeposit.connect(admin).stake(admin.address, staking_amount)
     })
 
 
     beforeEach( async () => {
-        [pool, admin, borrower, delegatee, newDelegatee, killer] = await ethers.getSigners();
 
-        delegator = (await delegatorFactory.connect(admin).deploy()) as BasicDelegator;
+        delegator = (await delegatorFactory.connect(admin).deploy()) as AaveDelegatorClaimer;
         await delegator.deployed();
 
-        comp = (await compFactory.connect(admin).deploy(admin.address)) as Comp;
-        await comp.deployed();
-
-        loan = (await loanFactory.connect(pool).deploy(pool.address, borrower.address, comp.address, delegator.address)) as PalLoan;
+        loan = (await loanFactory.connect(pool).deploy(pool.address, borrower.address, stkAave.address, delegator.address)) as PalLoan;
         await loan.deployed();
+
     });
 
 
@@ -60,7 +82,7 @@ describe('PalLoan contract tests', () => {
         const loan_delegator: string = await loan.delegator()
 
         expect(loan_pool).to.be.eq(pool.address)
-        expect(loan_underlying).to.be.eq(comp.address)
+        expect(loan_underlying).to.be.eq(stkAave.address)
         expect(loan_borrower).to.be.eq(borrower.address)
         expect(loan_delegator).to.be.eq(delegator.address)
     });
@@ -86,15 +108,19 @@ describe('PalLoan contract tests', () => {
 
         it(' should delegate the right amount of voting power', async () => {
 
-            await comp.connect(admin).transfer(loan.address, borrowAmount)
-            await comp.connect(admin).transfer(loan.address, feesAmount)
+            await stkAave.connect(admin).transfer(loan.address, borrowAmount)
+            await stkAave.connect(admin).transfer(loan.address, feesAmount)
 
             await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
-            const votes: BigNumber = await comp.getCurrentVotes(delegatee.address)
+            const votes: BigNumber = await stkAavePower.getPowerCurrent(delegatee.address, 0)
 
             expect(votes).to.be.eq(borrowAmount.add(feesAmount))
         });
+
+        after( async () => {
+            await loan.connect(pool).closeLoan(ethers.utils.parseEther('5'))
+        })
 
     });
 
@@ -125,31 +151,47 @@ describe('PalLoan contract tests', () => {
         const usedFees = ethers.utils.parseEther('5')
 
         beforeEach(async () => {
-            await comp.connect(admin).transfer(loan.address, borrowAmount)
-            await comp.connect(admin).transfer(loan.address, feesAmount)
+            await stkAave.connect(admin).transfer(loan.address, borrowAmount)
+            await stkAave.connect(admin).transfer(loan.address, feesAmount)
 
             await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
         });
 
         it(' should return the right amount of tokens to the Borrower', async () => {
-            const oldBalance = await comp.balanceOf(borrower.address)
+            const oldBalance = await stkAave.balanceOf(borrower.address)
 
             await loan.connect(pool).closeLoan(usedFees)
 
-            const newBalance = await comp.balanceOf(borrower.address)
+            const newBalance = await stkAave.balanceOf(borrower.address)
 
             expect(newBalance.sub(oldBalance)).to.be.eq(feesAmount.sub(usedFees))
         });
 
         it(' should return the right amount of tokens to the Pool', async () => {
-            const oldBalance = await comp.balanceOf(pool.address)
+            const oldBalance = await stkAave.balanceOf(pool.address)
 
             await loan.connect(pool).closeLoan(usedFees)
 
-            const newBalance = await comp.balanceOf(pool.address)
+            const newBalance = await stkAave.balanceOf(pool.address)
 
             expect(newBalance.sub(oldBalance)).to.be.eq(borrowAmount.add(usedFees))
+        });
+
+        it(' should remove the voting power given to the delegatee', async () => {
+            await loan.connect(pool).closeLoan(usedFees)
+
+            const votes: BigNumber = await stkAavePower.getPowerCurrent(delegatee.address, 0)
+
+            expect(votes).to.be.eq(0)
+        });
+
+        it(' should claim stkAave reward before closing', async () => {
+            await loan.connect(pool).closeLoan(usedFees)
+
+            const pendingRewards: BigNumber = await stkAaveDeposit.getTotalRewardsBalance(loan.address)
+
+            expect(pendingRewards).to.be.eq(0)
         });
     
     });
@@ -165,31 +207,47 @@ describe('PalLoan contract tests', () => {
         const killerAmount = ethers.utils.parseEther('1.5')
 
         beforeEach(async () => {
-            await comp.connect(admin).transfer(loan.address, borrowAmount)
-            await comp.connect(admin).transfer(loan.address, feesAmount)
+            await stkAave.connect(admin).transfer(loan.address, borrowAmount)
+            await stkAave.connect(admin).transfer(loan.address, feesAmount)
 
             await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
         });
 
         it(' should reward the right amount of tokens to the Killer', async () => {
-            const oldBalance = await comp.balanceOf(killer.address)
+            const oldBalance = await stkAave.balanceOf(killer.address)
 
             await loan.connect(pool).killLoan(killer.address, killerRatio)
 
-            const newBalance = await comp.balanceOf(killer.address)
+            const newBalance = await stkAave.balanceOf(killer.address)
 
             expect(newBalance.sub(oldBalance)).to.be.eq(killerAmount)
         });
 
         it(' should return the right amount of tokens to the Pool', async () => {
-            const oldBalance = await comp.balanceOf(pool.address)
+            const oldBalance = await stkAave.balanceOf(pool.address)
 
             await loan.connect(pool).killLoan(killer.address, killerRatio)
 
-            const newBalance = await comp.balanceOf(pool.address)
+            const newBalance = await stkAave.balanceOf(pool.address)
                     
             expect(newBalance.sub(oldBalance)).to.be.eq(borrowAmount.add(feesAmount).sub(killerAmount))
+        });
+
+        it(' should remove the voting power given to the delegatee', async () => {
+            await loan.connect(pool).killLoan(killer.address, killerRatio)
+
+            const votes: BigNumber = await stkAavePower.getPowerCurrent(delegatee.address, 0)
+
+            expect(votes).to.be.eq(0)
+        });
+
+        it(' should claim stkAave reward before killing', async () => {
+            await loan.connect(pool).killLoan(killer.address, killerRatio)
+
+            const pendingRewards: BigNumber = await stkAaveDeposit.getTotalRewardsBalance(loan.address)
+
+            expect(pendingRewards).to.be.eq(0)
         });
     
     });
@@ -201,27 +259,28 @@ describe('PalLoan contract tests', () => {
         let feesAmount = ethers.utils.parseEther('10')
 
         beforeEach(async () => {
-            await comp.connect(admin).transfer(loan.address, borrowAmount)
-            await comp.connect(admin).transfer(loan.address, feesAmount)
+            await stkAave.connect(admin).transfer(loan.address, borrowAmount)
+            await stkAave.connect(admin).transfer(loan.address, feesAmount)
 
             await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
-        });
-
-        it(' should update the delegatee', async () => {
-            await loan.changeDelegatee(newDelegatee.address)
-
-            const loan_delegatee: string = await loan.delegatee()
-
-            expect(loan_delegatee).to.be.eq(newDelegatee.address)
         });
 
 
         it(' should move the voting power to the new delegatee', async () => {
             await loan.changeDelegatee(newDelegatee.address)
 
-            const votes: BigNumber = await comp.getCurrentVotes(newDelegatee.address)
+            const votes: BigNumber = await stkAavePower.getPowerCurrent(newDelegatee.address, 0)
 
             expect(votes).to.be.eq(borrowAmount.add(feesAmount))
+        });
+
+        
+        it(' should update the delegatee', async () => {
+            await loan.changeDelegatee(newDelegatee.address)
+
+            const loan_delegatee: string = await loan.delegatee()
+
+            expect(loan_delegatee).to.be.eq(newDelegatee.address)
         });
 
 
@@ -275,35 +334,5 @@ describe('PalLoan contract tests', () => {
         });
 
     });
-
-
-    /*describe('wrong Delegator', async () => {
-
-        let loan2: PalLoan
-
-        before(async () => {
-            loan2 = (await loanFactory.connect(pool).deploy(pool.address, borrower.address, comp.address, borrower.address)) as PalLoan;
-            await loan2.deployed();
-        });
-
-        it(' should fail delegateCall', async () => {
-            await expect(
-                loan2.connect(pool).initiate(0, 0)
-            ).to.be.reverted
-    
-            await expect(
-                loan2.connect(pool).expand(0)
-            ).to.be.reverted
-    
-            await expect(
-                loan2.connect(pool).closeLoan(0)
-            ).to.be.reverted
-    
-            await expect(
-                loan2.connect(pool).killLoan(killer.address, 0)
-            ).to.be.reverted
-        });
-
-    });*/
 
 });

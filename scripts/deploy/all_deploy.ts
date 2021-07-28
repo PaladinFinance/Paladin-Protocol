@@ -37,6 +37,7 @@ async function main() {
   const Controller = await ethers.getContractFactory("PaladinController");
   const Interest = await ethers.getContractFactory("InterestCalculator");
   const PalLoanToken = await ethers.getContractFactory("PalLoanToken");
+  const BurnedPalLoanToken = await ethers.getContractFactory("BurnedPalLoanToken");
   const Registry = await ethers.getContractFactory("AddressRegistry");
   const PalPool = await ethers.getContractFactory("PalPool");
   const PalToken = await ethers.getContractFactory("PalToken");
@@ -237,6 +238,18 @@ async function main() {
     console.log('PalPool :  ' + palPools[p]['pool'])
     console.log('PalToken :  ' + palPools[p]['token'])
   }
+
+
+  console.log()
+  console.log()
+  console.log()
+
+  const burnedLoanTokenAddress = await loanToken.burnedToken()
+  const burnedLoanToken = BurnedPalLoanToken.attach(burnedLoanTokenAddress)
+  await hre.run("verify:verify", {
+    address: burnedLoanToken.address,
+    constructorArguments: ["burnedPalLoan Token", "bPLT"],
+  });
 
 }
 

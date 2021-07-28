@@ -185,7 +185,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
     describe('withdraw', async () => {
 
         const deposit = ethers.utils.parseEther('1000')
-        //calculated with exhcangeRate = 0.02e18
+        //calculated with exhcangeRate = 1e18
         const amount = ethers.utils.parseEther('500')
         const paltoken_amount = ethers.utils.parseEther('500')
 

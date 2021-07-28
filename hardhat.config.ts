@@ -32,11 +32,11 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      chainId: 1337,
-      allowUnlimitedContractSize: false,
-      blockGasLimit: 25000000
+      forking: {
+        url: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
+        blockNumber: 12908431
+      }
     },
-    localhost: {},
     kovan: {
       url: process.env.KOVAN_URI,
       accounts: [process.env.KOVAN_PRIVATE_KEY || ''],
@@ -47,9 +47,6 @@ const config: HardhatUserConfig = {
     rinkeby: {
       url: process.env.RINKEBY_URI,
       accounts: [process.env.RINKEBY_PRIVATE_KEY || ''],
-    },
-    coverage: {
-      url: 'http://127.0.0.1:8555' // Coverage launches its own ganache-cli client
     }
   },
   etherscan: {

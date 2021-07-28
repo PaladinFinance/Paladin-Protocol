@@ -8,7 +8,7 @@
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
-    "coverage": "npx hardhat coverage --network coverage --solcoverjs .solcover.js",
+    "coverage": "npx hardhat coverage --network hardhat --solcoverjs .solcover.js",
     "deploy_kovan": "npx hardhat run --network kovan scripts/deploy/all_deploy.ts"
   },
   "author": "",

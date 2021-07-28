@@ -112,7 +112,7 @@ contract BurnedPalLoanToken{
     * @param tokenId Id of the token to mint
     * @return bool : success
     */
-    function mint(address to, uint256 tokenId) external returns(bool){
+    function mint(address to, uint256 tokenId) external authorized returns(bool){
         require(to != address(0), "ERC721: mint to the zero address");
 
         //Update Supply
