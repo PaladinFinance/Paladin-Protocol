@@ -5,6 +5,7 @@ import "@typechain/hardhat";
 import "hardhat-contract-sizer";
 import "@nomiclabs/hardhat-etherscan";
 import "solidity-coverage";
+import "hardhat-gas-reporter"
 
 require("dotenv").config();
 
@@ -57,6 +58,10 @@ const config: HardhatUserConfig = {
   typechain: {
     outDir: "typechain",
     target: "ethers-v5"
+  },
+  gasReporter: {
+    //enabled: true
+    enabled: false
   }
 };
 

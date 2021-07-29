@@ -89,6 +89,34 @@ contract DoomsdayController is PaladinControllerInterface {
         revert();
     }
 
+    
+    /**
+    * @notice Remove a PalPool from teh list (& the related PalToken)
+    * @param _palPool address of the PalPool contract to remove
+    * @return bool : Success
+    */ 
+    function removePool(address _palPool) external override returns(bool){
+        //Remove a palToken & palPool from the list
+        require(msg.sender == admin, "Admin function");
+        require(isPalPool(_palPool), "Not listed");
+        
+        uint lastIndex = (palPools.length).sub(1);
+        for(uint i = 0; i < palPools.length; i++){
+            if(palPools[i] == _palPool){
+
+                //Replace the address to remove with the last one of the array
+                palPools[i] = palPools[lastIndex];
+                palTokens[i] = palTokens[lastIndex];
+                //And pop the last item of the array
+                palPools.pop();
+                palTokens.pop();
+             
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     /**
     * @notice Check if the given PalPool has enough cash to make a withdraw
@@ -114,7 +142,7 @@ contract DoomsdayController is PaladinControllerInterface {
         amount;
         return false;
     }
-    
+
 
     /**
     * @notice Check if Deposit was correctly done
@@ -173,6 +201,23 @@ contract DoomsdayController is PaladinControllerInterface {
         feesAmount;
         loanPool;
 
+        return false;
+    }
+
+
+    /**
+    * @notice Check if Expand Borrow was correctly done
+    * @param loanAddress address of the PalLoan contract
+    * @param newFeesAmount new amount of fees in the PalLoan
+    * @return bool : Verification Success
+    */
+    function expandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) external view override returns(bool){
+        require(isPalPool(msg.sender), "Call not allowed");
+
+        palPool;
+        loanAddress;
+        newFeesAmount;
+        
         return false;
     }
 
@@ -246,13 +291,6 @@ contract DoomsdayController is PaladinControllerInterface {
         PalPoolInterface _palPool = PalPoolInterface(_pool);
         _palPool.removeReserve(_amount, _recipient);
         return true;
-    }
-
-
-    function removeReserveFromAllPools(address _recipient) external override returns(bool){
-        //TO DO
-        //Do we swap all the funds into 1 coin ?
-        //Do we send each of them, and another contract takes care of that ?
     }
 
 

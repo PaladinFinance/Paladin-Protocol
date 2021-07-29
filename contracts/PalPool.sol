@@ -149,7 +149,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         underlying.safeTransfer(msg.sender, _toReturn);
 
         //Use the controller to check if the burning was successfull
-        require(controller.withdrawVerify(address(this), msg.sender, _amount), Errors.FAIL_WITHDRAW);
+        require(controller.withdrawVerify(address(this), msg.sender, _toReturn), Errors.FAIL_WITHDRAW);
 
         //Emit the Withdraw event
         emit Withdraw(msg.sender, _amount, address(this));

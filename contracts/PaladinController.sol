@@ -12,6 +12,7 @@ pragma solidity ^0.7.6;
 import "./utils/SafeMath.sol";
 import "./PaladinControllerInterface.sol";
 import "./PalPool.sol";
+import "./PalLoanInterface.sol";
 import "./utils/IERC20.sol";
 
 /** @title Paladin Controller contract  */
@@ -87,9 +88,46 @@ contract PaladinController is PaladinControllerInterface {
         //Add a new address to the palToken & palPool list
         require(msg.sender == admin, "Admin function");
         require(!isPalPool(_palPool), "Already added");
+
         palTokens.push(_palToken);
         palPools.push(_palPool);
+
+        emit NewPalPool(_palPool, _palToken);
+
         return true;
+    }
+
+    
+    /**
+    * @notice Remove a PalPool from teh list (& the related PalToken)
+    * @param _palPool address of the PalPool contract to remove
+    * @return bool : Success
+    */ 
+    function removePool(address _palPool) external override returns(bool){
+        //Remove a palToken & palPool from the list
+        require(msg.sender == admin, "Admin function");
+        require(isPalPool(_palPool), "Not listed");
+        
+        uint lastIndex = (palPools.length).sub(1);
+        for(uint i = 0; i < palPools.length; i++){
+            if(palPools[i] == _palPool){
+                //get the address of the PalToken for the Event
+                address _palToken = palTokens[i];
+
+                //Replace the address to remove with the last one of the array
+                palPools[i] = palPools[lastIndex];
+                palTokens[i] = palTokens[lastIndex];
+
+                //And pop the last item of the array
+                palPools.pop();
+                palTokens.pop();
+
+                emit NewPalPool(_palPool, _palToken);
+             
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -102,8 +140,7 @@ contract PaladinController is PaladinControllerInterface {
     function withdrawPossible(address palPool, uint amount) external view override returns(bool){
         //Get the underlying balance of the palPool contract to check if the action is possible
         PalPool _palPool = PalPool(palPool);
-        IERC20 underlying = _palPool.underlying();
-        return(underlying.balanceOf(palPool) >= amount);
+        return(_palPool._underlyingBalance() >= amount);
     }
     
 
@@ -116,8 +153,7 @@ contract PaladinController is PaladinControllerInterface {
     function borrowPossible(address palPool, uint amount) external view override returns(bool){
         //Get the underlying balance of the palPool contract to check if the action is possible
         PalPool _palPool = PalPool(palPool);
-        IERC20 underlying = _palPool.underlying();
-        return(underlying.balanceOf(palPool) >= amount);
+        return(_palPool._underlyingBalance() >= amount);
     }
     
 
@@ -125,7 +161,7 @@ contract PaladinController is PaladinControllerInterface {
     * @notice Check if Deposit was correctly done
     * @param palPool address of PalPool
     * @param dest address to send the minted palTokens
-    * @param amount amount of underlying tokens deposited
+    * @param amount amount of palTokens minted
     * @return bool : Verification Success
     */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
@@ -135,8 +171,8 @@ contract PaladinController is PaladinControllerInterface {
         dest;
         amount;
         
-        //no method yet 
-        return true;
+        //Check the amount sent isn't null 
+        return amount > 0;
     }
 
 
@@ -144,7 +180,7 @@ contract PaladinController is PaladinControllerInterface {
     * @notice Check if Withdraw was correctly done
     * @param palPool address of PalPool
     * @param dest address to send the underlying tokens
-    * @param amount amount of PalToken returned
+    * @param amount amount of underlying token returned
     * @return bool : Verification Success
     */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
@@ -154,8 +190,8 @@ contract PaladinController is PaladinControllerInterface {
         dest;
         amount;
 
-        //no method yet 
-        return true;
+        //Check the amount sent isn't null
+        return amount > 0;
     }
     
 
@@ -165,32 +201,38 @@ contract PaladinController is PaladinControllerInterface {
     * @param borrower borrower's address 
     * @param amount amount of token borrowed
     * @param feesAmount amount of fees paid by the borrower
-    * @param loanPool address of the new deployed PalLoan
+    * @param loanAddress address of the new deployed PalLoan
     * @return bool : Verification Success
     */
-    function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
+    function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanAddress) external view override returns(bool){
         require(isPalPool(msg.sender), "Call not allowed");
-        //Check if the borrow was successful
-        PalPoolInterface _palPool = PalPoolInterface(palPool);
-        (
-            address _borrower,
-            address _delegatee,
-            address _loan,
-            uint _tokenId,
-            uint _amount,
-            address _underlying,
-            uint _feesAmount,
-            ,
-            ,
-            ,
-            bool _closed,
-        ) = _palPool.getBorrowData(loanPool);
+        
+        palPool;
+        borrower;
+        delegatee;
+        amount;
+        feesAmount;
+        loanAddress;
+        
+        //no method yet 
+        return true;
+    }
 
-        _underlying;
-        _loan;
-        _tokenId;
-
-        return(borrower == _borrower && delegatee == _delegatee && amount == _amount && feesAmount == _feesAmount && !_closed);
+    /**
+    * @notice Check if Expand Borrow was correctly done
+    * @param loanAddress address of the PalLoan contract
+    * @param newFeesAmount new amount of fees in the PalLoan
+    * @return bool : Verification Success
+    */
+    function expandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) external view override returns(bool){
+        require(isPalPool(msg.sender), "Call not allowed");
+        
+        palPool;
+        loanAddress;
+        newFeesAmount;
+        
+        //no method yet 
+        return true;
     }
 
 
@@ -198,15 +240,15 @@ contract PaladinController is PaladinControllerInterface {
     * @notice Check if Borrow Closing was correctly done
     * @param palPool address of PalPool
     * @param borrower borrower's address
-    * @param loanPool address of the PalLoan contract to close
+    * @param loanAddress address of the PalLoan contract to close
     * @return bool : Verification Success
     */
-    function closeBorrowVerify(address palPool, address borrower, address loanPool) external view override returns(bool){
+    function closeBorrowVerify(address palPool, address borrower, address loanAddress) external view override returns(bool){
         require(isPalPool(msg.sender), "Call not allowed");
         
         palPool;
         borrower;
-        loanPool;
+        loanAddress;
         
         //no method yet 
         return true;
@@ -217,15 +259,15 @@ contract PaladinController is PaladinControllerInterface {
     * @notice Check if Borrow Killing was correctly done
     * @param palPool address of PalPool
     * @param killer killer's address
-    * @param loanPool address of the PalLoan contract to kill
+    * @param loanAddress address of the PalLoan contract to kill
     * @return bool : Verification Success
     */
-    function killBorrowVerify(address palPool, address killer, address loanPool) external view override returns(bool){
+    function killBorrowVerify(address palPool, address killer, address loanAddress) external view override returns(bool){
         require(isPalPool(msg.sender), "Call not allowed");
         
         palPool;
         killer;
-        loanPool;
+        loanAddress;
         
         //no method yet 
         return true;
@@ -263,13 +305,6 @@ contract PaladinController is PaladinControllerInterface {
         PalPoolInterface _palPool = PalPoolInterface(_pool);
         _palPool.removeReserve(_amount, _recipient);
         return true;
-    }
-
-
-    function removeReserveFromAllPools(address _recipient) external override returns(bool){
-        //TO DO
-        //Do we swap all the funds into 1 token ?
-        //Do we send each of them, and another contract takes care of that ?
     }
 
 
