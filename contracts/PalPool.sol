@@ -12,14 +12,14 @@ pragma abicoder v2;
 
 import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
-import "./PalPoolInterface.sol";
+import "./IPalPool.sol";
 import "./PalPoolStorage.sol";
-import "./PalLoanInterface.sol";
+import "./IPalLoan.sol";
 import "./PalLoan.sol";
 import "./PalToken.sol";
-import "./PaladinControllerInterface.sol";
-import "./PalLoanTokenInterface.sol";
-import "./pricing/InterestInterface.sol";
+import "./IPaladinController.sol";
+import "./IPalLoanToken.sol";
+import "./interests/InterestInterface.sol";
 import "./utils/IERC20.sol";
 import "./utils/Admin.sol";
 import {Errors} from  "./utils/Errors.sol";
@@ -28,7 +28,7 @@ import {Errors} from  "./utils/Errors.sol";
 
 /** @title palPool contract  */
 /// @author Paladin
-contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
+contract PalPool is IPalPool, PalPoolStorage, Admin {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
@@ -66,13 +66,13 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
 
         //Set inital values & modules
         palToken = PalToken (_palToken);
-        controller = PaladinControllerInterface(_controller);
+        controller = IPaladinController(_controller);
         underlying = IERC20(_underlying);
         accrualBlockNumber = block.number;
         interestModule = InterestInterface(_interestModule);
         borrowIndex = 1e36;
         delegator = _delegator;
-        palLoanToken = PalLoanTokenInterface(_palLoanToken);
+        palLoanToken = IPalLoanToken(_palLoanToken);
 
         //Set base values
         totalBorrowed = 0;
@@ -253,7 +253,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(_updateInterest());
         
         //Load the Loan Pool contract & get Loan owner
-        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
+        IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
@@ -296,7 +296,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
         //Load the Loan contract
-        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
+        IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
         //Calculates the amount of fees used
         uint _feesUsed = (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount);
@@ -373,7 +373,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(_loanHealthFactor >= killFactor, Errors.NOT_KILLABLE);
 
         //Load the Loan
-        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
+        IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
         //Kill the Loan
         _palLoan.killLoan(killer, killerRatio);
@@ -425,7 +425,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
         require(_updateInterest());
 
         //Load the Loan Pool contract
-        PalLoanInterface _palLoan = PalLoanInterface(_borrow.loan);
+        IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
         //Call the delegation logic in the palLoan to change the votong power recipient
         require(_palLoan.changeDelegatee(_newDelegatee), Errors.FAIL_LOAN_DELEGATEE_CHANGE);
@@ -693,7 +693,7 @@ contract PalPool is PalPoolInterface, PalPoolStorage, Admin {
     * @param  _newController address of the new Controller
     */
     function setNewController(address _newController) external override controllerOnly {
-        controller = PaladinControllerInterface(_newController);
+        controller = IPaladinController(_newController);
     }
 
     /**

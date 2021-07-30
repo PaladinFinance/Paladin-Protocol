@@ -14,7 +14,7 @@ import "./utils/IERC721.sol";
 
 /** @title palLoanToken Interface  */
 /// @author Paladin
-interface PalLoanTokenInterface is IERC721 {
+interface IPalLoanToken is IERC721 {
 
     //Events
 

@@ -10,11 +10,9 @@ pragma solidity ^0.7.6;
 pragma abicoder v2;
 //SPDX-License-Identifier: MIT
 
-import "./PaladinControllerInterface.sol";
-
 /** @title palPool Interface  */
 /// @author Paladin
-interface PalPoolInterface {
+interface IPalPool {
 
     //Events
     /** @notice Event when an user deposit tokens in the pool */

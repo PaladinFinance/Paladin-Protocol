@@ -9,7 +9,7 @@
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
-import "./PalLoanInterface.sol";
+import "./IPalLoan.sol";
 import "./utils/IERC20.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/SafeMath.sol";
@@ -17,7 +17,7 @@ import {Errors} from  "./utils/Errors.sol";
 
 /** @title PalToken Loan Pool contract (deployed by PalToken contract)  */
 /// @author Paladin
-contract PalLoan is PalLoanInterface {
+contract PalLoan is IPalLoan {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 

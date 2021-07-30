@@ -9,10 +9,10 @@
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
-import "./PaladinControllerInterface.sol";
-import "./PalLoanTokenInterface.sol";
-import "./pricing/InterestInterface.sol";
-import "./PalPoolInterface.sol";
+import "./IPaladinController.sol";
+import "./IPalLoanToken.sol";
+import "./interests/InterestInterface.sol";
+import "./IPalPool.sol";
 import "./PalToken.sol";
 import "./utils/IERC20.sol";
 
@@ -51,7 +51,7 @@ contract PalPoolStorage {
     //palPool variables & Mappings
 
     /** @notice ERC721 palLoanToken */
-    PalLoanTokenInterface public palLoanToken;
+    IPalLoanToken public palLoanToken;
 
     /** @notice Underlying ERC20 token of this Pool */
     IERC20 public underlying;
@@ -97,7 +97,7 @@ contract PalPoolStorage {
     //Modules
 
     /** @notice Paladin Controller contract */
-    PaladinControllerInterface public controller;
+    IPaladinController public controller;
     /** @dev Current Inetrest Module */
     InterestInterface internal interestModule;
 

@@ -11,7 +11,7 @@ pragma solidity ^0.7.6;
 
 /** @title Paladin Controller Interface  */
 /// @author Paladin
-interface PaladinControllerInterface {
+interface IPaladinController {
     
     //Events
 

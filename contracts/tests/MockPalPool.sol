@@ -5,7 +5,7 @@ pragma abicoder v2;
 import "../utils/SafeMath.sol";
 import "../utils/IERC20.sol";
 import "../utils/Admin.sol";
-import "../PaladinControllerInterface.sol";
+import "../IPaladinController.sol";
 import {Errors} from  "../utils/Errors.sol";
 
 contract MockPalPool is Admin {
@@ -13,7 +13,7 @@ contract MockPalPool is Admin {
 
     IERC20 public underlying;
     uint public totalReserve;
-    PaladinControllerInterface public controller;
+    IPaladinController public controller;
 
     modifier controllerOnly() {
         require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
@@ -27,7 +27,7 @@ contract MockPalPool is Admin {
     ){
         admin = msg.sender;
 
-        controller = PaladinControllerInterface(_controller);
+        controller = IPaladinController(_controller);
         underlying = IERC20(_underlying);
         totalReserve = _reserveAmount;
     }
@@ -43,6 +43,6 @@ contract MockPalPool is Admin {
     }
 
     function setNewController(address _newController) external controllerOnly {
-        controller = PaladinControllerInterface(_newController);
+        controller = IPaladinController(_newController);
     }
 }

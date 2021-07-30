@@ -10,14 +10,15 @@ pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
 import "./utils/SafeMath.sol";
-import "./PaladinControllerInterface.sol";
+import "./IPaladinController.sol";
 import "./PalPool.sol";
-import "./PalLoanInterface.sol";
+import "./IPalPool.sol";
+import "./IPalLoan.sol";
 import "./utils/IERC20.sol";
 
 /** @title Paladin Controller contract  */
 /// @author Paladin
-contract PaladinController is PaladinControllerInterface {
+contract PaladinController is IPaladinController {
     using SafeMath for uint;
     
 
@@ -293,7 +294,7 @@ contract PaladinController is PaladinControllerInterface {
     function setPoolsNewController(address _newController) external override returns(bool){
         require(msg.sender == admin, "Admin function");
         for(uint i = 0; i < palPools.length; i++){
-            PalPoolInterface _palPool = PalPoolInterface(palPools[i]);
+            IPalPool _palPool = IPalPool(palPools[i]);
             _palPool.setNewController(_newController);
         }
         return true;
@@ -302,7 +303,7 @@ contract PaladinController is PaladinControllerInterface {
 
     function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override returns(bool){
         require(msg.sender == admin, "Admin function");
-        PalPoolInterface _palPool = PalPoolInterface(_pool);
+        IPalPool _palPool = IPalPool(_pool);
         _palPool.removeReserve(_amount, _recipient);
         return true;
     }

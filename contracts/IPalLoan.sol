@@ -11,7 +11,7 @@ pragma solidity ^0.7.6;
 
 /** @title Interface for PalLoan contract  */
 /// @author Paladin
-interface PalLoanInterface {
+interface IPalLoan {
     //Functions
     function initiate(address _delegatee, uint _amount, uint _feesAmount) external returns(bool);
     function expand(uint _newFeesAmount) external returns(bool);

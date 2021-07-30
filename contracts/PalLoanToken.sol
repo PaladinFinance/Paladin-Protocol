@@ -10,18 +10,18 @@ pragma solidity ^0.7.6;
 pragma abicoder v2;
 //SPDX-License-Identifier: MIT
 
-import "./PalLoanTokenInterface.sol";
+import "./IPalLoanToken.sol";
 import "./utils/ERC165.sol";
 import "./utils/SafeMath.sol";
 import "./utils/Strings.sol";
 import "./utils/Admin.sol";
-import "./PaladinControllerInterface.sol";
+import "./IPaladinController.sol";
 import "./BurnedPalLoanToken.sol";
 import {Errors} from  "./utils/Errors.sol";
 
 /** @title palLoanToken contract  */
 /// @author Paladin
-contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
+contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     using SafeMath for uint;
     using Strings for uint;
 
@@ -58,7 +58,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
     mapping(address => mapping(address => bool)) private operatorApprovals;
 
     // Paladin controller
-    PaladinControllerInterface public controller;
+    IPaladinController public controller;
 
     // Burned Token contract
     BurnedPalLoanToken public burnedToken;
@@ -94,7 +94,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
         // ERC721 parameters + storage data
         name = "PalLoan Token";
         symbol = "PLT";
-        controller = PaladinControllerInterface(_controller);
+        controller = IPaladinController(_controller);
         index = 0;
 
         baseURI = _baseURI;
@@ -658,7 +658,7 @@ contract PalLoanToken is PalLoanTokenInterface, ERC165, Admin {
     * @param  _newController address of the new Controller
     */
     function setNewController(address _newController) external override controllerOnly {
-        controller = PaladinControllerInterface(_newController);
+        controller = IPaladinController(_newController);
     }
 
 

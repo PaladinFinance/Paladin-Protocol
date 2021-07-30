@@ -12,7 +12,7 @@ pragma abicoder v2;
 
 import {Errors} from  "./utils/Errors.sol";
 import "./utils/SafeMath.sol";
-import "./PalLoanTokenInterface.sol";
+import "./IPalLoanToken.sol";
 
 
 
@@ -69,7 +69,7 @@ contract BurnedPalLoanToken{
 
     //URI method
     function tokenURI(uint256 tokenId) public view returns (string memory) {
-        return PalLoanTokenInterface(minter).tokenURI(tokenId);
+        return IPalLoanToken(minter).tokenURI(tokenId);
     }
 
     /**
