@@ -63,13 +63,16 @@ contract InterestCalculator is InterestInterface {
     /**
     * @notice Calculates the Supply Rate for the calling PalPool
     * @dev Calculates the Supply Rate depending on the Pool Borrow Rate & Reserve Factor
+    * @param palPool Address of the PalPool calling the function
     * @param cash Cash amount of the calling PalPool
     * @param borrows Total Borrowed amount of the calling PalPool
     * @param reserves Total Reserves amount of the calling PalPool
     * @param reserveFactor Reserve Factor of the calling PalPool
     * @return uint : Supply Rate for the Pool (scale 1e18)
     */
-    function getSupplyRate(uint cash, uint borrows, uint reserves, uint reserveFactor) external view override returns(uint){
+    function getSupplyRate(address palPool, uint cash, uint borrows, uint reserves, uint reserveFactor) external view override returns(uint){
+        palPool; //Useless, needed to match the Interface
+        
         //Fetch the Pool Utilisation Rate & Borrow Rate
         uint _utilRate = utilizationRate(cash, borrows, reserves);
         uint _bRate = _borrowRate(cash, borrows, reserves);
@@ -82,12 +85,15 @@ contract InterestCalculator is InterestInterface {
     /**
     * @notice Get the Borrow Rate for a PalPool depending on the given parameters
     * @dev Calls the internal fucntion _borrowRate
+    * @param palPool Address of the PalPool calling the function
     * @param cash Cash amount of the calling PalPool
     * @param borrows Total Borrowed amount of the calling PalPool
     * @param reserves Total Reserves amount of the calling PalPool
     * @return uint : Borrow Rate for the Pool (scale 1e18)
     */
-    function getBorrowRate(uint cash, uint borrows, uint reserves) external view override returns(uint){
+    function getBorrowRate(address palPool, uint cash, uint borrows, uint reserves) external view override returns(uint){
+        palPool; //Useless, needed to match the Interface
+        
         //Internal call
         return _borrowRate(cash, borrows, reserves);
     }

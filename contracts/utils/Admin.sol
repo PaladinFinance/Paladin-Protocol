@@ -13,7 +13,7 @@ contract Admin {
     address payable internal admin;
     
     modifier adminOnly() {
-        //allows onyl the admin of this contract to call the function
+        //allows only the admin of this contract to call the function
         require(msg.sender == admin, '1');
         _;
     }

@@ -13,7 +13,7 @@ import "./IPaladinController.sol";
 import "./IPalLoanToken.sol";
 import "./interests/InterestInterface.sol";
 import "./IPalPool.sol";
-import "./PalToken.sol";
+import "./IPalToken.sol";
 import "./utils/IERC20.sol";
 
 /** @title palPool Storage contract  */
@@ -57,7 +57,7 @@ contract PalPoolStorage {
     IERC20 public underlying;
 
     /** @notice ERC20 palToken for this Pool */
-    PalToken public palToken;
+    IPalToken public palToken;
 
     /** @dev Boolean to prevent reentry in some functions */
     bool internal entered = false;

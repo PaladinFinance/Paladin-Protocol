@@ -151,11 +151,11 @@ describe('PalPool : 1 - constructor and storage tests', () => {
 
     describe('data fetching functions', async () => {
 
-        describe('_underlyingBalance', async () => {
+        describe('underlyingBalance', async () => {
 
             it(' should return the correct cash amount (0)', async () => {
     
-                const pool_cash: BigNumber = await pool._underlyingBalance()
+                const pool_cash: BigNumber = await pool.underlyingBalance()
 
                 expect(pool_cash).to.be.eq(0)
                 
@@ -170,9 +170,9 @@ describe('PalPool : 1 - constructor and storage tests', () => {
     
                 const pool_borrows: BigNumber = await pool.totalBorrowed()
                 const pool_reserves: BigNumber = await pool.totalReserve()
-                const pool_cash: BigNumber = await pool._underlyingBalance()
+                const pool_cash: BigNumber = await pool.underlyingBalance()
 
-                expect(await pool.borrowRatePerBlock()).to.be.eq(await interest.getBorrowRate(pool_cash, pool_borrows, pool_reserves))
+                expect(await pool.borrowRatePerBlock()).to.be.eq(await interest.getBorrowRate(pool.address, pool_cash, pool_borrows, pool_reserves))
                 
             });
     
@@ -185,10 +185,10 @@ describe('PalPool : 1 - constructor and storage tests', () => {
     
                 const pool_borrows: BigNumber = await pool.totalBorrowed()
                 const pool_reserves: BigNumber = await pool.totalReserve()
-                const pool_cash: BigNumber = await pool._underlyingBalance()
+                const pool_cash: BigNumber = await pool.underlyingBalance()
                 const pool_reserveFactor: BigNumber = await pool.reserveFactor()
 
-                expect(await pool.supplyRatePerBlock()).to.be.eq(await interest.getSupplyRate(pool_cash, pool_borrows, pool_reserves, pool_reserveFactor))
+                expect(await pool.supplyRatePerBlock()).to.be.eq(await interest.getSupplyRate(pool.address, pool_cash, pool_borrows, pool_reserves, pool_reserveFactor))
                 
             });
     

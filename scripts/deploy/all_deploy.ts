@@ -176,6 +176,15 @@ async function main() {
     ],
   });
   console.log()
+  for (let d in delegators) {
+    await hre.run("verify:verify", {
+      address: delegators[d],
+      constructorArguments: [],
+      contract: "contracts/delegators/"+DELEGATOR_NAMES[d]+".sol:"+DELEGATOR_NAMES[d]
+    });
+    console.log()
+  }
+  console.log()
   for (let p in palPools) {
     await hre.run("verify:verify", {
       address: palPools[p]['token'],

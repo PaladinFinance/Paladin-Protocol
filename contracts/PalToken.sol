@@ -11,11 +11,12 @@ pragma solidity ^0.7.6;
 
 import "./utils/SafeMath.sol";
 import "./utils/IERC20.sol";
+import "./utils/Admin.sol";
 import {Errors} from  "./utils/Errors.sol";
 
 /** @title palToken ERC20 contract  */
 /// @author Paladin
-contract PalToken is IERC20 {
+contract PalToken is IERC20, Admin {
     using SafeMath for uint;
 
     //ERC20 Variables & Mappings :
@@ -57,15 +58,16 @@ contract PalToken is IERC20 {
 
 
     constructor (string memory name_, string memory symbol_) {
+        admin = msg.sender;
+
         name = name_;
         symbol = symbol_;
         decimals = 18;
-        _totalSupply = 0;
         initialized = false;
     }
 
 
-    function initiate(address _palPool) external returns (bool){
+    function initiate(address _palPool) external adminOnly returns (bool){
         require(!initialized);
 
         initialized = true;
@@ -88,9 +90,9 @@ contract PalToken is IERC20 {
     function transferFrom(address src, address dest, uint amount) external override returns(bool){
         require(transferAllowances[src][msg.sender] >= amount, Errors.ALLOWANCE_TOO_LOW);
 
-        _transfer(src, dest, amount);
-
         transferAllowances[src][msg.sender] = transferAllowances[src][msg.sender].sub(amount);
+
+        _transfer(src, dest, amount);
 
         return true;
     }
@@ -102,7 +104,7 @@ contract PalToken is IERC20 {
         require(dest != src, Errors.SELF_TRANSFER);
         require(src != address(0) && dest != address(0), Errors.ZERO_ADDRESS);
 
-        //Update balances & allowance
+        //Update balances
         balances[src] = balances[src].sub(amount);
         balances[dest] = balances[dest].add(amount);
 
@@ -111,15 +113,28 @@ contract PalToken is IERC20 {
         return true;
     }
 
-
     function approve(address spender, uint amount) external override returns(bool){
-        address src = msg.sender;
+        return _approve(msg.sender, spender, amount);
+    }
+
+    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
+        return _approve(msg.sender, spender, transferAllowances[msg.sender][spender] + addedValue);
+    }
+
+    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
+        uint256 currentAllowance = transferAllowances[msg.sender][spender];
+        require(currentAllowance >= subtractedValue, "decreased allowance below zero");
+        return _approve(msg.sender, spender, currentAllowance - subtractedValue);
+    }
+
+
+    function _approve(address owner, address spender, uint amount) internal returns(bool){
         require(spender != address(0), Errors.ZERO_ADDRESS);
 
         //Update allowance and emit the Approval event
-        transferAllowances[src][spender] = amount;
+        transferAllowances[owner][spender] = amount;
 
-        emit Approval(src, spender, amount);
+        emit Approval(owner, spender, amount);
 
         return true;
     }

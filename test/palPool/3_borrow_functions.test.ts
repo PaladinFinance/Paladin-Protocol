@@ -908,13 +908,14 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should return the right amount', async () => {
 
-            const pool_cash: BigNumber = await pool._underlyingBalance()
+            const pool_cash: BigNumber = await pool.underlyingBalance()
             const pool_borrowed: BigNumber = await pool.totalBorrowed()
             const pool_reserves: BigNumber = await pool.totalReserve()
 
             const pool_min_borrow_length: BigNumber = await pool.minBorrowLength()
 
             const pool_borrow_rate: BigNumber = await interest.getBorrowRate(
+                pool.address,
                 pool_cash.sub(borrow_amount),
                 pool_borrowed.add(borrow_amount),
                 pool_reserves

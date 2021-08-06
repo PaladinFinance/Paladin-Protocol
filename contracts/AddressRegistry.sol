@@ -20,7 +20,7 @@ contract AddressRegistry is Admin {
 
     address private loanToken;
 
-    //underlying -> palToken
+    //underlying -> palPool
     mapping(address => address) private palPools;
 
     //underlying -> palToken

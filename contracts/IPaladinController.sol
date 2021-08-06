@@ -20,9 +20,6 @@ interface IPaladinController {
     /** @notice Event emitted when a token & pool are removed from the list */
     event RemovePalPool(address palPool, address palToken);
 
-    /** @notice Event emitted when the contract admni is updated */
-    event NewAdmin(address oldAdmin, address newAdmin);
-
 
     //Functions
     function isPalPool(address pool) external view returns(bool);
@@ -43,7 +40,6 @@ interface IPaladinController {
     function killBorrowVerify(address palPool, address killer, address loanAddress) external view returns(bool);
 
     //Admin functions
-    function setNewAdmin(address payable _newAdmin) external returns(bool);
     function setPoolsNewController(address _newController) external returns(bool);
     function removeReserveFromPool(address _pool, uint _amount, address _recipient) external returns(bool);
 

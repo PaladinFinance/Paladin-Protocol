@@ -258,12 +258,12 @@ describe('PalPool : 4 - Admin functions tests', () => {
             await underlying.connect(admin).approve(pool.address, amount)
 
             const oldReserves = await pool.totalReserve()
-            const oldCash = await pool._underlyingBalance()
+            const oldCash = await pool.underlyingBalance()
 
             await pool.connect(admin).addReserve(amount)
 
             const newReserves = await pool.totalReserve()
-            const newCash = await pool._underlyingBalance()
+            const newCash = await pool.underlyingBalance()
 
             expect(newReserves.sub(oldReserves)).to.be.eq(amount)
             expect(newCash.sub(oldCash)).to.be.eq(amount)
@@ -295,12 +295,12 @@ describe('PalPool : 4 - Admin functions tests', () => {
             await pool.connect(admin).addReserve(deposit)
 
             const oldReserves = await pool.totalReserve()
-            const oldCash = await pool._underlyingBalance()
+            const oldCash = await pool.underlyingBalance()
 
             await pool.connect(admin).removeReserve(amount, admin.address)
 
             const newReserves = await pool.totalReserve()
-            const newCash = await pool._underlyingBalance()
+            const newCash = await pool.underlyingBalance()
 
             expect(oldReserves.sub(newReserves)).to.be.eq(amount)
             expect(oldCash.sub(newCash)).to.be.eq(amount)

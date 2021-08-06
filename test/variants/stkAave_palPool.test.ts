@@ -148,7 +148,7 @@ describe('PalPool - stkAAVE version', () => {
             await pool.connect(user1).deposit(deposit2_amount)
 
             //Pool should hold more stkAave than what's been deposited (twice) : claimed->restaked rewards
-            expect(await pool._underlyingBalance()).to.be.gt(deposit_amount.add(deposit2_amount))
+            expect(await pool.underlyingBalance()).to.be.gt(deposit_amount.add(deposit2_amount))
         });
 
 
@@ -160,7 +160,7 @@ describe('PalPool - stkAAVE version', () => {
             await pool.connect(user1).withdraw(withdraw_amount)
 
             //Pool should hold more stkAave than what's been (deposited - withdrawn) : claimed->restaked rewards
-            expect(await pool._underlyingBalance()).to.be.gt(deposit_amount.sub(withdraw_amount))
+            expect(await pool.underlyingBalance()).to.be.gt(deposit_amount.sub(withdraw_amount))
         });
 
 
@@ -172,7 +172,7 @@ describe('PalPool - stkAAVE version', () => {
             await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
             //Pool should hold more stkAave than what's been (deposited - borrowed) : claimed->restaked rewards
-            expect(await pool._underlyingBalance()).to.be.gt(deposit_amount.sub(borrow_amount))
+            expect(await pool.underlyingBalance()).to.be.gt(deposit_amount.sub(borrow_amount))
         });
 
 
@@ -181,14 +181,14 @@ describe('PalPool - stkAAVE version', () => {
 
             await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
             
-            const before_pool_underlying_balance = await pool._underlyingBalance()
+            const before_pool_underlying_balance = await pool.underlyingBalance()
 
             await mineBlocks(50)
 
             const loan_address = (await pool.getLoansPools())[0]
             await pool.connect(user1).expandBorrow(loan_address, expand_amount)
 
-            const after_pool_underlying_balance = await pool._underlyingBalance()
+            const after_pool_underlying_balance = await pool.underlyingBalance()
 
             expect(after_pool_underlying_balance).to.be.gt(before_pool_underlying_balance)
         });
@@ -198,14 +198,14 @@ describe('PalPool - stkAAVE version', () => {
 
             await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
             
-            const before_pool_underlying_balance = await pool._underlyingBalance()
+            const before_pool_underlying_balance = await pool.underlyingBalance()
 
             await mineBlocks(50)
 
             const loan_address = (await pool.getLoansPools())[0]
             await pool.connect(user1).changeBorrowDelegatee(loan_address, user2.address)
 
-            const after_pool_underlying_balance = await pool._underlyingBalance()
+            const after_pool_underlying_balance = await pool.underlyingBalance()
 
             expect(after_pool_underlying_balance).to.be.gt(before_pool_underlying_balance)
         });

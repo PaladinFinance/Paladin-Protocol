@@ -17,6 +17,8 @@ const kinkMultiplierPerBlock = 12.6 / blocksPerYear;
 const kinkBaseRatePerBlock = 1.13 / blocksPerYear;
 const kink = 0.8;
 
+const fakeAddress = "0x5570fF7334c5B86c10333dec3985197eeB67555F"
+
 function simuUtilizationRate(cash: number, borrows: number, reserves: number){
     return borrows ? borrows / (cash + borrows - reserves) : 0
 }
@@ -100,7 +102,7 @@ describe('Interest Calculator contract tests', () => {
     it(' should calculate correct borrow rates', async () => {
 
         values.forEach(async v => {
-            let res = await interest.getBorrowRate(v['c'],v['b'],v['r'])
+            let res = await interest.getBorrowRate(fakeAddress,v['c'],v['b'],v['r'])
             let simu :number = simuBorrowRate(v['c'],v['b'],v['r'])
             let val: number = +(ethers.utils.formatEther(res))
             simu = Math.round(simu * 1e18) / 1e18
@@ -113,7 +115,7 @@ describe('Interest Calculator contract tests', () => {
         const reserveFactor = ethers.utils.parseEther('0.2')
 
         values.forEach(async v => {
-            let res = await interest.getSupplyRate(v['c'],v['b'],v['r'], reserveFactor)
+            let res = await interest.getSupplyRate(fakeAddress,v['c'],v['b'],v['r'], reserveFactor)
             let simu :number = simuSupplyRate(v['c'],v['b'],v['r'])
             let val: number = +(ethers.utils.formatEther(res))
             simu = Math.round(simu * 1e18) / 1e18
@@ -130,7 +132,7 @@ describe('Interest Calculator contract tests', () => {
         ).to.be.revertedWith("SafeMath: addition overflow")
 
         await expect(
-            interest.getBorrowRate(0, largestUint, 0)
+            interest.getBorrowRate(fakeAddress,0, largestUint, 0)
         ).to.be.revertedWith("SafeMath: multiplication overflow")
     })
 

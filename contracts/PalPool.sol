@@ -16,7 +16,7 @@ import "./IPalPool.sol";
 import "./PalPoolStorage.sol";
 import "./IPalLoan.sol";
 import "./PalLoan.sol";
-import "./PalToken.sol";
+import "./IPalToken.sol";
 import "./IPaladinController.sol";
 import "./IPalLoanToken.sol";
 import "./interests/InterestInterface.sol";
@@ -26,7 +26,7 @@ import {Errors} from  "./utils/Errors.sol";
 
 
 
-/** @title palPool contract  */
+/** @title PalPool contract  */
 /// @author Paladin
 contract PalPool is IPalPool, PalPoolStorage, Admin {
     using SafeMath for uint;
@@ -65,7 +65,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         admin = msg.sender;
 
         //Set inital values & modules
-        palToken = PalToken (_palToken);
+        palToken = IPalToken(_palToken);
         controller = IPaladinController(_controller);
         underlying = IERC20(_underlying);
         accrualBlockNumber = block.number;
@@ -73,10 +73,6 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         borrowIndex = 1e36;
         delegator = _delegator;
         palLoanToken = IPalLoanToken(_palLoanToken);
-
-        //Set base values
-        totalBorrowed = 0;
-        totalReserve = 0;
     }
 
     /**
@@ -84,7 +80,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @dev Get the underlying balance of this Pool
     * @return uint : balance of this pool in the underlying token
     */
-    function _underlyingBalance() public view returns(uint){
+    function underlyingBalance() public view returns(uint){
         //Return the balance of this contract for the underlying asset
         return underlying.balanceOf(address(this));
     }
@@ -140,7 +136,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         uint _toReturn = _num.div(mantissaScale);
 
         //Check if the pool has enough underlying to return
-        require(_toReturn <= _underlyingBalance(), Errors.INSUFFICIENT_CASH);
+        require(_toReturn <= underlyingBalance(), Errors.INSUFFICIENT_CASH);
 
         //Burn the corresponding palToken amount
         require(palToken.burn(msg.sender, _amount), Errors.FAIL_BURN);
@@ -166,7 +162,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     */
     function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override preventReentry returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
-        require(_amount < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
+        require(_amount < underlyingBalance(), Errors.INSUFFICIENT_CASH);
         require(_delegatee != address(0), Errors.ZERO_ADDRESS);
         require(_amount > 0, Errors.ZERO_BORROW);
         require(_feeAmount >= minBorrowFees(_amount), Errors.BORROW_INSUFFICIENT_FEES);
@@ -306,7 +302,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         //If the Borrow is closed before the minimum length, calculates the penalty fees to pay
         // -> Number of block remaining to complete the minimum length * current Borrow Rate
         if(block.number < (_borrow.startBlock.add(minBorrowLength))){
-            uint _currentBorrowRate = interestModule.getBorrowRate(_underlyingBalance(), totalBorrowed, totalReserve);
+            uint _currentBorrowRate = interestModule.getBorrowRate(address(this), underlyingBalance(), totalBorrowed, totalReserve);
             uint _missingBlocks = (_borrow.startBlock.add(minBorrowLength)).sub(block.number);
             _penaltyFees = _missingBlocks.mul(_borrow.amount.mul(_currentBorrowRate)).div(mantissaScale);
             _totalFees = _totalFees.add(_penaltyFees);
@@ -561,7 +557,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @return uint : Borrow Rate (scale 1e18)
     */
     function borrowRatePerBlock() external view override returns (uint){
-        return interestModule.getBorrowRate(_underlyingBalance(), totalBorrowed, totalReserve);
+        return interestModule.getBorrowRate(address(this), underlyingBalance(), totalBorrowed, totalReserve);
     }
     
     /**
@@ -570,7 +566,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @return uint : Supply Rate (scale 1e18)
     */
     function supplyRatePerBlock() external view override returns (uint){
-        return interestModule.getSupplyRate(_underlyingBalance(), totalBorrowed, totalReserve, reserveFactor);
+        return interestModule.getSupplyRate(address(this), underlyingBalance(), totalBorrowed, totalReserve, reserveFactor);
     }
 
     
@@ -586,7 +582,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         }
         else{
             // Exchange Rate = (Cash + Borrows - Reserve) / Supply
-            uint _cash = _underlyingBalance();
+            uint _cash = underlyingBalance();
             uint _availableCash = _cash.add(totalBorrowed).sub(totalReserve);
             return _availableCash.mul(1e18).div(_totalSupply);
         }
@@ -617,9 +613,9 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @return uint : minimum amount (in wei)
     */
     function minBorrowFees(uint _amount) public view override returns (uint){
-        require(_amount < _underlyingBalance(), Errors.INSUFFICIENT_CASH);
+        require(_amount < underlyingBalance(), Errors.INSUFFICIENT_CASH);
         //Future Borrow Rate with the amount to borrow counted as already borrowed
-        uint _borrowRate = interestModule.getBorrowRate(_underlyingBalance().sub(_amount), totalBorrowed.add(_amount), totalReserve);
+        uint _borrowRate = interestModule.getBorrowRate(address(this), underlyingBalance().sub(_amount), totalBorrowed.add(_amount), totalReserve);
         uint _minFees = minBorrowLength.mul(_amount.mul(_borrowRate)).div(mantissaScale);
         return _minFees > 0 ? _minFees : 1;
     }
@@ -649,13 +645,13 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         }
 
         //Get Pool variables from Storage
-        uint _cash = _underlyingBalance();
+        uint _cash = underlyingBalance();
         uint _borrows = totalBorrowed;
         uint _reserves = totalReserve;
         uint _oldBorrowIndex = borrowIndex;
 
         //Get the Borrow Rate from the Interest Module
-        uint _borrowRate = interestModule.getBorrowRate(_cash, _borrows, _reserves);
+        uint _borrowRate = interestModule.getBorrowRate(address(this), _cash, _borrows, _reserves);
 
         //Delta of blocks since the last update
         uint _ellapsedBlocks = _currentBlock.sub(accrualBlockNumber);
@@ -765,7 +761,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     function removeReserve(uint _amount, address _recipient) external override controllerOnly { //add system so Controller can also fetch Fees
         //Check if there is enough in the reserve
         require(_updateInterest());
-        require(_amount <= _underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
+        require(_amount <= underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
 
         totalReserve = totalReserve.sub(_amount);
 

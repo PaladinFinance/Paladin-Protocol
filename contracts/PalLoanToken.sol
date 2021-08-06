@@ -39,6 +39,8 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     //Incremental index for next token ID
     uint256 private index;
 
+    uint256 public totalSupply;
+
     // Mapping from token ID to owner address
     mapping(uint256 => address) private owners;
 
@@ -95,7 +97,6 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         name = "PalLoan Token";
         symbol = "PLT";
         controller = IPaladinController(_controller);
-        index = 0;
 
         baseURI = _baseURI;
 
@@ -157,7 +158,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
 
 
     /**
-    * @notice Return owner of the token, even is the token was burned 
+    * @notice Return owner of the token, even if the token was burned 
     * @dev Check if the given id has an owner in this contract, and then if it was burned and has an owner
     * @param tokenId Id of the token
     * @return address : address of the owner
@@ -544,6 +545,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint ownerIndex = balances[to];
         ownedTokens[to].push(tokenId);
         ownedTokensIndex[tokenId] = ownerIndex;
+        balances[to] = balances[to].add(1);
     }
 
 
@@ -559,6 +561,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         }
         delete ownedTokensIndex[tokenId];
         ownedTokens[from].pop();
+        balances[from] = balances[from].sub(1);
     }
 
 
@@ -573,10 +576,10 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         //Get the new token Id, and increase the global index
         uint tokenId = index;
         index = index.add(1);
+        totalSupply = totalSupply.add(1);
 
         //Write this token in the storage
         _addTokenToOwner(to, tokenId);
-        balances[to] = balances[to].add(1);
         owners[tokenId] = to;
 
         emit Transfer(address(0), to, tokenId);
@@ -598,7 +601,6 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
 
         //Update data in storage
         _removeTokenToOwner(owner, tokenId);
-        balances[owner] = balances[owner].sub(1);
         owners[tokenId] = address(0);
 
         emit Transfer(owner, address(0), tokenId);
@@ -629,8 +631,6 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         //Update storage data
         _removeTokenToOwner(from, tokenId);
         _addTokenToOwner(to, tokenId);
-        balances[from] = balances[from].sub(1);
-        balances[to] = balances[to].add(1);
         owners[tokenId] = to;
 
         emit Transfer(from, to, tokenId);

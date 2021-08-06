@@ -15,7 +15,7 @@ import "./utils/SafeERC20.sol";
 import "./utils/SafeMath.sol";
 import {Errors} from  "./utils/Errors.sol";
 
-/** @title PalToken Loan Pool contract (deployed by PalToken contract)  */
+/** @title PalPool Loan contract (deployed by PalPool contract)  */
 /// @author Paladin
 contract PalLoan is IPalLoan {
     using SafeMath for uint;
@@ -61,6 +61,7 @@ contract PalLoan is IPalLoan {
     * @return bool : Power Delagation success
     */
     function initiate(address _delegatee, uint _amount, uint _feesAmount) external override motherPoolOnly returns(bool){
+        // delegatecall() to trusted contract (Delegator type contract)
         (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
         return success;
@@ -73,6 +74,7 @@ contract PalLoan is IPalLoan {
     * @return bool : Expand success
     */
     function expand(uint _newFeesAmount) external override motherPoolOnly returns(bool){
+        // delegatecall() to trusted contract (Delegator type contract)
         (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
         return success;
@@ -84,6 +86,7 @@ contract PalLoan is IPalLoan {
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
     function closeLoan(uint _usedAmount) external motherPoolOnly override {
+        // delegatecall() to trusted contract (Delegator type contract)
         (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
 
@@ -98,6 +101,7 @@ contract PalLoan is IPalLoan {
     * @param _killerRatio Percentage of the fees to reward to the killer (scale 1e18)
     */
     function killLoan(address _killer, uint _killerRatio) external override motherPoolOnly {
+        // delegatecall() to trusted contract (Delegator type contract)
         (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
 
@@ -113,6 +117,7 @@ contract PalLoan is IPalLoan {
     * @return bool : Power Delagation success
     */
     function changeDelegatee(address _delegatee) external override motherPoolOnly returns(bool){
+        // delegatecall() to trusted contract (Delegator type contract)
         (bool success, ) = delegator.delegatecall(msg.data);
         require(success);
         return success;

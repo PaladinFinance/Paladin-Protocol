@@ -14,15 +14,13 @@ import "../IPaladinController.sol";
 import "../PalPool.sol";
 import "../IPalPool.sol";
 import "../utils/IERC20.sol";
+import "../utils/Admin.sol";
 
 /** @title DoomsdayController contract -> blocks any transaction from the PalPools  */
 /// @author Paladin
-contract DoomsdayController is IPaladinController {
+contract DoomsdayController is IPaladinController, Admin {
     using SafeMath for uint;
     
-
-    /** @dev Admin address for this contract */
-    address payable internal admin;
 
     /** @notice List of current active palToken Pools */
     address[] public palTokens;
@@ -69,9 +67,9 @@ contract DoomsdayController is IPaladinController {
     * @param _palPools array of address of PalPool contracts
     * @return bool : Success
     */ 
-    function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
+    function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override adminOnly returns(bool){
         require(!initialized, "Lists already set");
+        require(_palTokens.length == _palPools.length, "List sizes not equal");
         palPools = _palPools;
         palTokens = _palTokens;
         initialized = true;
@@ -96,9 +94,8 @@ contract DoomsdayController is IPaladinController {
     * @param _palPool address of the PalPool contract to remove
     * @return bool : Success
     */ 
-    function removePool(address _palPool) external override returns(bool){
+    function removePool(address _palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(msg.sender == admin, "Admin function");
         require(isPalPool(_palPool), "Not listed");
         
         uint lastIndex = (palPools.length).sub(1);
@@ -160,7 +157,7 @@ contract DoomsdayController is IPaladinController {
         amount;
         
         //no method yet 
-        return true;
+        return false;
     }
 
 
@@ -264,21 +261,8 @@ contract DoomsdayController is IPaladinController {
     
     //Admin function
 
-    /**
-    * @notice Set a new Controller Admin
-    * @dev Changes the address for the admin parameter
-    * @param _newAdmin address of the new Controller Admin
-    * @return bool : Update success
-    */
-    function setNewAdmin(address payable _newAdmin) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
-        admin = _newAdmin;
-        return true;
-    }
 
-
-    function setPoolsNewController(address _newController) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
+    function setPoolsNewController(address _newController) external override adminOnly returns(bool){
         for(uint i = 0; i < palPools.length; i++){
             IPalPool _palPool = IPalPool(palPools[i]);
             _palPool.setNewController(_newController);
@@ -287,8 +271,7 @@ contract DoomsdayController is IPaladinController {
     }
 
 
-    function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
+    function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override adminOnly returns(bool){
         IPalPool _palPool = IPalPool(_pool);
         _palPool.removeReserve(_amount, _recipient);
         return true;

@@ -91,7 +91,7 @@ describe('Paladin Controller contract tests', () => {
         it(' should block non-admin to initialize', async () => {
             await expect(
                 controller.connect(user1).setInitialPools([fakeToken.address], [fakePool.address])
-            ).to.be.revertedWith('Admin function')
+            ).to.be.revertedWith('1')
         });
     
         it(' should block 2nd initialize', async () => {
@@ -140,8 +140,8 @@ describe('Paladin Controller contract tests', () => {
         it(' should block non-admin to add PalPool', async () => {
             await expect(
                 controller.connect(user1).addNewPool(fakeToken.address, fakePool.address),
-                'Admin function'
-            ).to.be.revertedWith('Admin function')
+                '1'
+            ).to.be.revertedWith('1')
         });
     
         it(' should remove PalPool (& PalToken)', async () => {
@@ -194,8 +194,8 @@ describe('Paladin Controller contract tests', () => {
         it(' should block non-admin to remove PalPool', async () => {
             await expect(
                 controller.connect(user1).removePool(fakePool.address),
-                'Admin function'
-            ).to.be.revertedWith('Admin function')
+                '1'
+            ).to.be.revertedWith('1')
         });
 
     });
@@ -323,7 +323,7 @@ describe('Paladin Controller contract tests', () => {
     
             await expect(
                 controller.connect(admin).addNewPool(fakeToken.address, fakePool.address)
-            ).to.be.revertedWith('Admin function')
+            ).to.be.revertedWith('1')
     
             await controller.connect(user1).addNewPool(fakeToken2.address, fakePool2.address);
     
@@ -359,19 +359,19 @@ describe('Paladin Controller contract tests', () => {
         it(' should block non-admin to change the admin', async ()=> {
             await expect(
                 controller.connect(user1).setNewAdmin(user1.address)
-            ).to.be.revertedWith('Admin function')
+            ).to.be.revertedWith('1')
         });
     
         it(' should block non-admin to change PalPools controller', async ()=> {
             await expect(
                 controller.connect(user1).setPoolsNewController(user1.address)
-            ).to.be.revertedWith('Admin function')
+            ).to.be.revertedWith('1')
         });
     
         it(' should block non-admin to remove from PalPool Reserve', async ()=> {
             await expect(
                 controller.connect(user1).removeReserveFromPool(fakePool.address, ethers.utils.parseEther('1'), user1.address)
-            ).to.be.revertedWith('Admin function')
+            ).to.be.revertedWith('1')
         });
 
     });

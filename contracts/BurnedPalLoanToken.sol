@@ -16,7 +16,7 @@ import "./IPalLoanToken.sol";
 
 
 
-/** @title bPalLoanToken contract  */
+/** @title BurnedPalLoanToken contract  */
 /// @author Paladin
 contract BurnedPalLoanToken{
     using SafeMath for uint;

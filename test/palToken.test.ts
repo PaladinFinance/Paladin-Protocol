@@ -186,6 +186,8 @@ describe('PalToken contract tests', () => {
     describe('approve', async () => {
 
         const allowance = ethers.utils.parseEther('150')
+        const change_allowance = ethers.utils.parseEther('50')
+        const over_allowance = ethers.utils.parseEther('200')
         
         beforeEach(async () => {
             await token.initiate(pool.address)
@@ -203,6 +205,34 @@ describe('PalToken contract tests', () => {
             
         });
 
+        it(' should increase allowance correctly', async () => {
+
+            await token.connect(user1).approve(user2.address, allowance)
+
+            let oldAllowance = await token.connect(user1).allowance(user1.address, user2.address)
+
+            await token.connect(user1).increaseAllowance(user2.address, change_allowance)
+
+            let newAllowance = await token.connect(user1).allowance(user1.address, user2.address)
+
+            expect(newAllowance.sub(oldAllowance)).to.be.eq(change_allowance)
+            
+        });
+
+        it(' should decrease allowance correctly', async () => {
+
+            await token.connect(user1).approve(user2.address, allowance)
+
+            let oldAllowance = await token.connect(user1).allowance(user1.address, user2.address)
+
+            await token.connect(user1).decreaseAllowance(user2.address, change_allowance)
+
+            let newAllowance = await token.connect(user1).allowance(user1.address, user2.address)
+
+            expect(oldAllowance.sub(newAllowance)).to.be.eq(change_allowance)
+            
+        });
+
         it(' should emit the correct Event', async () => {
 
             await expect(token.connect(user1).approve(user2.address, allowance))
@@ -216,6 +246,16 @@ describe('PalToken contract tests', () => {
             await expect(
                 token.connect(user1).approve(ethers.constants.AddressZero, allowance)
             ).to.be.revertedWith('22')
+            
+        });
+        
+        it(' should fail to decrease allwoance under 0', async () => {
+
+            await token.connect(user1).approve(user2.address, allowance)
+
+            await expect(
+                token.connect(user1).decreaseAllowance(user2.address, over_allowance)
+            ).to.be.revertedWith('decreased allowance below zero')
             
         });
 

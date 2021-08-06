@@ -15,15 +15,13 @@ import "./PalPool.sol";
 import "./IPalPool.sol";
 import "./IPalLoan.sol";
 import "./utils/IERC20.sol";
+import "./utils/Admin.sol";
 
 /** @title Paladin Controller contract  */
 /// @author Paladin
-contract PaladinController is IPaladinController {
+contract PaladinController is IPaladinController, Admin {
     using SafeMath for uint;
-    
 
-    /** @dev Admin address for this contract */
-    address payable internal admin;
 
     /** @notice List of current active palToken Pools */
     address[] public palTokens;
@@ -70,9 +68,9 @@ contract PaladinController is IPaladinController {
     * @param _palPools array of address of PalPool contracts
     * @return bool : Success
     */ 
-    function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
+    function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override adminOnly returns(bool){
         require(!initialized, "Lists already set");
+        require(_palTokens.length == _palPools.length, "List sizes not equal");
         palPools = _palPools;
         palTokens = _palTokens;
         initialized = true;
@@ -85,9 +83,8 @@ contract PaladinController is IPaladinController {
     * @param _palPool address of the PalPool contract
     * @return bool : Success
     */ 
-    function addNewPool(address _palToken, address _palPool) external override returns(bool){
+    function addNewPool(address _palToken, address _palPool) external override adminOnly returns(bool){
         //Add a new address to the palToken & palPool list
-        require(msg.sender == admin, "Admin function");
         require(!isPalPool(_palPool), "Already added");
 
         palTokens.push(_palToken);
@@ -100,13 +97,12 @@ contract PaladinController is IPaladinController {
 
     
     /**
-    * @notice Remove a PalPool from teh list (& the related PalToken)
+    * @notice Remove a PalPool from the list (& the related PalToken)
     * @param _palPool address of the PalPool contract to remove
     * @return bool : Success
     */ 
-    function removePool(address _palPool) external override returns(bool){
+    function removePool(address _palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(msg.sender == admin, "Admin function");
         require(isPalPool(_palPool), "Not listed");
         
         uint lastIndex = (palPools.length).sub(1);
@@ -141,7 +137,7 @@ contract PaladinController is IPaladinController {
     function withdrawPossible(address palPool, uint amount) external view override returns(bool){
         //Get the underlying balance of the palPool contract to check if the action is possible
         PalPool _palPool = PalPool(palPool);
-        return(_palPool._underlyingBalance() >= amount);
+        return(_palPool.underlyingBalance() >= amount);
     }
     
 
@@ -154,7 +150,7 @@ contract PaladinController is IPaladinController {
     function borrowPossible(address palPool, uint amount) external view override returns(bool){
         //Get the underlying balance of the palPool contract to check if the action is possible
         PalPool _palPool = PalPool(palPool);
-        return(_palPool._underlyingBalance() >= amount);
+        return(_palPool.underlyingBalance() >= amount);
     }
     
 
@@ -278,21 +274,8 @@ contract PaladinController is IPaladinController {
     
     //Admin function
 
-    /**
-    * @notice Set a new Controller Admin
-    * @dev Changes the address for the admin parameter
-    * @param _newAdmin address of the new Controller Admin
-    * @return bool : Update success
-    */
-    function setNewAdmin(address payable _newAdmin) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
-        admin = _newAdmin;
-        return true;
-    }
 
-
-    function setPoolsNewController(address _newController) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
+    function setPoolsNewController(address _newController) external override adminOnly returns(bool){
         for(uint i = 0; i < palPools.length; i++){
             IPalPool _palPool = IPalPool(palPools[i]);
             _palPool.setNewController(_newController);
@@ -301,8 +284,7 @@ contract PaladinController is IPaladinController {
     }
 
 
-    function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override returns(bool){
-        require(msg.sender == admin, "Admin function");
+    function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override adminOnly returns(bool){
         IPalPool _palPool = IPalPool(_pool);
         _palPool.removeReserve(_amount, _recipient);
         return true;

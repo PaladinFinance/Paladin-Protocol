@@ -104,14 +104,14 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
         it(' should do the transfer correctly (& emit correct Event)', async () => {
 
-            const old_poolBalance = await pool._underlyingBalance()
+            const old_poolBalance = await pool.underlyingBalance()
             const old_balance_fromERC20 = await underlying.balanceOf(pool.address)
 
             await expect(pool.connect(user1).deposit(amount))
                 .to.emit(pool, 'Deposit')
                 .withArgs(user1.address, amount, pool.address);
 
-            const new_poolBalance = await pool._underlyingBalance()
+            const new_poolBalance = await pool.underlyingBalance()
             const new_balance_fromERC20 = await underlying.balanceOf(pool.address)
 
             expect(new_poolBalance.sub(old_poolBalance)).to.be.eq(amount)
@@ -200,14 +200,14 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
         it(' should withdraw funds correctly (& emit the correct Event)', async () => {
 
-            const old_poolBalance = await pool._underlyingBalance()
+            const old_poolBalance = await pool.underlyingBalance()
             const old_balance_fromERC20 = await underlying.balanceOf(pool.address)
 
             await expect(pool.connect(user1).withdraw(paltoken_amount))
                 .to.emit(pool, 'Withdraw')
                 .withArgs(user1.address, paltoken_amount, pool.address);
 
-            const new_poolBalance = await pool._underlyingBalance()
+            const new_poolBalance = await pool.underlyingBalance()
             const new_balance_fromERC20 = await underlying.balanceOf(pool.address)
 
             expect(old_poolBalance.sub(new_poolBalance)).to.be.eq(amount)
