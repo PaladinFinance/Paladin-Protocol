@@ -32,12 +32,12 @@ contract MockPalPool is Admin {
         totalReserve = _reserveAmount;
     }
 
-    function _underlyingBalance() public pure returns(uint){
+    function underlyingBalance() public pure returns(uint){
         return 10e18;
     }
 
     function removeReserve(uint _amount, address _recipient) external controllerOnly {
-        require(_amount <= _underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
+        require(_amount <= underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
         totalReserve = totalReserve.sub(_amount);
         underlying.transfer(_recipient, _amount);
     }

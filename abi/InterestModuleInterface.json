@@ -2,6 +2,11 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "palPool",
+        "type": "address"
+      },
+      {
         "internalType": "uint256",
         "name": "cash",
         "type": "uint256"
@@ -30,6 +35,11 @@
   },
   {
     "inputs": [
+      {
+        "internalType": "address",
+        "name": "palPool",
+        "type": "address"
+      },
       {
         "internalType": "uint256",
         "name": "cash",

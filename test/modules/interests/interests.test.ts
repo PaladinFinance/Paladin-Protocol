@@ -1,7 +1,7 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { InterestCalculator } from "../../typechain/InterestCalculator";
+import { InterestCalculator } from "../../../typechain/InterestCalculator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "@ethersproject/bignumber";
 

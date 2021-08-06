@@ -13,7 +13,7 @@ library Errors {
     // Admin error
     string public constant CALLER_NOT_ADMIN = '1'; // 'The caller must be the admin'
     string public constant CALLER_NOT_CONTROLLER = '29'; // 'The caller must be the admin or the controller'
-    string public constant CALLER_NOT_ALLOWED_POOL = '30';  // 'The caller must be a palPool listed in tle controller'
+    string public constant CALLER_NOT_ALLOWED_POOL = '30';  // 'The caller must be a palPool listed in the controller'
     string public constant CALLER_NOT_MINTER = '31';
 
     // ERC20 type errors

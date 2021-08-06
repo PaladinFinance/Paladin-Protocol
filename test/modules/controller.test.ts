@@ -220,6 +220,8 @@ describe('Paladin Controller contract tests', () => {
 
         it(' should return the good booleans to the PalPool', async () => {
 
+            await underlying.connect(admin).transfer(mockPool.address, 1000000);
+
             expect(
                 await controller.connect(admin).withdrawPossible(mockPool.address, 10)
             ).to.be.true

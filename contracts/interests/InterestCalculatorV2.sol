@@ -10,38 +10,55 @@ pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
 import "./InterestInterface.sol";
-
+import "./multipliers/IMultiplierCalculator.sol";
 import "../utils/SafeMath.sol";
+import "../utils/Admin.sol";
 
-/** @title Interest Module for Paladin PalPools  */
+/** @title Interest Module V2 for Paladin PalPools  */
 /// @author Paladin
-contract InterestCalculator is InterestInterface {
+contract InterestCalculatorV2 is InterestInterface, Admin {
     using SafeMath for uint;
 
-    /** @notice admin address (contract creator) */
-    address public admin;
+
+    bool private initiated = false;
+
+    mapping(address => bool) public useMultiplier;
+
+    uint public blocksPerYear = 2336000;
 
     uint public multiplierPerBlock;
-    /** @notice base borrow rate */
     uint public baseRatePerBlock;
-    /** @notice mulitplier for borrow rate for the kink */
-    uint public kinkMultiplierPerBlock;
-    /** @notice borrow rate for the kink */
-    uint public kinkBaseRatePerBlock;
-    /** @notice  ratio of utilization rate at wihich we use kink_ values*/
-    uint public constant kink = 0.8e18;
+    uint public jumpMultiplierPerBlock;
+
+    mapping(address => IMultiplierCalculator) public multiplierForPool;
     
 
     constructor(){
         admin = msg.sender;
-
-        uint blocksPerYear = 2336000;
-        //Target yearly values for Borrow Rate
-        multiplierPerBlock = uint(0.7e18).div(blocksPerYear);
-        baseRatePerBlock = uint(0.57e18).div(blocksPerYear);
-        kinkMultiplierPerBlock = uint(12.6e18).div(blocksPerYear);
-        kinkBaseRatePerBlock = uint(1.13e18).div(blocksPerYear);
     }
+
+
+    function initiate(
+        uint multiplierPerYear,
+        uint baseRatePerYear,
+        uint jumpMultiplierPerYear,
+        address[] memory palPools,
+        address[] memory multiplierCalculators
+    ) external adminOnly {
+        require(!initiated, "Already initiated");
+        require(palPools.length == multiplierCalculators.length);
+
+        multiplierPerBlock = multiplierPerYear.div(blocksPerYear);
+        baseRatePerBlock = baseRatePerYear.div(blocksPerYear);
+        jumpMultiplierPerBlock = jumpMultiplierPerYear.div(blocksPerYear);
+
+        for(uint i = 0; i < palPools.length; i++){
+            multiplierForPool[palPools[i]] = IMultiplierCalculator(multiplierCalculators[i]);
+        }
+
+        initiated = true;
+    }
+
 
     /**
     * @notice Calculates the Utilization Rate of a PalPool
@@ -71,11 +88,9 @@ contract InterestCalculator is InterestInterface {
     * @return uint : Supply Rate for the Pool (scale 1e18)
     */
     function getSupplyRate(address palPool, uint cash, uint borrows, uint reserves, uint reserveFactor) external view override returns(uint){
-        palPool; //Useless, needed to match the Interface
-        
         //Fetch the Pool Utilisation Rate & Borrow Rate
         uint _utilRate = utilizationRate(cash, borrows, reserves);
-        uint _bRate = _borrowRate(cash, borrows, reserves);
+        uint _bRate = _borrowRate(palPool, cash, borrows, reserves);
 
         //Supply Rate = Utilization Rate * (Borrow Rate * (1 - Reserve Factor))
         uint _tempRate = _bRate.mul(uint(1e18).sub(reserveFactor)).div(1e18);
@@ -92,32 +107,68 @@ contract InterestCalculator is InterestInterface {
     * @return uint : Borrow Rate for the Pool (scale 1e18)
     */
     function getBorrowRate(address palPool, uint cash, uint borrows, uint reserves) external view override returns(uint){
-        palPool; //Useless, needed to match the Interface
-        
         //Internal call
-        return _borrowRate(cash, borrows, reserves);
+        return _borrowRate(palPool, cash, borrows, reserves);
     }
 
     /**
     * @dev Calculates the Borrow Rate for the PalPool, depending on the utilisation rate & the kink value.
+    * @param palPool Address of the PalPool calling the function
     * @param cash Cash amount of the calling PalPool
     * @param borrows Total Borrowed amount of the calling PalPool
     * @param reserves Total Reserves amount of the calling PalPool
     * @return uint : Borrow Rate for the Pool (scale 1e18)
     */
-    function _borrowRate(uint cash, uint borrows, uint reserves) internal view returns(uint){
+    function _borrowRate(address palPool, uint cash, uint borrows, uint reserves) internal view returns(uint){
         //Fetch the utilisation rate
         uint _utilRate = utilizationRate(cash, borrows, reserves);
-        //If the Utilization Rate is less than the Kink value
-        // Borrow Rate = Multiplier * Utilization Rate + Base Rate
-        if(_utilRate < kink) {
-            return _utilRate.mul(multiplierPerBlock).div(1e18).add(baseRatePerBlock);
+
+        if(useMultiplier[palPool]){
+            // multiplier model calculation
+            uint _govMultiplier = multiplierForPool[palPool].getCurrentMultiplier();
+
+            return (_utilRate.mul(multiplierPerBlock).div(1e18).add(baseRatePerBlock)).mul(_govMultiplier).div(1e18);
+        
+        
+        } else if(_utilRate > 0.8e18){
+            // jumpRate model calculation 
+            uint _tempRate = uint256(0.8e18).mul(multiplierPerBlock).div(1e18).add(baseRatePerBlock);
+
+            return (_utilRate.sub(0.8e18).mul(jumpMultiplierPerBlock).div(1e18)).add(_tempRate);
         }
-        //If the Utilization Rate is more than the Kink value
-        // Borrow Rate = Kink Multiplier * (Utilization Rate - 0.8) + Kink Rate
-        else {
-            uint _temp = _utilRate.sub(0.8e18);
-            return kinkMultiplierPerBlock.mul(_temp).div(1e18).add(kinkBaseRatePerBlock);
-        }
+
+        //Base rate calculation
+        return _utilRate.mul(multiplierPerBlock).div(1e18).add(baseRatePerBlock);
+    }
+
+
+    //Admin functions
+
+
+    function activateMultiplier(address palPool) external adminOnly {
+        require(!useMultiplier[palPool], "Already activated");
+        useMultiplier[palPool] = true;
+    }
+
+    function stopMultiplier(address palPool) external adminOnly {
+        require(useMultiplier[palPool], "Not activated");
+        useMultiplier[palPool] = false;
+    }
+
+
+    function updateBaseValues(uint newMultiplierPerYear, uint newBaseRatePerYear, uint jumpMultiplierPerYear) external adminOnly {
+        multiplierPerBlock = newMultiplierPerYear.div(blocksPerYear);
+        baseRatePerBlock = newBaseRatePerYear.div(blocksPerYear);
+        jumpMultiplierPerBlock = jumpMultiplierPerYear.div(blocksPerYear);
+    }
+
+
+    function updateBlocksPerYear(uint newBlockPerYear) external adminOnly {
+        blocksPerYear = newBlockPerYear;
+    }
+
+    function updatePoolMultiplierCalculator(address palPool, address newMultiplierCalculator) external adminOnly {
+        //either update already existing item, or add a new one
+        multiplierForPool[palPool] = IMultiplierCalculator(newMultiplierCalculator);
     }
 }
