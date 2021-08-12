@@ -16,37 +16,80 @@ const DELEGATOR_NAMES = {
     SNAPSHOT_DELEGATOR: 'SnapshotDelegator'
 }
 
+const MULTIPLIER_NAMES = {
+    GOVERNOR: 'GovernorMultiplier',
+    AAVE: 'AaveMultiplier'
+}
+
+const MULTIPLIER_CONTRACTS = {
+    COMP: {
+        NAME: MULTIPLIER_NAMES.GOVERNOR,
+        GOV: 'Compound',
+        GOVERNOR_ADDRESS: "0xc0Da02939E1441F497fd74F78cE7Decb17B66529"
+    },
+    UNI: {
+        NAME: MULTIPLIER_NAMES.GOVERNOR,
+        GOV: 'Uniswap',
+        GOVERNOR_ADDRESS: "0x5e4be8Bc9637f0EAA1A755019e06A68ce081D58F"
+    },
+    AAVE: {
+        NAME: MULTIPLIER_NAMES.AAVE,
+        GOV: 'Aave',
+        GOVERNANCE_ADDRESS: "0xc2eBaB3Bac8f2f5028f5C7317027A41EBFCa31D2",
+        STRATEGY_ADDRESS: "0x2012b02574F32a96b9CFb8Ba7Fdfd589D5c70F50",
+    }
+}
+
+const MULTIPLIER_KEYS = {
+    'COMP': MULTIPLIER_CONTRACTS.COMP,
+    'UNI': MULTIPLIER_CONTRACTS.UNI,
+    'AAVE': MULTIPLIER_CONTRACTS.AAVE,
+}
+
+
 const POOLS_PARAMS = {
     COMP: {
         UNDERLYING: TOKENS.COMP,
         DELEGATOR: 'BASIC_DELEGATOR',
         NAME: 'Paladin COMP',
-        SYMBOL: 'palCOMP'
+        SYMBOL: 'palCOMP',
+        MUTIPLIER: 'COMP'
     },
     UNI: {
         UNDERLYING: TOKENS.UNI,
         DELEGATOR: 'BASIC_DELEGATOR',
         NAME: 'Paladin UNI',
-        SYMBOL: 'palUNI'
+        SYMBOL: 'palUNI',
+        MUTIPLIER: 'UNI'
     },
     AAVE: {
         UNDERLYING: TOKENS.AAVE,
         DELEGATOR: 'AAVE_DELEGATOR',
         NAME: 'Paladin AAVE',
-        SYMBOL: 'palAAVE'
+        SYMBOL: 'palAAVE',
+        MUTIPLIER: 'AAVE'
     },
     STKAAVE: {
         UNDERLYING: TOKENS.STKAAVE,
         DELEGATOR: 'AAVE_DELEGATOR_CLAIMER',
         NAME: 'Paladin stkAAVE',
-        SYMBOL: 'palStkAAVE'
+        SYMBOL: 'palStkAAVE',
+        MUTIPLIER: 'AAVE'
     }
 }
 
 const PAL_LOAN_TOKEN_URI = "about:blank"
 
+const INTEREST_MODULE_VALUES = {
+    BASE_RATE_PER_YEAR: ethers.utils.parseEther('0.25'),
+    MULTIPLIER_PER_YEAR: ethers.utils.parseEther('0.9375'),
+    JUMP_MULTIPLIER_PER_YEAR: ethers.utils.parseEther('13.25')
+}
+
 
 //Already deployed contracts : 
+
+
 const POOLS = {
     COMP: {
         POOL: "0x2ad0827e1Fca16Cf937DaDedF5cE81Ed0848bE28",
@@ -72,6 +115,8 @@ const CONTROLLER = "0x12692B01B2c0fc42c7daaf0a9Cb8a0B198916156";
 
 const INTEREST_MODULE = "0x037Cea58aCd888115792bceEe7CAdba3d633860a";
 
+const INTEREST_MODULE_V2 = "0xd18886822b0269836a03BAD0058f497493f35cB9";
+
 const ADDRESS_REGISTRY = "0x961FACC23c1dAee162b6ff142f416E814F2Dea25";
 
 const DELEGATORS = {
@@ -81,6 +126,33 @@ const DELEGATORS = {
     SNAPSHOT_DELEGATOR: "0x1aE113966C29046CaC0490ceaFC7eb1Dc2426f38"
 }
 
+const MULTIPLIERS = {
+    COMP: {
+        NAME: MULTIPLIER_NAMES.GOVERNOR,
+        CONTRACT: MULTIPLIER_CONTRACTS.COMP,
+        ADDRESS: "0x3Bd47B4F89C41d3C62c70274D44b5F60fBA0F016",
+        POOLS: [
+            POOLS.COMP.POOL
+        ]
+    },
+    UNI: {
+        NAME: MULTIPLIER_NAMES.GOVERNOR,
+        CONTRACT: MULTIPLIER_CONTRACTS.UNI,
+        ADDRESS: "0xACC64387b282A0C26216324E28B8d3fDfbd24e34",
+        POOLS: [
+            POOLS.UNI.POOL
+        ]
+    },
+    AAVE: {
+        NAME: MULTIPLIER_NAMES.AAVE,
+        CONTRACT: MULTIPLIER_CONTRACTS.AAVE,
+        ADDRESS: "0x399D7EB51675e7Cd10a9196Dc4f86adDb68e10C7",
+        POOLS: [
+            POOLS.AAVE.POOL,
+            POOLS.STKAAVE.POOL
+        ]
+    }
+}
 
 
 module.exports = {
@@ -91,7 +163,13 @@ module.exports = {
     PAL_LOAN_TOKEN,
     CONTROLLER,
     INTEREST_MODULE,
+    INTEREST_MODULE_V2,
     ADDRESS_REGISTRY,
     DELEGATORS,
-    PAL_LOAN_TOKEN_URI
+    PAL_LOAN_TOKEN_URI,
+    MULTIPLIER_CONTRACTS,
+    MULTIPLIER_NAMES,
+    INTEREST_MODULE_VALUES,
+    MULTIPLIERS,
+    MULTIPLIER_KEYS
 };

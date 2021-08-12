@@ -18,13 +18,25 @@ const params_path = () => {
 
 const param_file_path = params_path();
 
-const { POOLS_PARAMS, TOKENS, DELEGATOR_NAMES, PAL_LOAN_TOKEN_URI } = require(param_file_path);
+const { 
+  POOLS_PARAMS,
+  TOKENS,
+  DELEGATOR_NAMES,
+  PAL_LOAN_TOKEN_URI,
+  MULTIPLIER_CONTRACTS,
+  MULTIPLIER_NAMES,
+  INTEREST_MODULE_VALUES,
+  MULTIPLIER_KEYS
+} = require(param_file_path);
 
 let pools: String[] = [];
 let tokens: String[] = [];
 let underlyings: String[] = [];
 
 let delegators: { [name: string]: string } = {};
+
+let multipliers_pools: { [name: string]: string[] } = {};
+let multipliers_address: { [name: string]: string } = {};
 
 let palPools: { [name: string]: { [name: string]: string } } = {};
 
@@ -35,7 +47,7 @@ async function main() {
 
 
   const Controller = await ethers.getContractFactory("PaladinController");
-  const Interest = await ethers.getContractFactory("InterestCalculator");
+  const Interest = await ethers.getContractFactory("InterestCalculatorV2");
   const PalLoanToken = await ethers.getContractFactory("PalLoanToken");
   const BurnedPalLoanToken = await ethers.getContractFactory("BurnedPalLoanToken");
   const Registry = await ethers.getContractFactory("AddressRegistry");
@@ -45,12 +57,15 @@ async function main() {
   //variant pools :
   const stkAavePalPool = await ethers.getContractFactory("PalPoolStkAave");
 
+  //multipliers : 
+  const GovernorMultiplier = await ethers.getContractFactory("GovernorMultiplier");
+  const AaveMultiplier = await ethers.getContractFactory("AaveMultiplier");
 
 
   console.log('Deploying the Paladin Controller ...')
   const controller = await Controller.deploy();
 
-  console.log('Deploying the Interest Calculator Module ...')
+  console.log('Deploying the Interest Calculator Module V2 ...')
   const interest = await Interest.deploy();
 
 
@@ -77,7 +92,9 @@ async function main() {
     delegators[d] = delegator.address;
   }
 
-
+  for(let m in MULTIPLIER_KEYS){
+    multipliers_pools[m] = []
+  }
 
   for (let p in POOLS_PARAMS) {
     let params = POOLS_PARAMS[p];
@@ -119,6 +136,8 @@ async function main() {
     tokens.push(palToken.address)
     underlyings.push(params.UNDERLYING)
 
+    multipliers_pools[params.MUTIPLIER].push(palPool.address)
+
     palPools[p] = {
       'pool': palPool.address,
       'token': palToken.address,
@@ -126,9 +145,54 @@ async function main() {
     }
   }
 
-
-
   await controller.setInitialPools(tokens, pools);
+
+
+  //deploy mutipliers
+  console.log('Deploying Multipliers ...')
+
+  for(let m in MULTIPLIER_KEYS){
+    let mult_data = MULTIPLIER_KEYS[m]
+    let multiplier: any
+
+    if(mult_data.NAME == MULTIPLIER_NAMES.GOVERNOR){
+      multiplier = await GovernorMultiplier.deploy(
+        mult_data.GOVERNOR_ADDRESS,
+        multipliers_pools[m]
+      )
+    }
+    else if(mult_data.NAME == MULTIPLIER_NAMES.AAVE){
+      multiplier = await AaveMultiplier.deploy(
+        mult_data.GOVERNANCE_ADDRESS,
+        mult_data.STRATEGY_ADDRESS,
+        multipliers_pools[m]
+      )
+    }
+    await multiplier.deployed();
+    multipliers_address[m] = multiplier.address;
+  }
+
+
+
+  //initiate interest module
+
+  let mult_list:String[] = [];
+  let pool_list:String[] = [];
+  for(let m in multipliers_pools){
+    for(let p in multipliers_pools[m]){
+      mult_list.push(multipliers_address[m]);
+      pool_list.push(multipliers_pools[m][p]);
+    }
+  }
+
+  console.log('Initiating the Interest Module ...')
+  await interest.initiate(
+    INTEREST_MODULE_VALUES.MULTIPLIER_PER_YEAR,
+    INTEREST_MODULE_VALUES.BASE_RATE_PER_YEAR,
+    INTEREST_MODULE_VALUES.JUMP_MULTIPLIER_PER_YEAR,
+    pool_list,
+    mult_list
+)
 
 
 
@@ -183,6 +247,29 @@ async function main() {
       contract: "contracts/delegators/"+DELEGATOR_NAMES[d]+".sol:"+DELEGATOR_NAMES[d]
     });
     console.log()
+  }
+  for (let m in multipliers_address) {
+    if(MULTIPLIER_CONTRACTS[m].NAME == MULTIPLIER_NAMES.GOVERNOR){
+      await hre.run("verify:verify", {
+        address: multipliers_address[m],
+        constructorArguments: [
+          MULTIPLIER_CONTRACTS[m].GOVERNOR_ADDRESS,
+          multipliers_pools[m]
+        ]
+      });
+      console.log()
+    }
+    else if(MULTIPLIER_CONTRACTS[m].NAME == MULTIPLIER_NAMES.AAVE){
+      await hre.run("verify:verify", {
+        address: multipliers_address[m],
+        constructorArguments: [
+          MULTIPLIER_CONTRACTS[m].GOVERNANCE_ADDRESS,
+          MULTIPLIER_CONTRACTS[m].STRATEGY_ADDRESS,
+          multipliers_pools[m]
+        ]
+      });
+      console.log()
+    }
   }
   console.log()
   for (let p in palPools) {
@@ -240,6 +327,11 @@ async function main() {
   for (let d in delegators) {
     console.log(DELEGATOR_NAMES[d] + ' : ')
     console.log(delegators[d])
+  }
+  console.log()
+  for (let m in multipliers_address) {
+    console.log(MULTIPLIER_CONTRACTS[m].NAME + ' (' + MULTIPLIER_CONTRACTS[m].GOV + ' Governance)' + ' : ')
+    console.log(multipliers_address[m])
   }
   console.log()
   for (let p in palPools) {

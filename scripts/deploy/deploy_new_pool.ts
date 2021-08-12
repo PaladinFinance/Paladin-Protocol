@@ -17,7 +17,7 @@ const params_path = () => {
 
 const param_file_path = params_path();
 
-const { POOLS_PARAMS, TOKENS, DELEGATORS, CONTROLLER, INTEREST_MODULE, PAL_LOAN_TOKEN } = require(param_file_path);
+const { POOLS_PARAMS, TOKENS, DELEGATORS, CONTROLLER, INTEREST_MODULE_V2, PAL_LOAN_TOKEN } = require(param_file_path);
 
 
 const KEY = 'COMP'
@@ -49,7 +49,7 @@ async function main() {
       palToken.address,
       CONTROLLER,
       params.UNDERLYING,
-      INTEREST_MODULE,
+      INTEREST_MODULE_V2,
       DELEGATORS[params.DELEGATOR],
       PAL_LOAN_TOKEN,
       TOKENS.AAVE
@@ -60,7 +60,7 @@ async function main() {
       palToken.address,
       CONTROLLER,
       params.UNDERLYING,
-      INTEREST_MODULE,
+      INTEREST_MODULE_V2,
       DELEGATORS[params.DELEGATOR],
       PAL_LOAN_TOKEN
     );
@@ -88,7 +88,7 @@ async function main() {
         palToken.address,
         CONTROLLER,
         params.UNDERLYING,
-        INTEREST_MODULE,
+        INTEREST_MODULE_V2,
         DELEGATORS[params.DELEGATOR],
         PAL_LOAN_TOKEN,
         TOKENS.AAVE
@@ -102,7 +102,7 @@ async function main() {
         palToken.address,
         CONTROLLER,
         params.UNDERLYING,
-        INTEREST_MODULE,
+        INTEREST_MODULE_V2,
         DELEGATORS[params.DELEGATOR],
         PAL_LOAN_TOKEN
       ],
