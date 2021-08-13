@@ -257,8 +257,8 @@ describe('InterestCalculator V2 contract tests', () => {
 
             await interest.connect(admin).activateMultiplier(pool.address)
 
-            const cash1 = ethers.utils.parseEther('50')
-            const borrow1 = ethers.utils.parseEther('25')
+            const cash1 = ethers.utils.parseEther('500')
+            const borrow1 = ethers.utils.parseEther('250')
             const reserve1 = ethers.utils.parseEther('0')
 
             await pool.changeTotalBorrowed(borrow1);
@@ -270,9 +270,9 @@ describe('InterestCalculator V2 contract tests', () => {
 
             expect(borrowRate1).to.be.eq(expectedRate1)
 
-            const cash2 = ethers.utils.parseEther('500')
-            const borrow2 = ethers.utils.parseEther('750')
-            const reserve2 = ethers.utils.parseEther('250')
+            const cash2 = ethers.utils.parseEther('50000')
+            const borrow2 = ethers.utils.parseEther('75000')
+            const reserve2 = ethers.utils.parseEther('25000')
 
             await pool.changeTotalBorrowed(borrow2);
             const mult2 = await governorMultiplier.getCurrentMultiplier();
