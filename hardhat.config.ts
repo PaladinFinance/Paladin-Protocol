@@ -19,7 +19,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            //runs: 9999,
+            //runs: 99999,
             runs: 25000,
           },
         }
@@ -60,7 +60,6 @@ const config: HardhatUserConfig = {
     target: "ethers-v5"
   },
   gasReporter: {
-    //enabled: true
     enabled: false
   }
 };

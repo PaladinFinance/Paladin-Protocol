@@ -1,7 +1,8 @@
 import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { PalLoan } from "../../typechain/PalLoan";
+import { IPalLoan } from "../../typechain/IPalLoan";
+import { IPalLoan__factory } from "../../typechain/factories/IPalLoan__factory";
 import { IERC20 } from "../../typechain/IERC20";
 import { IGovernancePowerDelegationToken } from "../../typechain/IGovernancePowerDelegationToken";
 import { IERC20__factory } from "../../typechain/factories/IERC20__factory";
@@ -11,6 +12,7 @@ import { AaveDelegator } from "../../typechain/AaveDelegator";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
 import { getAAVE } from "../utils/getERC20";
+import { PalLoanFactory } from "../../typechain/PalLoanFactory";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -18,10 +20,11 @@ const { provider } = ethers;
 
 let delegatorFactory: ContractFactory
 let loanFactory: ContractFactory
+let palLoanFactory: ContractFactory
 
 const AAVE_address = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9" //AAVE contract on mainnet
 
-describe('PalLoan contract tests (using the Aave Delegator)', () => {
+describe('PalLoan (Delegator clone) tests (Aave Delegator version)', () => {
     let pool: SignerWithAddress
     let admin: SignerWithAddress
     let borrower: SignerWithAddress
@@ -29,16 +32,21 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
     let newDelegatee: SignerWithAddress
     let killer: SignerWithAddress
 
-    let loan: PalLoan
+    let loan: IPalLoan
     let delegator: AaveDelegator
     let aave: IERC20
     let aavePower: IGovernancePowerDelegationToken
+    let factory: PalLoanFactory
+
+
+    const borrowAmount = ethers.utils.parseEther('100')
+    const feesAmount = ethers.utils.parseEther('10')
 
     
     before( async () => {
         delegatorFactory = await ethers.getContractFactory("AaveDelegator");
 
-        loanFactory = await ethers.getContractFactory("PalLoan");
+        palLoanFactory = await ethers.getContractFactory("PalLoanFactory");
 
         [pool, admin, borrower, delegatee, newDelegatee, killer] = await ethers.getSigners();
 
@@ -54,51 +62,52 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
         delegator = (await delegatorFactory.connect(admin).deploy()) as AaveDelegator;
         await delegator.deployed();
 
-        loan = (await loanFactory.connect(pool).deploy(pool.address, borrower.address, aave.address, delegator.address)) as PalLoan;
-        await loan.deployed();
+        factory = (await palLoanFactory.connect(admin).deploy()) as PalLoanFactory;
+        await factory.deployed();
+
+        // use PalLoanFactory to clone Delegator
+        await factory.createPalLoan(
+            delegator.address,
+            pool.address,
+            borrower.address,
+            aave.address,
+            delegatee.address,
+            borrowAmount,
+            feesAmount
+        );
+
+        let loan_index = (await factory.deployedCount()).sub(1)
+        let loan_address = await factory.deployedLoans(loan_index)
+
+        loan = IPalLoan__factory.connect(loan_address, provider);
 
     });
 
+    describe('cloning & intitialization', async () => {
 
-    it(' should be deployed & have correct parameters', async () => {
-        expect(loan.address).to.properAddress
 
-        const loan_pool: string = await loan.motherPool()
-        const loan_underlying: string = await loan.underlying()
-        const loan_borrower: string = await loan.borrower()
-        const loan_delegator: string = await loan.delegator()
-
-        expect(loan_pool).to.be.eq(pool.address)
-        expect(loan_underlying).to.be.eq(aave.address)
-        expect(loan_borrower).to.be.eq(borrower.address)
-        expect(loan_delegator).to.be.eq(delegator.address)
-    });
-
-    describe('intitiate', async () => {
-
-        let borrowAmount = ethers.utils.parseEther('100')
-        let feesAmount = ethers.utils.parseEther('10')
-
-        it(' should delegate the right parameters', async () => {
-
-            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
-
+        it(' should be deployed & have correct parameters', async () => {
+            expect(loan.address).to.properAddress
+    
+            const loan_pool: string = await loan.motherPool()
+            const loan_underlying: string = await loan.underlying()
+            const loan_borrower: string = await loan.borrower()
             const loan_borrowAmount: BigNumber = await loan.amount()
             const loan_feesAmount: BigNumber = await loan.feesAmount()
             const loan_delegatee: string = await loan.delegatee()
-
+    
+            expect(loan_pool).to.be.eq(pool.address)
+            expect(loan_underlying).to.be.eq(aave.address)
+            expect(loan_borrower).to.be.eq(borrower.address)
             expect(loan_borrowAmount).to.be.eq(borrowAmount)
             expect(loan_feesAmount).to.be.eq(feesAmount)
             expect(loan_delegatee).to.be.eq(delegatee.address)
         });
 
-
         it(' should delegate the right amount of voting power', async () => {
 
             await aave.connect(admin).transfer(loan.address, borrowAmount)
             await aave.connect(admin).transfer(loan.address, feesAmount)
-
-            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
             const votes: BigNumber = await aavePower.getPowerCurrent(delegatee.address, 0)
 
@@ -120,7 +129,7 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
 
             const oldFeesAmount = await loan.feesAmount()
 
-            await loan.expand(feesAmount)
+            await loan.connect(pool).expand(feesAmount)
 
             const newFeesAmount = await loan.feesAmount()
 
@@ -132,16 +141,11 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
 
     describe('closeLoan', async () => {
 
-        const borrowAmount = ethers.utils.parseEther('100')
-        const feesAmount = ethers.utils.parseEther('10')
-
         const usedFees = ethers.utils.parseEther('5')
 
         beforeEach(async () => {
             await aave.connect(admin).transfer(loan.address, borrowAmount)
             await aave.connect(admin).transfer(loan.address, feesAmount)
-
-            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
         });
 
@@ -178,9 +182,6 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
 
     describe('killLoan', async () => {
 
-        const borrowAmount = ethers.utils.parseEther('100')
-        const feesAmount = ethers.utils.parseEther('10')
-
         const killerRatio = ethers.utils.parseEther('0.15')
 
         const killerAmount = ethers.utils.parseEther('1.5')
@@ -188,8 +189,6 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
         beforeEach(async () => {
             await aave.connect(admin).transfer(loan.address, borrowAmount)
             await aave.connect(admin).transfer(loan.address, feesAmount)
-
-            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
 
         });
 
@@ -226,19 +225,14 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
 
     describe('changeDelegatee', async () => {
 
-        let borrowAmount = ethers.utils.parseEther('100')
-        let feesAmount = ethers.utils.parseEther('10')
-
         beforeEach(async () => {
             await aave.connect(admin).transfer(loan.address, borrowAmount)
             await aave.connect(admin).transfer(loan.address, feesAmount)
-
-            await loan.connect(pool).initiate(delegatee.address, borrowAmount, feesAmount)
         });
 
 
         it(' should move the voting power to the new delegatee', async () => {
-            await loan.changeDelegatee(newDelegatee.address)
+            await loan.connect(pool).changeDelegatee(newDelegatee.address)
 
             const votes: BigNumber = await aavePower.getPowerCurrent(newDelegatee.address, 0)
 
@@ -247,7 +241,7 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
 
         
         it(' should update the delegatee', async () => {
-            await loan.changeDelegatee(newDelegatee.address)
+            await loan.connect(pool).changeDelegatee(newDelegatee.address)
 
             const loan_delegatee: string = await loan.delegatee()
 
@@ -260,16 +254,14 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
             const old_loan_pool: string = await loan.motherPool()
             const old_loan_underlying: string = await loan.underlying()
             const old_loan_borrower: string = await loan.borrower()
-            const old_loan_delegator: string = await loan.delegator()
             const old_loan_borrowAmount: BigNumber = await loan.amount()
             const old_loan_feesAmount: BigNumber = await loan.feesAmount()
 
-            await loan.changeDelegatee(newDelegatee.address)
+            await loan.connect(pool).changeDelegatee(newDelegatee.address)
 
             const loan_pool: string = await loan.motherPool()
             const loan_underlying: string = await loan.underlying()
             const loan_borrower: string = await loan.borrower()
-            const loan_delegator: string = await loan.delegator()
             const loan_borrowAmount: BigNumber = await loan.amount()
             const loan_feesAmount: BigNumber = await loan.feesAmount()
 
@@ -278,7 +270,6 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
             expect(loan_pool).to.be.eq(old_loan_pool)
             expect(loan_underlying).to.be.eq(old_loan_underlying)
             expect(loan_borrower).to.be.eq(old_loan_borrower)
-            expect(loan_delegator).to.be.eq(old_loan_delegator)
         });
 
     });
@@ -287,10 +278,6 @@ describe('PalLoan contract tests (using the Aave Delegator)', () => {
     describe('motherPoolOnly modifier', async () => {
 
         it(' should block non-pool calls', async () => {
-            await expect(
-                loan.connect(borrower).initiate(delegatee.address, 0, 0)
-            ).to.be.reverted
-    
             await expect(
                 loan.connect(borrower).expand(0)
             ).to.be.reverted

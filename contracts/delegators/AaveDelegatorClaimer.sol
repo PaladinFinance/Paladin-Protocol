@@ -19,6 +19,11 @@ contract AaveDelegatorClaimer is AaveDelegator {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
+    constructor(){
+        //Set up initial values
+        motherPool = payable(address(0xdead));
+        
+    }
 
     /**
     * @notice Starts the Loan and Delegate the voting Power to the Delegatee
@@ -28,8 +33,15 @@ contract AaveDelegatorClaimer is AaveDelegator {
     * @param _feesAmount Amount of fees (in the underlying token) paid by the borrower
     * @return bool : Power Delagation success
     */
-    function initiate(address _delegatee, uint _amount, uint _feesAmount) public override(AaveDelegator) returns(bool){
-        return super.initiate(_delegatee, _amount, _feesAmount);
+    function initiate(
+        address _motherPool,
+        address _borrower,
+        address _underlying,
+        address _delegatee,
+        uint _amount,
+        uint _feesAmount
+    ) public override(AaveDelegator) returns(bool){
+        return super.initiate(_motherPool, _borrower, _underlying, _delegatee, _amount, _feesAmount);
     }
 
     /**
@@ -38,7 +50,7 @@ contract AaveDelegatorClaimer is AaveDelegator {
     * @param _newFeesAmount new Amount of fees paid by the Borrower
     * @return bool : Expand success
     */
-    function expand(uint _newFeesAmount) public override(AaveDelegator) returns(bool){
+    function expand(uint _newFeesAmount) public override(AaveDelegator) motherPoolOnly returns(bool){
         return super.expand(_newFeesAmount);
     }
 
@@ -47,7 +59,7 @@ contract AaveDelegatorClaimer is AaveDelegator {
     * @dev Return the non-used fees to the Borrower, the loaned tokens and the used fees to the PalPool, then destroy the contract
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
-    function closeLoan(uint _usedAmount) public override(AaveDelegator) {
+    function closeLoan(uint _usedAmount) public override(AaveDelegator) motherPoolOnly {
         //Claim the reward from the StkAave contract and send them to the PalPool
         IStakedAave _stkAave = IStakedAave(underlying);
         uint _pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
@@ -62,7 +74,7 @@ contract AaveDelegatorClaimer is AaveDelegator {
     * @param _killer Address of the Loan Killer
     * @param _killerRatio Percentage of the fees to reward to the killer (scale 1e18)
     */
-    function killLoan(address _killer, uint _killerRatio) public override(AaveDelegator) {
+    function killLoan(address _killer, uint _killerRatio) public override(AaveDelegator) motherPoolOnly {
         //Claim the reward from the StkAave contract and send them to the PalPool
         IStakedAave _stkAave = IStakedAave(underlying);
         uint _pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
@@ -78,7 +90,7 @@ contract AaveDelegatorClaimer is AaveDelegator {
     * @param _delegatee Address to delegate the voting power to
     * @return bool : Power Delagation success
     */
-    function changeDelegatee(address _delegatee) public override(AaveDelegator) returns(bool){
+    function changeDelegatee(address _delegatee) public override(AaveDelegator) motherPoolOnly returns(bool){
         return super.changeDelegatee(_delegatee);
     }
 }

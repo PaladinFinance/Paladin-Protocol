@@ -8,14 +8,17 @@ chai.use(solidity);
 const { expect } = chai;
 
 
-describe('Basic Delegator contract tests', () => {
+describe('Delegator implementation contract tests', () => {
     let admin: SignerWithAddress
-    let user: SignerWithAddress
+    let pool: SignerWithAddress
+    let borrower: SignerWithAddress
+    let delegatee: SignerWithAddress
+    let underlying: SignerWithAddress
 
     let delegator: BasicDelegator
 
     beforeEach( async () => {
-        [admin, user] = await ethers.getSigners();
+        [admin, pool, borrower, delegatee, underlying] = await ethers.getSigners();
 
         const delegatorFactory = await ethers.getContractFactory(
             "BasicDelegator",
@@ -30,14 +33,16 @@ describe('Basic Delegator contract tests', () => {
         expect(delegator.address).to.properAddress
     });
 
+    it(' should not allow initialization on template contracts', async () => {
+        await expect(
+            delegator.connect(admin).initiate(pool.address, borrower.address, underlying.address, delegatee.address, 0, 0)
+        ).to.be.reverted
+    });
+
     it(' should fail all function calls', async () => {
         await expect(
-            delegator.connect(admin).initiate(user.address, 0, 0)
-        ).to.be.reverted
-
-        /*await expect(
             delegator.connect(admin).expand(0)
-        ).to.be.reverted*/
+        ).to.be.reverted
 
         await expect(
             delegator.connect(admin).closeLoan(0)

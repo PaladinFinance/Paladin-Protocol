@@ -23,13 +23,23 @@ contract BasicDelegator {
 
     //Mock Variables for DelegateCall
 
-    address internal underlying;
-    uint internal amount;
-    address internal borrower;
-    address internal delegatee;
-    address payable internal motherPool;
-    uint internal feesAmount;
+    address public underlying;
+    uint public amount;
+    address public borrower;
+    address public delegatee;
+    address payable public motherPool;
+    uint public feesAmount;
 
+    constructor(){
+        //Set up initial values
+        motherPool = payable(address(0xdead));
+        
+    }
+
+    modifier motherPoolOnly() {
+        require(msg.sender == motherPool);
+        _;
+    }
 
     /**
     * @notice Starts the Loan and Delegate the voting Power to the Delegatee
@@ -39,7 +49,20 @@ contract BasicDelegator {
     * @param _feesAmount Amount of fees (in the underlying token) paid by the borrower
     * @return bool : Power Delagation success
     */
-    function initiate(address _delegatee, uint _amount, uint _feesAmount) external returns(bool){
+    function initiate(
+        address _motherPool,
+        address _borrower,
+        address _underlying,
+        address _delegatee,
+        uint _amount,
+        uint _feesAmount
+    ) external returns(bool){
+        require(motherPool == address(0));
+
+        motherPool = payable(_motherPool);
+        borrower = _borrower;
+        underlying = _underlying;
+
         //Set up the borrowed amount and the amount of fees paid
         amount = _amount;
         feesAmount = _feesAmount;
@@ -57,7 +80,7 @@ contract BasicDelegator {
     * @param _newFeesAmount new Amount of fees paid by the Borrower
     * @return bool : Expand success
     */
-    function expand(uint _newFeesAmount) external returns(bool){
+    function expand(uint _newFeesAmount) external motherPoolOnly returns(bool){
         feesAmount = feesAmount.add(_newFeesAmount);
         return true;
     }
@@ -67,7 +90,7 @@ contract BasicDelegator {
     * @dev Return the non-used fees to the Borrower, the loaned tokens and the used fees to the PalPool, then destroy the contract
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
-    function closeLoan(uint _usedAmount) external {
+    function closeLoan(uint _usedAmount) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
         
         //Return the remaining amount to the borrower
@@ -87,7 +110,7 @@ contract BasicDelegator {
     * @param _killer Address of the Loan Killer
     * @param _killerRatio Percentage of the fees to reward to the killer (scale 1e18)
     */
-    function killLoan(address _killer, uint _killerRatio) external {
+    function killLoan(address _killer, uint _killerRatio) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
         
         //Send the killer reward to the killer
@@ -106,7 +129,7 @@ contract BasicDelegator {
     * @param _delegatee Address to delegate the voting power to
     * @return bool : Power Delagation success
     */
-    function changeDelegatee(address _delegatee) external returns(bool){
+    function changeDelegatee(address _delegatee) external motherPoolOnly returns(bool){
         delegatee = _delegatee;
         
         //Delegate governance power : Governor Alpha version

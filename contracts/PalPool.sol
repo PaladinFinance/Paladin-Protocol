@@ -12,10 +12,11 @@ pragma abicoder v2;
 
 import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
+import "./utils/Clones.sol";
 import "./IPalPool.sol";
 import "./PalPoolStorage.sol";
 import "./IPalLoan.sol";
-import "./PalLoan.sol";
+//import "./PalLoan.sol";
 import "./IPalToken.sol";
 import "./IPaladinController.sol";
 import "./IPalLoanToken.sol";
@@ -170,13 +171,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
 
         address _borrower = msg.sender;
 
-        //Deploy a new Loan Pool contract
-        PalLoan _newLoan = new PalLoan(
-            address(this),
-            _borrower,
-            address(underlying),
-            delegator
-        );
+        IPalLoan _newLoan = IPalLoan(Clones.clone(delegator));
 
         //Send the borrowed amount of underlying tokens to the Loan
         underlying.safeTransfer(address(_newLoan), _amount);
@@ -185,7 +180,14 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         underlying.safeTransferFrom(_borrower, address(_newLoan), _feeAmount);
 
         //Start the Loan (and delegate voting power)
-        require(_newLoan.initiate(_delegatee, _amount, _feeAmount), Errors.FAIL_LOAN_INITIATE);
+        require(_newLoan.initiate(
+            address(this),
+            _borrower,
+            address(underlying),
+            _delegatee,
+            _amount,
+            _feeAmount
+        ), Errors.FAIL_LOAN_INITIATE);
 
         //Update Total Borrowed, and add the new Loan to mappings
         totalBorrowed = totalBorrowed.add(_amount);

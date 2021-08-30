@@ -4,7 +4,8 @@ import { solidity } from "ethereum-waffle";
 import { PalToken } from "../../typechain/PalToken";
 import { PalPool } from "../../typechain/PalPool";
 import { PalLoanToken } from "../../typechain/PalLoanToken";
-import { PalLoan } from "../../typechain/PalLoan";
+import { IPalLoan } from "../../typechain/IPalLoan";
+import { IPalLoan__factory } from "../../typechain/factories/IPalLoan__factory";
 import { PaladinController } from "../../typechain/PaladinController";
 import { InterestCalculator } from "../../typechain/InterestCalculator";
 import { Comp } from "../../typechain/Comp";
@@ -15,6 +16,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(solidity);
 const { expect } = chai;
+const { provider } = ethers;
 
 const mantissaScale = ethers.utils.parseEther('1')
 
@@ -24,7 +26,6 @@ let controllerFactory: ContractFactory
 let delegatorFactory: ContractFactory
 let interestFactory: ContractFactory
 let erc20Factory: ContractFactory
-let loanFactory: ContractFactory
 let palLoanTokenFactory: ContractFactory
 
 describe('PalPool : 3 - Borrows tests', () => {
@@ -54,7 +55,6 @@ describe('PalPool : 3 - Borrows tests', () => {
         delegatorFactory = await ethers.getContractFactory("BasicDelegator");
         interestFactory = await ethers.getContractFactory("InterestCalculator");
         erc20Factory = await ethers.getContractFactory("Comp");
-        loanFactory = await ethers.getContractFactory("PalLoan");
     })
 
 
@@ -194,13 +194,12 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             expect(new_loan_address).to.properAddress
 
-            const loan = loanFactory.attach(new_loan_address)
+            const loan = IPalLoan__factory.connect(new_loan_address, provider);
 
             const loan_pool: string = await loan.motherPool()
             const loan_underlying: string = await loan.underlying()
             const loan_borrower: string = await loan.borrower()
             const loan_delegatee: string = await loan.delegatee()
-            const loan_delegator: string = await loan.delegator()
             const loan_borrowAmount: BigNumber = await loan.amount()
             const loan_feesAmount: BigNumber = await loan.feesAmount()
 
@@ -208,7 +207,6 @@ describe('PalPool : 3 - Borrows tests', () => {
             expect(loan_underlying).to.be.eq(underlying.address)
             expect(loan_borrower).to.be.eq(user1.address)
             expect(loan_delegatee).to.be.eq(user2.address)
-            expect(loan_delegator).to.be.eq(delegator.address)
             expect(loan_borrowAmount).to.be.eq(borrow_amount)
             expect(loan_feesAmount).to.be.eq(fees_amount)
 
@@ -256,7 +254,7 @@ describe('PalPool : 3 - Borrows tests', () => {
         });
 
 
-        it(' should allow borrower to also be delgatee', async () => {
+        it(' should allow borrower to also be delegatee', async () => {
 
             await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
 
@@ -391,7 +389,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await pool.connect(user1).expandBorrow(loan_address, expand_fees_amount)
 
-            const loan = loanFactory.attach(loan_address)
+            const loan = IPalLoan__factory.connect(loan_address, provider);
 
             const loan_feesAmount: BigNumber = await loan.feesAmount()
 
@@ -858,7 +856,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await pool.connect(user1).changeBorrowDelegatee(loan_address, user3.address)
 
-            const loan = loanFactory.attach(loan_address)
+            const loan = IPalLoan__factory.connect(loan_address, provider);
 
             const loan_delegatee: string = await loan.delegatee()
 
