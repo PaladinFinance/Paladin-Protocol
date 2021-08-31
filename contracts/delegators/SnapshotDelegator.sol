@@ -107,6 +107,9 @@ contract SnapshotDelegator{
             _underlying.safeTransfer(borrower, _returnAmount);
         }
         _underlying.safeTransfer(motherPool, _keepAmount);
+
+         //Destruct the contract, so it's not usable anymore
+        selfdestruct(motherPool);
     }
 
     /**
@@ -128,6 +131,9 @@ contract SnapshotDelegator{
         uint _poolAmount = _balance.sub(_killerAmount);
         _underlying.safeTransfer(_killer, _killerAmount);
         _underlying.safeTransfer(motherPool, _poolAmount);
+
+         //Destruct the contract, so it's not usable anymore
+        selfdestruct(motherPool);
     }
 
 
