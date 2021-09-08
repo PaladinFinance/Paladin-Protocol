@@ -48,7 +48,14 @@ const config: HardhatUserConfig = {
     rinkeby: {
       url: process.env.RINKEBY_URI,
       accounts: [process.env.RINKEBY_PRIVATE_KEY || ''],
-    }
+    },
+    mainnet: {
+      url: process.env.MAINNET_URI,
+      accounts: [process.env.MAINNET_PRIVATE_KEY || ''],
+      /*accounts: {
+        mnemonic: process.env.MAINNET_MNEMONIC,
+      },*/
+    },
   },
   etherscan: {
     // Your API key for Etherscan
