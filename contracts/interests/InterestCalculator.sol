@@ -21,13 +21,13 @@ contract InterestCalculator is InterestInterface {
     /** @notice admin address (contract creator) */
     address public admin;
 
-    uint public multiplierPerBlock;
+    uint public immutable multiplierPerBlock;
     /** @notice base borrow rate */
-    uint public baseRatePerBlock;
+    uint public immutable baseRatePerBlock;
     /** @notice mulitplier for borrow rate for the kink */
-    uint public kinkMultiplierPerBlock;
+    uint public immutable kinkMultiplierPerBlock;
     /** @notice borrow rate for the kink */
-    uint public kinkBaseRatePerBlock;
+    uint public immutable kinkBaseRatePerBlock;
     /** @notice  ratio of utilization rate at wihich we use kink_ values*/
     uint public constant kink = 0.8e18;
     

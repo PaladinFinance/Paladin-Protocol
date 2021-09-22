@@ -26,9 +26,9 @@ contract PalPoolStkAave is PalPool {
     using SafeERC20 for IERC20;
 
     /** @dev stkAAVE token address */
-    address private stkAaveAddress;
+    address private immutable stkAaveAddress;
     /** @dev AAVE token address */
-    address private aaveAddress;
+    address private immutable aaveAddress;
     /** @dev Block number of the last reward claim */
     uint public claimBlockNumber = 0;
 

@@ -21,13 +21,19 @@ contract AaveDelegator {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
-    //Mock Variables for DelegateCall
+    //Variables
 
+    /** @notice Address of the underlying token for this loan */
     address public underlying;
+    /** @notice Amount of the underlying token in this loan */
     uint public amount;
+    /** @notice Address of the borrower */
     address public borrower;
+    /** @notice Address of the delegatee for the voting power */
     address public delegatee;
+    /** @notice PalPool that created this loan */
     address payable public motherPool;
+    /** @notice Amount of fees paid for this loan */
     uint public feesAmount;
 
     constructor(){
