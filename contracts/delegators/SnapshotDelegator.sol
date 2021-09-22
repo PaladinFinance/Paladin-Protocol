@@ -13,7 +13,7 @@ import "../utils/IERC20.sol";
 import "../utils/SafeERC20.sol";
 import "../utils/SafeMath.sol";
 import {Errors} from  "../utils/Errors.sol";
-import "./utils/DelegateRegistry.sol";
+import "./utils/IDelegateRegistry.sol";
 
 
 /** @title Snapshot token Delegator  */
@@ -21,6 +21,8 @@ import "./utils/DelegateRegistry.sol";
 contract SnapshotDelegator{
     using SafeMath for uint;
     using SafeERC20 for IERC20;
+
+    IDelegateRegistry public constant registry = IDelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
 
     //Variables
 
@@ -76,8 +78,7 @@ contract SnapshotDelegator{
         
         //Delegate governance power : Snapshot version
         //This is the Delegate Registry for Mainnet & Kovan
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.setDelegate("", _delegatee);
+        registry.setDelegate("", _delegatee);
 
         return true;
     }
@@ -101,8 +102,7 @@ contract SnapshotDelegator{
     function closeLoan(uint _usedAmount) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
 
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.clearDelegate("");
+        registry.clearDelegate("");
         
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
@@ -127,8 +127,7 @@ contract SnapshotDelegator{
     function killLoan(address _killer, uint _killerRatio) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
 
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.clearDelegate("");
+        registry.clearDelegate("");
         
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
@@ -154,8 +153,7 @@ contract SnapshotDelegator{
         
         //Delegate governance power : Snapshot version
         //This is the Delegate Registry for Mainnet & Kovan
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.setDelegate("", _delegatee);
+        registry.setDelegate("", _delegatee);
         return true;
     }
 }
