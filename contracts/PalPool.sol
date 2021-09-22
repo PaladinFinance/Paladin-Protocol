@@ -669,7 +669,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         uint _accumulatedInterest = _interestFactor.mul(_borrows).div(mantissaScale);
         uint _newBorrows = _borrows.add(_accumulatedInterest);
         uint _newReserve = _reserves.add(reserveFactor.mul(_accumulatedInterest).div(mantissaScale));
-        uint _newBorrowIndex = _oldBorrowIndex.add((_interestFactor.mul(1e18)).mul(_oldBorrowIndex).div(1e36));
+        uint _newBorrowIndex = _oldBorrowIndex.add(_interestFactor.mul(_oldBorrowIndex).div(1e18));
 
         //Update storage
         totalBorrowed = _newBorrows;
