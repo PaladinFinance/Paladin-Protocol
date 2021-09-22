@@ -119,7 +119,7 @@ contract PaladinController is IPaladinController, Admin {
                 palPools.pop();
                 palTokens.pop();
 
-                emit NewPalPool(_palPool, _palToken);
+                emit RemovePalPool(_palPool, _palToken);
              
                 return true;
             }
