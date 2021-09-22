@@ -23,25 +23,16 @@ import "./IPalLoanToken.sol";
 import "./interests/InterestInterface.sol";
 import "./utils/IERC20.sol";
 import "./utils/Admin.sol";
+import "./utils/ReentrancyGuard.sol";
 import {Errors} from  "./utils/Errors.sol";
 
 
 
 /** @title PalPool contract  */
 /// @author Paladin
-contract PalPool is IPalPool, PalPoolStorage, Admin {
+contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
-
-
-
-    modifier preventReentry() {
-        //modifier to prevent reentry in some functions
-        require(!entered);
-        entered = true;
-        _;
-        entered = false;
-    }
 
 
     modifier controllerOnly() {
@@ -92,7 +83,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _amount Amount of underlying to deposit
     * @return bool : amount of minted palTokens
     */
-    function deposit(uint _amount) public virtual override preventReentry returns(uint){
+    function deposit(uint _amount) public virtual override nonReentrant returns(uint){
         require(_updateInterest());
 
         //Retrieve the current exchange rate palToken:underlying
@@ -125,7 +116,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _amount Amount of palToken to return
     * @return uint : amount of underlying returned
     */
-    function withdraw(uint _amount) public virtual override preventReentry returns(uint){
+    function withdraw(uint _amount) public virtual override nonReentrant returns(uint){
         require(_updateInterest());
         require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
 
@@ -161,7 +152,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _feeAmount Amount of fee to pay to start the loan
     * @return uint : new PalLoanToken Id
     */
-    function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override preventReentry returns(uint){
+    function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override nonReentrant returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
         require(_amount < underlyingBalance(), Errors.INSUFFICIENT_CASH);
         require(_delegatee != address(0), Errors.ZERO_ADDRESS);
@@ -241,7 +232,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _feeAmount New amount of fees to pay
     * @return bool : Amount of fees paid
     */
-    function expandBorrow(address _loan, uint _feeAmount) public virtual override preventReentry returns(uint){
+    function expandBorrow(address _loan, uint _feeAmount) public virtual override nonReentrant returns(uint){
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
@@ -282,7 +273,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @dev Close a Loan, and return the non-used fees to the Borrower
     * @param _loan Address of the Loan
     */
-    function closeBorrow(address _loan) public virtual override preventReentry {
+    function closeBorrow(address _loan) public virtual override nonReentrant {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
@@ -353,7 +344,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @dev Kill a non-healthy Loan to collect rewards
     * @param _loan Address of the Loan
     */
-    function killBorrow(address _loan) public virtual override preventReentry {
+    function killBorrow(address _loan) public virtual override nonReentrant {
         address killer = msg.sender;
         //Fetch the corresponding Borrow
         //And check that the killer is not the Borrower, and the Loan is still active
@@ -413,7 +404,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _loan Address of the Loan
     * @param _newDelegatee Address of the new voting power recipient
     */
-    function changeBorrowDelegatee(address _loan, address _newDelegatee) public virtual override preventReentry {
+    function changeBorrowDelegatee(address _loan, address _newDelegatee) public virtual override nonReentrant {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
