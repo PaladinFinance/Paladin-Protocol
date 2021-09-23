@@ -204,11 +204,12 @@ describe('Paladin Controller contract tests', () => {
     describe('PalPool functions', async () => {
 
         let reserveAmount = ethers.utils.parseEther('1');
+        let accruedFeesAmount = ethers.utils.parseEther('0.75');
         let invalidAmount = ethers.utils.parseEther('1000');
 
         beforeEach( async () => {
 
-            mockPool = (await mockPoolFactory.deploy(controller.address, underlying.address, reserveAmount)) as MockPalPool;
+            mockPool = (await mockPoolFactory.deploy(controller.address, underlying.address, reserveAmount, accruedFeesAmount)) as MockPalPool;
             await mockPool.deployed();
 
             const pools_list = [fakePool.address, mockPool.address]
@@ -305,11 +306,12 @@ describe('Paladin Controller contract tests', () => {
     describe('Admin functions', async () => {
 
         let reserveAmount = ethers.utils.parseEther('1');
+        let accruedFeesAmount = ethers.utils.parseEther('0.75');
         let removeAmount = ethers.utils.parseEther('0.5');
 
         beforeEach( async () => {
 
-            mockPool = (await mockPoolFactory.deploy(controller.address, underlying.address, reserveAmount)) as MockPalPool;
+            mockPool = (await mockPoolFactory.deploy(controller.address, underlying.address, reserveAmount, accruedFeesAmount)) as MockPalPool;
             await mockPool.deployed();
 
             const pools_list = [mockPool.address]
@@ -342,13 +344,13 @@ describe('Paladin Controller contract tests', () => {
             expect(await mockPool.controller()).to.be.eq(admin.address);
         });
 
-        it(' should send funds from the PalPolool reserve to the Controller', async ()=> {
+        it(' should allow the controller to withdraw the fees', async ()=> {
             await underlying.connect(admin).transfer(mockPool.address, reserveAmount);
 
             const old_admin_balance = await underlying.balanceOf(admin.address);
             const old_pool_balance = await underlying.balanceOf(mockPool.address);
 
-            await controller.connect(admin).removeReserveFromPool(mockPool.address, removeAmount, admin.address)
+            await controller.connect(admin).withdrawFromPool(mockPool.address, removeAmount, admin.address)
 
             const new_admin_balance = await underlying.balanceOf(admin.address);
             const new_pool_balance = await underlying.balanceOf(mockPool.address);
@@ -372,7 +374,7 @@ describe('Paladin Controller contract tests', () => {
     
         it(' should block non-admin to remove from PalPool Reserve', async ()=> {
             await expect(
-                controller.connect(user1).removeReserveFromPool(fakePool.address, ethers.utils.parseEther('1'), user1.address)
+                controller.connect(user1).withdrawFromPool(fakePool.address, ethers.utils.parseEther('1'), user1.address)
             ).to.be.revertedWith('1')
         });
 

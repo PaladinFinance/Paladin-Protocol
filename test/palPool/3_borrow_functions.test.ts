@@ -20,6 +20,13 @@ const { provider } = ethers;
 
 const mantissaScale = ethers.utils.parseEther('1')
 
+const mineBlocks = async (n: number): Promise<any> => {
+    for(let i = 0; i < n; i++){
+        await ethers.provider.send("evm_mine", [])
+    }
+    return Promise.resolve()
+}
+
 let poolFactory: ContractFactory
 let tokenFactory: ContractFactory
 let controllerFactory: ContractFactory
@@ -94,7 +101,6 @@ describe('PalPool : 3 - Borrows tests', () => {
         await controller.addNewPool(token.address, pool.address);
     });
 
-    
 
 
     describe('borrow', async () => {
@@ -585,6 +591,38 @@ describe('PalPool : 3 - Borrows tests', () => {
         });
 
 
+        it(' should update totalBorrowed, totalReserve & accruedFees correctly', async () => {
+
+            const reserveFactor = await pool.reserveFactor()
+
+            await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+            
+            const old_totalReserve = await pool.totalReserve()
+            const old_accruedFees = await pool.accruedFees()
+
+            const loan_address = (await pool.getLoansPools())[0]
+            const minBorrowLength = await pool.minBorrowLength()
+
+            await mineBlocks(minBorrowLength.toNumber() + 1)
+
+            await pool.connect(user1).closeBorrow(loan_address)
+
+            const new_totalBorrowed = await pool.totalBorrowed()
+            const new_totalReserve = await pool.totalReserve()
+            const new_accruedFees = await pool.accruedFees()
+
+            const loan_data = await pool.getBorrowData(loan_address)
+
+            const expected_totalReserve = loan_data._feesUsed.mul(reserveFactor).div(mantissaScale)
+            const expected_accruedFees = loan_data._feesUsed.mul(reserveFactor).div(mantissaScale)
+
+            expect(+(new_totalBorrowed.toString())).to.be.closeTo(0,10) //case where 1 wei is remaining
+            expect(new_totalReserve).to.be.closeTo(old_totalReserve.add(expected_totalReserve), 10)
+            expect(new_accruedFees).to.be.closeTo(old_accruedFees.add(expected_accruedFees), 10)
+
+        });
+
+
         it(' should fail if already closed', async () => {
 
             await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
@@ -636,14 +674,6 @@ describe('PalPool : 3 - Borrows tests', () => {
         const fees_amount = ethers.utils.parseEther('0.004')
 
         const killerRatio = ethers.utils.parseEther('0.15')
-
-
-        const mineBlocks = async (n: number): Promise<any> => {
-            for(let i = 0; i < n; i++){
-                await ethers.provider.send("evm_mine", [])
-            }
-            return Promise.resolve()
-        }
 
 
         beforeEach(async () => {
@@ -699,6 +729,35 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             expect(newBalance.sub(oldBalance)).to.be.eq(killerFees)
             
+        });
+
+
+        it(' should update totalBorrowed, totalReserve & accruedFees correctly', async () => {
+
+            const reserveFactor = await pool.reserveFactor()
+            
+            const old_totalReserve = await pool.totalReserve()
+            const old_accruedFees = await pool.accruedFees()
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            await mineBlocks(170)
+
+            await pool.connect(user2).killBorrow(loan_address)
+
+            const new_totalBorrowed = await pool.totalBorrowed()
+            const new_totalReserve = await pool.totalReserve()
+            const new_accruedFees = await pool.accruedFees()
+
+            const loan_data = await pool.getBorrowData(loan_address)
+
+            const expected_totalReserve = loan_data._feesUsed.mul(reserveFactor.sub(killerRatio)).div(mantissaScale)
+            const expected_accruedFees = loan_data._feesUsed.mul(reserveFactor.sub(killerRatio)).div(mantissaScale)
+
+            expect(new_totalBorrowed).to.be.closeTo(BigNumber.from('0'),10) //case where 1 wei is remaining
+            expect(new_totalReserve).to.be.closeTo(old_totalReserve.add(expected_totalReserve), 10)
+            expect(new_accruedFees).to.be.closeTo(old_accruedFees.add(expected_accruedFees), 10)
+
         });
 
 
@@ -937,5 +996,70 @@ describe('PalPool : 3 - Borrows tests', () => {
         });
 
     });
+
+    describe("_updateInterest", async () => {
+
+        const deposit = ethers.utils.parseEther('1000')
+
+        const borrow_amount = ethers.utils.parseEther('100')
+
+        const fees_amount = ethers.utils.parseEther('5')
+
+        const mantissaScale = ethers.utils.parseEther('1')
+
+
+        beforeEach(async () => {
+            await underlying.connect(admin).transfer(user2.address, deposit)
+            await underlying.connect(admin).transfer(user1.address, fees_amount)
+
+            await underlying.connect(user1).approve(pool.address, fees_amount)
+            await underlying.connect(user2).approve(pool.address, deposit)
+
+            await pool.connect(user2).deposit(deposit)
+
+            
+        });
+
+        it(' should accrue interest correctly', async () => {
+
+            const reserveFactor = await pool.reserveFactor()
+            const killerRatio = await pool.killerRatio()
+
+            const borrow_tx = await pool.connect(user1).borrow(user1.address, borrow_amount, fees_amount)
+
+            const old_borrowIndex = await pool.borrowIndex()
+            const old_totalBorrowed = await pool.totalBorrowed()
+            const old_totalReserve = await pool.totalReserve()
+            const old_accruedFees = await pool.accruedFees()
+
+            const current_borrowRate = await pool.borrowRatePerBlock()
+
+            await mineBlocks(100)
+
+            const accrue_tx = await pool.connect(user1)._updateInterest()
+
+            const new_borrowIndex = await pool.borrowIndex()
+            const new_totalBorrowed = await pool.totalBorrowed()
+            const new_totalReserve = await pool.totalReserve()
+            const new_accruedFees = await pool.accruedFees()
+            
+            const block_delta = (accrue_tx.blockNumber || 0) - (borrow_tx.blockNumber || 0)
+
+            const expected_interestFactor = current_borrowRate.mul(block_delta)
+            const expected_accumulatedInterest = old_totalBorrowed.mul(expected_interestFactor).div(mantissaScale)
+            const expected_accruedReserve = expected_accumulatedInterest.mul(reserveFactor).div(mantissaScale)
+            const expected_accruedFees = expected_accumulatedInterest.mul(reserveFactor.sub(killerRatio)).div(mantissaScale)
+            const expected_borrowIndex = old_borrowIndex.add(old_borrowIndex.mul(expected_interestFactor).div(mantissaScale))
+            const expected_totalBorrowed = old_totalBorrowed.add(expected_accumulatedInterest)
+            
+            expect(await pool.accrualBlockNumber()).to.be.eq(accrue_tx.blockNumber)
+            expect(new_borrowIndex).to.be.eq(expected_borrowIndex)
+            expect(new_totalBorrowed).to.be.eq(expected_totalBorrowed)
+            expect(new_totalReserve).to.be.eq(old_totalReserve.add(expected_accruedReserve))
+            expect(new_accruedFees).to.be.eq(old_accruedFees.add(expected_accruedFees))
+
+        });
+
+    })
 
 });

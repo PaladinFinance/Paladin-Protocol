@@ -46,5 +46,6 @@ library Errors {
     string public constant INVALID_PARAMETERS = '28'; 
     string public constant FAIL_LOAN_DELEGATEE_CHANGE = '32';
     string public constant FAIL_LOAN_TOKEN_BURN = '33';
+    string public constant FEES_ACCRUED_INSUFFICIENT = '34';
 
 }

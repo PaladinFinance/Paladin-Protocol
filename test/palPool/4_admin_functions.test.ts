@@ -11,7 +11,6 @@ import { BasicDelegator } from "../../typechain/BasicDelegator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
-import { poll } from "@ethersproject/web";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -297,7 +296,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
             const oldReserves = await pool.totalReserve()
             const oldCash = await pool.underlyingBalance()
 
-            await pool.connect(admin).removeReserve(amount, admin.address)
+            await pool.connect(admin).removeReserve(amount)
 
             const newReserves = await pool.totalReserve()
             const newCash = await pool.underlyingBalance()
@@ -311,7 +310,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
         it(' should fail if not enough cash in the Pool', async () => {
 
             await expect(
-                pool.connect(admin).removeReserve(amount, admin.address)
+                pool.connect(admin).removeReserve(amount)
             ).to.be.revertedWith('19')
         });
 
@@ -321,7 +320,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
             await underlying.connect(admin).transfer(pool.address, deposit)
 
             await expect(
-                pool.connect(admin).removeReserve(amount, admin.address)
+                pool.connect(admin).removeReserve(amount)
             ).to.be.revertedWith('19')
         });
 
@@ -329,7 +328,68 @@ describe('PalPool : 4 - Admin functions tests', () => {
         it(' should not be callable by non-admin', async () => {
 
             await expect(
-                pool.connect(user1).removeReserve(amount, admin.address)
+                pool.connect(user1).removeReserve(amount)
+            ).to.be.revertedWith('1')
+            
+        });
+
+    });
+
+
+    describe('withdrawFees', async () => {
+
+        const deposit = ethers.utils.parseEther('1000')
+        const borrowAmount = ethers.utils.parseEther('100')
+        const feesAmount = ethers.utils.parseEther('10')
+
+        beforeEach( async () => {
+            await underlying.connect(admin).transfer(user1.address, deposit.add(feesAmount))
+
+            await underlying.connect(user1).approve(pool.address, deposit.add(feesAmount))
+
+            await pool.connect(user1).deposit(deposit)
+
+            await pool.connect(user1).borrow(user1.address, borrowAmount, feesAmount)
+
+            const loan_address = (await pool.getLoansPools())[0]
+
+            await pool.connect(user1).closeBorrow(loan_address)
+
+        })
+
+
+        it(' should withdraw the given amount of fees from the Pool', async () => {
+
+            const oldReserves = await pool.totalReserve()
+            const oldCash = await pool.underlyingBalance()
+
+            const accruedFeesAmount = await pool.accruedFees()
+
+            await pool.connect(admin).withdrawFees(accruedFeesAmount, admin.address)
+
+            const newReserves = await pool.totalReserve()
+            const newCash = await pool.underlyingBalance()
+
+            expect(await pool.accruedFees()).to.be.eq(0)
+            expect(oldReserves.sub(newReserves)).to.be.eq(accruedFeesAmount)
+            expect(oldCash.sub(newCash)).to.be.eq(accruedFeesAmount)
+            
+        });
+
+
+        it(' should fail if not enough fees to withdraw', async () => {
+
+            await expect(
+                pool.connect(admin).withdrawFees(ethers.utils.parseEther('50'), admin.address)
+            ).to.be.revertedWith('34')
+
+        });
+
+
+        it(' should only be callable by admin & controller', async () => {
+
+            await expect(
+                pool.connect(user1).withdrawFees(ethers.utils.parseEther('2'), admin.address)
             ).to.be.revertedWith('29')
             
         });

@@ -66,6 +66,9 @@ contract PalPoolStorage {
     uint public totalReserve;
     /** @notice Total of underlying tokens "borrowed" (in Loan Pool contracts) */
     uint public totalBorrowed;
+    /** @notice Total fees accrued since last withdraw */
+    /** (this amount id part of the Reserve : we should always have totalReserve >= accruedFees) */
+    uint public accruedFees;
 
     /** @notice Minimum duration of a Borrow (in blocks) */
     uint public minBorrowLength = 45290;

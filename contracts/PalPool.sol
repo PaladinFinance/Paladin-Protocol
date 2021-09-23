@@ -318,10 +318,14 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         _borrow.feesUsed = _totalFees;
         _borrow.closeBlock = block.number;
 
-        //Update the storage variables
+        //Remove the borrowed tokens + fees from the TotalBorrowed
+        //Add to the Reserve the reserveFactor of Penalty Fees (if there is Penalty Fees)
+        //And add the fees counted as potential Killer Fees to the Accrued Fees, since no killing was necessary
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
         uint _realPenaltyFees = _totalFees.sub(_feesUsed);
+        uint _killerFees = _feesUsed.mul(killerRatio).div(mantissaScale);
         totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
+        accruedFees = accruedFees.add(_killerFees).add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
 
         require(controller.closeBorrowVerify(address(this), _loanOwner, _borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
@@ -376,9 +380,13 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         _borrow.feesUsed = _borrow.feesAmount;
         _borrow.closeBlock = block.number;
 
-        uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(uint(1e18));
+        //Remove the borrowed tokens + fees from the TotalBorrowed
+        //Remove the amount paid as killer fees from the Reserve, and any over accrued interest in the Reserve & AccruedFees
+        uint _overAccruedInterest = _loanHealthFactor <= mantissaScale ? 0 : _feesUsed.sub(_borrow.feesAmount);
+        uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(mantissaScale);
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
-        totalReserve = totalReserve.sub(_killerFees);
+        totalReserve = totalReserve.sub(_killerFees).sub(_overAccruedInterest.mul(reserveFactor).div(mantissaScale));
+        accruedFees = accruedFees.sub(_overAccruedInterest.mul(reserveFactor.sub(killerRatio)).div(mantissaScale));
 
         require(controller.killBorrowVerify(address(this), killer, _borrow.loan), Errors.FAIL_KILL_BORROW);
 
@@ -641,6 +649,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         uint _cash = underlyingBalance();
         uint _borrows = totalBorrowed;
         uint _reserves = totalReserve;
+        uint _accruedFees = accruedFees;
         uint _oldBorrowIndex = borrowIndex;
 
         //Get the Borrow Rate from the Interest Module
@@ -654,17 +663,20 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         Accumulated Interests = Interest Factor * Borrows
         Total Borrows = Borrows + Accumulated Interests
         Total Reserve = Reserve + Accumulated Interests * Reserve Factor
+        Accrued Fees = Accrued Fees + Accumulated Interests * (Reserve Factor - Killer Ratio) -> (available fees should not count potential fees to send to killers)
         Borrow Index = old Borrow Index + old Borrow Index * Interest Factor 
         */
         uint _interestFactor = _borrowRate.mul(_ellapsedBlocks);
         uint _accumulatedInterest = _interestFactor.mul(_borrows).div(mantissaScale);
         uint _newBorrows = _borrows.add(_accumulatedInterest);
         uint _newReserve = _reserves.add(reserveFactor.mul(_accumulatedInterest).div(mantissaScale));
+        uint _newAccruedFees = _accruedFees.add((reserveFactor.sub(killerRatio)).mul(_accumulatedInterest).div(mantissaScale));
         uint _newBorrowIndex = _oldBorrowIndex.add(_interestFactor.mul(_oldBorrowIndex).div(1e18));
 
         //Update storage
         totalBorrowed = _newBorrows;
         totalReserve = _newReserve;
+        accruedFees = _newAccruedFees;
         borrowIndex = _newBorrowIndex;
         accrualBlockNumber = _currentBlock;
 
@@ -751,7 +763,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     * @dev Transfer underlying token from the Pool to the admin
     * @param _amount Amount of underlying to transfer
     */
-    function removeReserve(uint _amount, address _recipient) external override controllerOnly { //add system so Controller can also fetch Fees
+    function removeReserve(uint _amount) external override adminOnly {
         //Check if there is enough in the reserve
         require(_updateInterest());
         require(_amount <= underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
@@ -759,9 +771,31 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         totalReserve = totalReserve.sub(_amount);
 
         //Transfer underlying to the admin
-        underlying.safeTransfer(_recipient, _amount);
+        underlying.safeTransfer(admin, _amount);
 
         emit RemoveReserve(_amount);
+    }
+
+    /**
+    * @notice Method to allow the Controller (or admin) to withdraw protocol fees
+    * @dev Transfer underlying token from the Pool to the controller (or admin)
+    * @param _amount Amount of underlying to transfer
+    * @param _recipient Address to receive the token
+    */
+    function withdrawFees(uint _amount, address _recipient) external override controllerOnly {
+        //Check if there is enough in the reserve
+        require(_updateInterest());
+        require(_amount<= accruedFees && _amount <= totalReserve, Errors.FEES_ACCRUED_INSUFFICIENT);
+
+        //Substract from accruedFees (to track how much fees the Controller can withdraw since last time)
+        //And also from the REserve, since the fees are part of the Reserve
+        accruedFees = accruedFees.sub(_amount);
+        totalReserve = totalReserve.sub(_amount);
+
+        //Transfer fees to the recipient
+        underlying.safeTransfer(_recipient, _amount);
+
+        emit WithdrawFees(_amount);
     }
 
 }

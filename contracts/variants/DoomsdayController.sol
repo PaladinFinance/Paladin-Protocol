@@ -280,9 +280,9 @@ contract DoomsdayController is IPaladinController, Admin {
     }
 
 
-    function removeReserveFromPool(address _pool, uint _amount, address _recipient) external override adminOnly returns(bool){
+    function withdrawFromPool(address _pool, uint _amount, address _recipient) external override adminOnly returns(bool){
         IPalPool _palPool = IPalPool(_pool);
-        _palPool.removeReserve(_amount, _recipient);
+        _palPool.withdrawFees(_amount, _recipient);
         return true;
     }
 
