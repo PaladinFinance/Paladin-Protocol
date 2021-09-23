@@ -35,8 +35,9 @@ contract DoomsdayController is IPaladinController, Admin {
     //Check if an address is a valid palPool
     function isPalPool(address _pool) public view override returns(bool){
         //Check if the given address is in the palPools list
-        for(uint i = 0; i < palPools.length; i++){
-            if(palPools[i] == _pool){
+        address[] memory _pools = palPools;
+        for(uint i = 0; i < _pools.length; i++){
+            if(_pools[i] == _pool){
                 return true;
             }
         }
@@ -97,17 +98,24 @@ contract DoomsdayController is IPaladinController, Admin {
     function removePool(address _palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
         require(isPalPool(_palPool), "Not listed");
+
+        address[] memory _pools = palPools;
         
-        uint lastIndex = (palPools.length).sub(1);
-        for(uint i = 0; i < palPools.length; i++){
-            if(palPools[i] == _palPool){
+        uint lastIndex = (_pools.length).sub(1);
+        for(uint i = 0; i < _pools.length; i++){
+            if(_pools[i] == _palPool){
+                //get the address of the PalToken for the Event
+                address _palToken = _pools[i];
 
                 //Replace the address to remove with the last one of the array
                 palPools[i] = palPools[lastIndex];
                 palTokens[i] = palTokens[lastIndex];
+
                 //And pop the last item of the array
                 palPools.pop();
                 palTokens.pop();
+
+                emit RemovePalPool(_palPool, _palToken);
              
                 return true;
             }
@@ -263,8 +271,9 @@ contract DoomsdayController is IPaladinController, Admin {
 
 
     function setPoolsNewController(address _newController) external override adminOnly returns(bool){
-        for(uint i = 0; i < palPools.length; i++){
-            IPalPool _palPool = IPalPool(palPools[i]);
+        address[] memory _pools = palPools;
+        for(uint i = 0; i < _pools.length; i++){
+            IPalPool _palPool = IPalPool(_pools[i]);
             _palPool.setNewController(_newController);
         }
         return true;
