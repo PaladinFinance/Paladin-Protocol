@@ -89,14 +89,14 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Retrieve the current exchange rate palToken:underlying
         uint _exchRate = _exchangeRate();
 
+
+        //Find the amount to mint depending on the amount to transfer
+        uint _num = _amount.mul(mantissaScale);
+        uint _toMint = _num.div(_exchRate);
+
         //Transfer the underlying to this contract
         //The amount of underlying needs to be approved before
         underlying.safeTransferFrom(msg.sender, address(this), _amount);
-
-
-        //Find the amount to mint depending of the previous transfer
-        uint _num = _amount.mul(mantissaScale);
-        uint _toMint = _num.div(_exchRate);
 
         //Mint the palToken
         require(palToken.mint(msg.sender, _toMint), Errors.FAIL_MINT);
@@ -162,6 +162,9 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         address _borrower = msg.sender;
 
+        //Update Total Borrowed
+        totalBorrowed = totalBorrowed.add(_amount);
+
         IPalLoan _newLoan = IPalLoan(Clones.clone(delegator));
 
         //Send the borrowed amount of underlying tokens to the Loan
@@ -180,9 +183,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
             _feeAmount
         ), Errors.FAIL_LOAN_INITIATE);
 
-        //Update Total Borrowed, and add the new Loan to mappings
-        totalBorrowed = totalBorrowed.add(_amount);
-
+        //Add the new Loan to mappings
         loans.push(address(_newLoan));
 
         //Mint the palLoanToken linked to this new Loan
@@ -246,13 +247,13 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
+        _borrow.feesAmount = _borrow.feesAmount.add(_feeAmount);
+
         //Transfer the new fees to the Loan
-        //If success, update the Borrow data, and call the expand fucntion of the Loan
+        //If success, call the expand function of the Loan
         underlying.safeTransferFrom(_loanOwner, _borrow.loan, _feeAmount);
 
         require(_palLoan.expand(_feeAmount), Errors.FAIL_LOAN_EXPAND);
-
-        _borrow.feesAmount = _borrow.feesAmount.add(_feeAmount);
 
         emit ExpandLoan(
             _loanOwner,
@@ -306,12 +307,6 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         if(_totalFees > _borrow.feesAmount){
             _totalFees = _borrow.feesAmount;
         }
-        
-        //Close and destroy the loan
-        _palLoan.closeLoan(_totalFees);
-
-        //Burn the palLoanToken for this Loan
-        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
 
         //Set the Borrow as closed
         _borrow.closed = true;
@@ -326,6 +321,12 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         uint _killerFees = _feesUsed.mul(killerRatio).div(mantissaScale);
         totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
         accruedFees = accruedFees.add(_killerFees).add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
+        
+        //Close and destroy the loan
+        _palLoan.closeLoan(_totalFees);
+
+        //Burn the palLoanToken for this Loan
+        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
 
         require(controller.closeBorrowVerify(address(this), _loanOwner, _borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
@@ -368,12 +369,6 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Load the Loan
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
-        //Kill the Loan
-        _palLoan.killLoan(killer, killerRatio);
-
-        //Burn the palLoanToken for this Loan
-        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
-
         //Close the Loan, and update storage variables
         _borrow.closed = true;
         _borrow.killed = true;
@@ -387,6 +382,12 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
         totalReserve = totalReserve.sub(_killerFees).sub(_overAccruedInterest.mul(reserveFactor).div(mantissaScale));
         accruedFees = accruedFees.sub(_overAccruedInterest.mul(reserveFactor.sub(killerRatio)).div(mantissaScale));
+
+        //Kill the Loan
+        _palLoan.killLoan(killer, killerRatio);
+
+        //Burn the palLoanToken for this Loan
+        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
 
         require(controller.killBorrowVerify(address(this), killer, _borrow.loan), Errors.FAIL_KILL_BORROW);
 
@@ -424,11 +425,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Load the Loan Pool contract
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
-        //Call the delegation logic in the palLoan to change the votong power recipient
-        require(_palLoan.changeDelegatee(_newDelegatee), Errors.FAIL_LOAN_DELEGATEE_CHANGE);
-
         //Update storage data
         _borrow.delegatee = _newDelegatee;
+
+        //Call the delegation logic in the palLoan to change the votong power recipient
+        require(_palLoan.changeDelegatee(_newDelegatee), Errors.FAIL_LOAN_DELEGATEE_CHANGE);
 
         //Emit the Event
         emit ChangeLoanDelegatee(

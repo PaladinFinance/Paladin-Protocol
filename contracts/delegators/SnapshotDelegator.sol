@@ -101,8 +101,6 @@ contract SnapshotDelegator{
     */
     function closeLoan(uint _usedAmount) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
-
-        registry.clearDelegate("");
         
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
@@ -113,6 +111,8 @@ contract SnapshotDelegator{
             _underlying.safeTransfer(borrower, _returnAmount);
         }
         _underlying.safeTransfer(motherPool, _keepAmount);
+
+        registry.clearDelegate("");
 
          //Destruct the contract, so it's not usable anymore
         selfdestruct(motherPool);
@@ -126,8 +126,6 @@ contract SnapshotDelegator{
     */
     function killLoan(address _killer, uint _killerRatio) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
-
-        registry.clearDelegate("");
         
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
@@ -136,6 +134,8 @@ contract SnapshotDelegator{
         uint _poolAmount = _balance.sub(_killerAmount);
         _underlying.safeTransfer(_killer, _killerAmount);
         _underlying.safeTransfer(motherPool, _poolAmount);
+
+        registry.clearDelegate("");
 
          //Destruct the contract, so it's not usable anymore
         selfdestruct(motherPool);
