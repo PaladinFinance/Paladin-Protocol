@@ -65,7 +65,7 @@ contract SnapshotDelegator{
         address _delegatee,
         uint _amount,
         uint _feesAmount
-    ) public returns(bool){
+    ) external returns(bool){
         require(motherPool == address(0));
 
         motherPool = payable(_motherPool);
