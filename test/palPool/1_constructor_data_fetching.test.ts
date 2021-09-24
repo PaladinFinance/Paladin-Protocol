@@ -133,8 +133,8 @@ describe('PalPool : 1 - constructor and storage tests', () => {
 
             const pool_killFactor: BigNumber = await pool.killFactor()
             const pool_killerRatio: BigNumber = await pool.killerRatio()
-            const expected_killFactor = ethers.utils.parseEther('0.96')
-            const expected_killerRatio = ethers.utils.parseEther('0.15')
+            const expected_killFactor = ethers.utils.parseEther('0.95')
+            const expected_killerRatio = ethers.utils.parseEther('0.1')
             
             expect(pool_killFactor).to.be.eq(expected_killFactor)
             expect(pool_killerRatio).to.be.eq(expected_killerRatio)

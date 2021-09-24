@@ -673,7 +673,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         const fees_amount = ethers.utils.parseEther('0.004')
 
-        const killerRatio = ethers.utils.parseEther('0.15')
+        const killerRatio = ethers.utils.parseEther('0.1')
 
 
         beforeEach(async () => {
