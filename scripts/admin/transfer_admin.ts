@@ -32,10 +32,21 @@ async function main() {
     const interest = Interest.attach(INTEREST_MODULE_V2);
 
 
-    await controller.setNewAdmin(new_admin)
-    await registry.setNewAdmin(new_admin)
-    await loanToken.setNewAdmin(new_admin)
-    await interest.setNewAdmin(new_admin)
+    let tx = await controller.setNewAdmin(new_admin)
+
+    await tx.wait(10)
+
+    tx = await registry.setNewAdmin(new_admin)
+
+    await tx.wait(10)
+
+    tx = await loanToken.setNewAdmin(new_admin)
+
+    await tx.wait(10)
+
+    tx = await interest.setNewAdmin(new_admin)
+
+    await tx.wait(10)
 
 
     console.log('Updating all Pools admin ... ')
@@ -44,7 +55,10 @@ async function main() {
 
         let pool = new ethers.Contract(pool_data.POOL, PalPool.abi, provider);
 
-        await pool.setNewAdmin(new_admin)
+        tx = await pool.setNewAdmin(new_admin)
+
+        await tx.wait(10)
+
     }
 
     console.log('Admin transfer done ')
