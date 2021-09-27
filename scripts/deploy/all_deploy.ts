@@ -40,6 +40,10 @@ let multipliers_address: { [name: string]: string } = {};
 
 let palPools: { [name: string]: { [name: string]: string } } = {};
 
+function delay(ms: number) {
+  return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
 async function main() {
 
   const deployer = (await hre.ethers.getSigners())[0];
@@ -64,6 +68,8 @@ async function main() {
 
   console.log('Deploying the Paladin Controller ...')
   const controller = await Controller.deploy();
+
+  await controller.deployTransaction.wait(5);
 
   console.log('Deploying the Interest Calculator Module V2 ...')
   const interest = await Interest.deploy();
@@ -90,6 +96,8 @@ async function main() {
     await delegator.deployed();
 
     delegators[d] = delegator.address;
+
+    //await delegator.deployTransaction.wait(5);
   }
 
   for(let m in MULTIPLIER_KEYS){
@@ -102,6 +110,8 @@ async function main() {
     console.log('Deploying PalToken ' + params.SYMBOL + ' ...')
     let palToken = await PalToken.deploy(params.NAME, params.SYMBOL);
     await palToken.deployed();
+
+    //await palToken.deployTransaction.wait(5);
 
 
     let palPool;
@@ -129,8 +139,11 @@ async function main() {
     }
     await palPool.deployed();
 
-    await palToken.initiate(palPool.address)
+    //await palPool.deployTransaction.wait(5);
 
+    let initiate_tx = await palToken.initiate(palPool.address)
+
+    await initiate_tx.wait(5);
 
     pools.push(palPool.address)
     tokens.push(palToken.address)
@@ -143,10 +156,14 @@ async function main() {
       'token': palToken.address,
       'symbol': params.SYMBOL
     }
+
+    await delay(30000);
+
   }
 
-  await controller.setInitialPools(tokens, pools);
+  const tx = await controller.setInitialPools(tokens, pools);
 
+  await tx.wait(15);
 
   //deploy mutipliers
   console.log('Deploying Multipliers ...')
@@ -170,9 +187,23 @@ async function main() {
     }
     await multiplier.deployed();
     multipliers_address[m] = multiplier.address;
+
+    await multiplier.deployTransaction.wait(5);
   }
 
 
+
+  console.log('Deploying the Address Registry ...')
+  const registry = await Registry.deploy(
+    controller.address,
+    loanToken.address,
+    underlyings,
+    pools,
+    tokens
+  );
+  await registry.deployed();
+
+  await registry.deployTransaction.wait(5);
 
   //initiate interest module
 
@@ -192,21 +223,7 @@ async function main() {
     INTEREST_MODULE_VALUES.JUMP_MULTIPLIER_PER_YEAR,
     pool_list,
     mult_list
-)
-
-
-
-  console.log('Deploying the Address Registry ...')
-  const registry = await Registry.deploy(
-    controller.address,
-    loanToken.address,
-    underlyings,
-    pools,
-    tokens
-  );
-  await registry.deployed
-
-
+  )
 
 
 
