@@ -3,7 +3,20 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 const network = hre.network.name;
-const param_file_path = network === 'kovan' ? '../utils/kovan_params' : '../utils/main_params'
+
+const params_path = () => {
+    if (network === 'kovan') {
+      return '../utils/kovan_params'
+    }
+    else if (network === 'rinkeby') {
+      return '../utils/rinkeby_params'
+    }
+    else {
+      return '../utils/main_params'
+    }
+  }
+  
+const param_file_path = params_path();
 
 const { CONTROLLER, PAL_LOAN_TOKEN, ADDRESS_REGISTRY, INTEREST_MODULE_V2, POOLS } = require(param_file_path);
 
@@ -14,6 +27,11 @@ const new_admin = ''
 
 
 async function main() {
+
+    if(new_admin === ""){
+        console.log('No admin address given')
+        process.exit(1);
+    }
 
     const provider = ethers.provider;
 
