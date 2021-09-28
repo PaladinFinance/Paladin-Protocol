@@ -9,7 +9,8 @@
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "coverage": "npx hardhat coverage --network hardhat --solcoverjs .solcover.js",
-    "deploy_kovan": "npx hardhat run --network kovan scripts/deploy/all_deploy.ts"
+    "deploy_kovan": "npx hardhat run --network kovan scripts/deploy/all_deploy.ts",
+    "deploy": "npx hardhat run --network mainnet scripts/deploy/all_deploy.ts"
   },
   "author": "",
   "license": "MIT",
