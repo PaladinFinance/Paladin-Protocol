@@ -41,6 +41,6 @@ interface IPaladinController {
 
     //Admin functions
     function setPoolsNewController(address _newController) external returns(bool);
-    function removeReserveFromPool(address _pool, uint _amount, address _recipient) external returns(bool);
+    function withdrawFromPool(address _pool, uint _amount, address _recipient) external returns(bool);
 
 }

@@ -261,8 +261,9 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256 totalCount = tokenCount.add(burnedToken.balanceOf(owner));
         uint256[] memory result = new uint256[](totalCount);
 
+        uint256[] memory ownerTokens = ownedTokens[owner];
         for(uint256 i = 0; i < tokenCount; i++){
-            result[i] = ownedTokens[owner][i];
+            result[i] = ownerTokens[i];
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
@@ -287,8 +288,9 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256 totalCount = tokenCount.add(burnedToken.balanceOf(owner));
         address[] memory result = new address[](totalCount);
 
+        uint256[] memory ownerTokens = ownedTokens[owner];
         for(uint256 i = 0; i < tokenCount; i++){
-            result[i] = loans[ownedTokens[owner][i]];
+            result[i] = loans[ownerTokens[i]];
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
@@ -313,17 +315,19 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256 totalCount = tokenCount.add(burnedToken.balanceOf(owner));
         address[] memory result = new address[](totalCount);
 
+        uint256[] memory ownerTokens = ownedTokens[owner];
         for(uint256 i = 0; i < tokenCount; i++){
-            if(pools[ownedTokens[owner][i]] == palPool){
-                result[m] = loans[ownedTokens[owner][i]];
+            if(pools[ownerTokens[i]] == palPool){
+                result[m] = loans[ownerTokens[i]];
                 m++;
             }
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
         for(uint256 j = tokenCount; j < totalCount; j++){
-            if(pools[burned[j.sub(tokenCount)]] == palPool){
-                result[m] = loans[burned[j.sub(tokenCount)]];
+            uint256 burnedId = burned[j.sub(tokenCount)];
+            if(pools[burnedId] == palPool){
+                result[m] = loans[burnedId];
                 m++;
             }
         }
@@ -600,6 +604,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         _approve(address(0), tokenId);
 
         //Update data in storage
+        totalSupply = totalSupply.sub(1);
         _removeTokenToOwner(owner, tokenId);
         owners[tokenId] = address(0);
 

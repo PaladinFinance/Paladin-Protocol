@@ -60,8 +60,9 @@ contract GovernorMultiplier is IMultiplierCalculator, Admin {
 
     function getTotalBorrowedMultiPools() internal view returns(uint){
         uint total = 0;
-        for(uint i = 0; i < pools.length; i++){
-            total = total.add(IPalPoolSimplified(pools[i]).totalBorrowed());
+        address[] memory _pools = pools;
+        for(uint i = 0; i < _pools.length; i++){
+            total = total.add(IPalPoolSimplified(_pools[i]).totalBorrowed());
         }
         return total;
     }
@@ -75,9 +76,10 @@ contract GovernorMultiplier is IMultiplierCalculator, Admin {
     }
 
     function removePool(address _pool) external adminOnly {
-        for(uint i; i < pools.length; i++){
-            if(pools[i] == _pool){
-                uint lastIndex = pools.length.sub(1);
+        address[] memory _pools = pools;
+        for(uint i; i < _pools.length; i++){
+            if(_pools[i] == _pool){
+                uint lastIndex = _pools.length.sub(1);
                 if(i != lastIndex){
                     pools[i] = pools[lastIndex];
                 }

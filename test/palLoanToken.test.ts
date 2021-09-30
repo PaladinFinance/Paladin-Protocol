@@ -63,6 +63,10 @@ describe('PalLoanToken contract tests', () => {
         expect(tokenName).to.be.eq(name)
         expect(tokenSymbol).to.be.eq(symbol)
 
+        const tokenSupply = await token.totalSupply()
+
+        expect(tokenSupply).to.be.eq(0)
+
         const tokenController = await token.controller()
 
         expect(tokenController).to.be.eq(controller.address)
@@ -91,13 +95,19 @@ describe('PalLoanToken contract tests', () => {
 
             const expected_id = 0
 
+            const old_supply = await token.totalSupply()
+
             await expect(token.connect(pool1).mint(user1.address, pool1.address, loan1.address))
                 .to.emit(token, 'NewLoanToken')
                 .withArgs(pool1.address, user1.address, loan1.address, expected_id);
 
+            const new_supply = await token.totalSupply()
+
             expect(await token.ownerOf(expected_id)).to.be.eq(user1.address)
 
             expect(await token.balanceOf(user1.address)).to.be.eq(1)
+
+            expect(new_supply.sub(old_supply)).to.be.eq(1)
         });
 
 
@@ -312,6 +322,8 @@ describe('PalLoanToken contract tests', () => {
 
         it(' should burn (with correct Event) & update balances/ownership', async () => {
 
+            const old_supply = await token.totalSupply()
+
             await expect(token.connect(pool1).burn(0))
                 .to.emit(token, 'BurnLoanToken')
                 .withArgs(pool1.address, user1.address, loan1.address, 0);
@@ -321,6 +333,10 @@ describe('PalLoanToken contract tests', () => {
             ).to.be.reverted
 
             expect(await token.balanceOf(user1.address)).to.be.eq(1)
+
+            const new_supply = await token.totalSupply()
+
+            expect(old_supply.sub(new_supply)).to.be.eq(1)
 
         });
 

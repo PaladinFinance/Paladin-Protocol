@@ -64,6 +64,7 @@ interface IPalPool {
     /** @notice Reserve Events */
     event AddReserve(uint amount);
     event RemoveReserve(uint amount);
+    event WithdrawFees(uint amount);
 
 
     //Functions
@@ -118,6 +119,7 @@ interface IPalPool {
     function updatePoolFactors(uint _reserveFactor, uint _killerRatio) external;
 
     function addReserve(uint _amount) external;
-    function removeReserve(uint _amount, address _recipient) external;
+    function removeReserve(uint _amount) external;
+    function withdrawFees(uint _amount, address _recipient) external;
 
 }

@@ -13,6 +13,7 @@ contract MockPalPool is Admin {
 
     IERC20 public underlying;
     uint public totalReserve;
+    uint public accruedFees;
     IPaladinController public controller;
 
     modifier controllerOnly() {
@@ -23,22 +24,26 @@ contract MockPalPool is Admin {
     constructor(
         address _controller, 
         address _underlying,
-        uint _reserveAmount
+        uint _reserveAmount,
+        uint _accruedFees
     ){
         admin = msg.sender;
 
         controller = IPaladinController(_controller);
         underlying = IERC20(_underlying);
         totalReserve = _reserveAmount;
+        accruedFees = _accruedFees;
     }
 
     function underlyingBalance() public pure returns(uint){
         return 10e18;
     }
 
-    function removeReserve(uint _amount, address _recipient) external controllerOnly {
-        require(_amount <= underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
+    function withdrawFees(uint _amount, address _recipient) external controllerOnly {
+        require(_amount<= accruedFees && _amount <= totalReserve, Errors.FEES_ACCRUED_INSUFFICIENT);
+        accruedFees = accruedFees.sub(_amount);
         totalReserve = totalReserve.sub(_amount);
+
         underlying.transfer(_recipient, _amount);
     }
 

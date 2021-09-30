@@ -66,15 +66,18 @@ contract PalPoolStorage {
     uint public totalReserve;
     /** @notice Total of underlying tokens "borrowed" (in Loan Pool contracts) */
     uint public totalBorrowed;
+    /** @notice Total fees accrued since last withdraw */
+    /** (this amount id part of the Reserve : we should always have totalReserve >= accruedFees) */
+    uint public accruedFees;
 
     /** @notice Minimum duration of a Borrow (in blocks) */
     uint public minBorrowLength = 45290;
     
 
     /** @dev Health Factor to kill a loan */
-    uint public constant killFactor = 0.96e18;
+    uint public constant killFactor = 0.95e18;
     /** @dev Ratio of the borrow fees to pay the killer of a loan */
-    uint public killerRatio = 0.15e18;
+    uint public killerRatio = 0.1e18;
 
     /** @dev Base value to mint palTokens */
     uint internal constant initialExchangeRate = 1e18;

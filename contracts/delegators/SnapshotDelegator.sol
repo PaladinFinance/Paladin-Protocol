@@ -13,7 +13,7 @@ import "../utils/IERC20.sol";
 import "../utils/SafeERC20.sol";
 import "../utils/SafeMath.sol";
 import {Errors} from  "../utils/Errors.sol";
-import "./utils/DelegateRegistry.sol";
+import "./utils/IDelegateRegistry.sol";
 
 
 /** @title Snapshot token Delegator  */
@@ -22,14 +22,33 @@ contract SnapshotDelegator{
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
-    //Mock Variables for DelegateCall
+    IDelegateRegistry public constant registry = IDelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
 
-    address internal underlying;
-    uint internal amount;
-    address internal borrower;
-    address internal delegatee;
-    address payable internal motherPool;
-    uint internal feesAmount;
+    //Variables
+
+    /** @notice Address of the underlying token for this loan */
+    address public underlying;
+    /** @notice Amount of the underlying token in this loan */
+    uint public amount;
+    /** @notice Address of the borrower */
+    address public borrower;
+    /** @notice Address of the delegatee for the voting power */
+    address public delegatee;
+    /** @notice PalPool that created this loan */
+    address payable public motherPool;
+    /** @notice Amount of fees paid for this loan */
+    uint public feesAmount;
+
+    constructor(){
+        //Set up initial values
+        motherPool = payable(address(0xdead));
+        
+    }
+
+    modifier motherPoolOnly() {
+        require(msg.sender == motherPool);
+        _;
+    }
 
     /**
     * @notice Starts the Loan and Delegate the voting Power to the Delegatee
@@ -39,7 +58,19 @@ contract SnapshotDelegator{
     * @param _feesAmount Amount of fees (in the underlying token) paid by the borrower
     * @return bool : Power Delagation success
     */
-    function initiate(address _delegatee, uint _amount, uint _feesAmount) external returns(bool){
+    function initiate(
+        address _motherPool,
+        address _borrower,
+        address _underlying,
+        address _delegatee,
+        uint _amount,
+        uint _feesAmount
+    ) external returns(bool){
+        require(motherPool == address(0));
+
+        motherPool = payable(_motherPool);
+        borrower = _borrower;
+        underlying = _underlying;
         //Set up the borrowed amount and the amount of fees paid
         amount = _amount;
         feesAmount = _feesAmount;
@@ -47,8 +78,7 @@ contract SnapshotDelegator{
         
         //Delegate governance power : Snapshot version
         //This is the Delegate Registry for Mainnet & Kovan
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.setDelegate("", _delegatee);
+        registry.setDelegate("", _delegatee);
 
         return true;
     }
@@ -59,7 +89,7 @@ contract SnapshotDelegator{
     * @param _newFeesAmount new Amount of fees paid by the Borrower
     * @return bool : Expand success
     */
-    function expand(uint _newFeesAmount) external returns(bool){
+    function expand(uint _newFeesAmount) external motherPoolOnly returns(bool){
         feesAmount = feesAmount.add(_newFeesAmount);
         return true;
     }
@@ -69,11 +99,8 @@ contract SnapshotDelegator{
     * @dev Return the non-used fees to the Borrower, the loaned tokens and the used fees to the PalPool, then destroy the contract
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
-    function closeLoan(uint _usedAmount) external {
+    function closeLoan(uint _usedAmount) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
-
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.clearDelegate("");
         
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
@@ -84,6 +111,11 @@ contract SnapshotDelegator{
             _underlying.safeTransfer(borrower, _returnAmount);
         }
         _underlying.safeTransfer(motherPool, _keepAmount);
+
+        registry.clearDelegate("");
+
+         //Destruct the contract, so it's not usable anymore
+        selfdestruct(motherPool);
     }
 
     /**
@@ -92,11 +124,8 @@ contract SnapshotDelegator{
     * @param _killer Address of the Loan Killer
     * @param _killerRatio Percentage of the fees to reward to the killer (scale 1e18)
     */
-    function killLoan(address _killer, uint _killerRatio) external {
+    function killLoan(address _killer, uint _killerRatio) external motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
-
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.clearDelegate("");
         
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
@@ -105,6 +134,11 @@ contract SnapshotDelegator{
         uint _poolAmount = _balance.sub(_killerAmount);
         _underlying.safeTransfer(_killer, _killerAmount);
         _underlying.safeTransfer(motherPool, _poolAmount);
+
+        registry.clearDelegate("");
+
+         //Destruct the contract, so it's not usable anymore
+        selfdestruct(motherPool);
     }
 
 
@@ -114,13 +148,12 @@ contract SnapshotDelegator{
     * @param _delegatee Address to delegate the voting power to
     * @return bool : Power Delagation success
     */
-    function changeDelegatee(address _delegatee) external returns(bool){
+    function changeDelegatee(address _delegatee) external motherPoolOnly returns(bool){
         delegatee = _delegatee;
         
         //Delegate governance power : Snapshot version
         //This is the Delegate Registry for Mainnet & Kovan
-        DelegateRegistry _registry = DelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
-        _registry.setDelegate("", _delegatee);
+        registry.setDelegate("", _delegatee);
         return true;
     }
 }

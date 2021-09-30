@@ -118,13 +118,13 @@ contract PalToken is IERC20, Admin {
     }
 
     function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
-        return _approve(msg.sender, spender, transferAllowances[msg.sender][spender] + addedValue);
+        return _approve(msg.sender, spender, transferAllowances[msg.sender][spender].add(addedValue));
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 currentAllowance = transferAllowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "decreased allowance below zero");
-        return _approve(msg.sender, spender, currentAllowance - subtractedValue);
+        return _approve(msg.sender, spender, currentAllowance.sub(subtractedValue));
     }
 
 

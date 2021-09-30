@@ -12,35 +12,27 @@ pragma abicoder v2;
 
 import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
+import "./utils/Clones.sol";
 import "./IPalPool.sol";
 import "./PalPoolStorage.sol";
 import "./IPalLoan.sol";
-import "./PalLoan.sol";
+//import "./PalLoan.sol";
 import "./IPalToken.sol";
 import "./IPaladinController.sol";
 import "./IPalLoanToken.sol";
 import "./interests/InterestInterface.sol";
 import "./utils/IERC20.sol";
 import "./utils/Admin.sol";
+import "./utils/ReentrancyGuard.sol";
 import {Errors} from  "./utils/Errors.sol";
 
 
 
 /** @title PalPool contract  */
 /// @author Paladin
-contract PalPool is IPalPool, PalPoolStorage, Admin {
+contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
-
-
-
-    modifier preventReentry() {
-        //modifier to prevent reentry in some functions
-        require(!entered);
-        entered = true;
-        _;
-        entered = false;
-    }
 
 
     modifier controllerOnly() {
@@ -91,20 +83,20 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _amount Amount of underlying to deposit
     * @return bool : amount of minted palTokens
     */
-    function deposit(uint _amount) public virtual override preventReentry returns(uint){
+    function deposit(uint _amount) public virtual override nonReentrant returns(uint){
         require(_updateInterest());
 
         //Retrieve the current exchange rate palToken:underlying
         uint _exchRate = _exchangeRate();
 
+
+        //Find the amount to mint depending on the amount to transfer
+        uint _num = _amount.mul(mantissaScale);
+        uint _toMint = _num.div(_exchRate);
+
         //Transfer the underlying to this contract
         //The amount of underlying needs to be approved before
         underlying.safeTransferFrom(msg.sender, address(this), _amount);
-
-
-        //Find the amount to mint depending of the previous transfer
-        uint _num = _amount.mul(mantissaScale);
-        uint _toMint = _num.div(_exchRate);
 
         //Mint the palToken
         require(palToken.mint(msg.sender, _toMint), Errors.FAIL_MINT);
@@ -124,7 +116,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _amount Amount of palToken to return
     * @return uint : amount of underlying returned
     */
-    function withdraw(uint _amount) public virtual override preventReentry returns(uint){
+    function withdraw(uint _amount) public virtual override nonReentrant returns(uint){
         require(_updateInterest());
         require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
 
@@ -160,7 +152,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _feeAmount Amount of fee to pay to start the loan
     * @return uint : new PalLoanToken Id
     */
-    function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override preventReentry returns(uint){
+    function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override nonReentrant returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
         require(_amount < underlyingBalance(), Errors.INSUFFICIENT_CASH);
         require(_delegatee != address(0), Errors.ZERO_ADDRESS);
@@ -170,13 +162,10 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
 
         address _borrower = msg.sender;
 
-        //Deploy a new Loan Pool contract
-        PalLoan _newLoan = new PalLoan(
-            address(this),
-            _borrower,
-            address(underlying),
-            delegator
-        );
+        //Update Total Borrowed
+        totalBorrowed = totalBorrowed.add(_amount);
+
+        IPalLoan _newLoan = IPalLoan(Clones.clone(delegator));
 
         //Send the borrowed amount of underlying tokens to the Loan
         underlying.safeTransfer(address(_newLoan), _amount);
@@ -185,11 +174,16 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         underlying.safeTransferFrom(_borrower, address(_newLoan), _feeAmount);
 
         //Start the Loan (and delegate voting power)
-        require(_newLoan.initiate(_delegatee, _amount, _feeAmount), Errors.FAIL_LOAN_INITIATE);
+        require(_newLoan.initiate(
+            address(this),
+            _borrower,
+            address(underlying),
+            _delegatee,
+            _amount,
+            _feeAmount
+        ), Errors.FAIL_LOAN_INITIATE);
 
-        //Update Total Borrowed, and add the new Loan to mappings
-        totalBorrowed = totalBorrowed.add(_amount);
-
+        //Add the new Loan to mappings
         loans.push(address(_newLoan));
 
         //Mint the palLoanToken linked to this new Loan
@@ -239,7 +233,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _feeAmount New amount of fees to pay
     * @return bool : Amount of fees paid
     */
-    function expandBorrow(address _loan, uint _feeAmount) public virtual override preventReentry returns(uint){
+    function expandBorrow(address _loan, uint _feeAmount) public virtual override nonReentrant returns(uint){
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
@@ -253,13 +247,13 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
 
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
+        _borrow.feesAmount = _borrow.feesAmount.add(_feeAmount);
+
         //Transfer the new fees to the Loan
-        //If success, update the Borrow data, and call the expand fucntion of the Loan
+        //If success, call the expand function of the Loan
         underlying.safeTransferFrom(_loanOwner, _borrow.loan, _feeAmount);
 
         require(_palLoan.expand(_feeAmount), Errors.FAIL_LOAN_EXPAND);
-
-        _borrow.feesAmount = _borrow.feesAmount.add(_feeAmount);
 
         emit ExpandLoan(
             _loanOwner,
@@ -280,7 +274,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @dev Close a Loan, and return the non-used fees to the Borrower
     * @param _loan Address of the Loan
     */
-    function closeBorrow(address _loan) public virtual override preventReentry {
+    function closeBorrow(address _loan) public virtual override nonReentrant {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
@@ -313,22 +307,26 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         if(_totalFees > _borrow.feesAmount){
             _totalFees = _borrow.feesAmount;
         }
-        
-        //Close and destroy the loan
-        _palLoan.closeLoan(_totalFees);
-
-        //Burn the palLoanToken for this Loan
-        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
 
         //Set the Borrow as closed
         _borrow.closed = true;
         _borrow.feesUsed = _totalFees;
         _borrow.closeBlock = block.number;
 
-        //Update the storage variables
+        //Remove the borrowed tokens + fees from the TotalBorrowed
+        //Add to the Reserve the reserveFactor of Penalty Fees (if there is Penalty Fees)
+        //And add the fees counted as potential Killer Fees to the Accrued Fees, since no killing was necessary
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
         uint _realPenaltyFees = _totalFees.sub(_feesUsed);
+        uint _killerFees = _feesUsed.mul(killerRatio).div(mantissaScale);
         totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
+        accruedFees = accruedFees.add(_killerFees).add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
+        
+        //Close and destroy the loan
+        _palLoan.closeLoan(_totalFees);
+
+        //Burn the palLoanToken for this Loan
+        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
 
         require(controller.closeBorrowVerify(address(this), _loanOwner, _borrow.loan), Errors.FAIL_CLOSE_BORROW);
 
@@ -351,7 +349,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @dev Kill a non-healthy Loan to collect rewards
     * @param _loan Address of the Loan
     */
-    function killBorrow(address _loan) public virtual override preventReentry {
+    function killBorrow(address _loan) public virtual override nonReentrant {
         address killer = msg.sender;
         //Fetch the corresponding Borrow
         //And check that the killer is not the Borrower, and the Loan is still active
@@ -371,21 +369,25 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         //Load the Loan
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
-        //Kill the Loan
-        _palLoan.killLoan(killer, killerRatio);
-
-        //Burn the palLoanToken for this Loan
-        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
-
         //Close the Loan, and update storage variables
         _borrow.closed = true;
         _borrow.killed = true;
         _borrow.feesUsed = _borrow.feesAmount;
         _borrow.closeBlock = block.number;
 
-        uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(uint(1e18));
+        //Remove the borrowed tokens + fees from the TotalBorrowed
+        //Remove the amount paid as killer fees from the Reserve, and any over accrued interest in the Reserve & AccruedFees
+        uint _overAccruedInterest = _loanHealthFactor <= mantissaScale ? 0 : _feesUsed.sub(_borrow.feesAmount);
+        uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(mantissaScale);
         totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
-        totalReserve = totalReserve.sub(_killerFees);
+        totalReserve = totalReserve.sub(_killerFees).sub(_overAccruedInterest.mul(reserveFactor).div(mantissaScale));
+        accruedFees = accruedFees.sub(_overAccruedInterest.mul(reserveFactor.sub(killerRatio)).div(mantissaScale));
+
+        //Kill the Loan
+        _palLoan.killLoan(killer, killerRatio);
+
+        //Burn the palLoanToken for this Loan
+        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
 
         require(controller.killBorrowVerify(address(this), killer, _borrow.loan), Errors.FAIL_KILL_BORROW);
 
@@ -411,7 +413,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @param _loan Address of the Loan
     * @param _newDelegatee Address of the new voting power recipient
     */
-    function changeBorrowDelegatee(address _loan, address _newDelegatee) public virtual override preventReentry {
+    function changeBorrowDelegatee(address _loan, address _newDelegatee) public virtual override nonReentrant {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
@@ -423,11 +425,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         //Load the Loan Pool contract
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
-        //Call the delegation logic in the palLoan to change the votong power recipient
-        require(_palLoan.changeDelegatee(_newDelegatee), Errors.FAIL_LOAN_DELEGATEE_CHANGE);
-
         //Update storage data
         _borrow.delegatee = _newDelegatee;
+
+        //Call the delegation logic in the palLoan to change the votong power recipient
+        require(_palLoan.changeDelegatee(_newDelegatee), Errors.FAIL_LOAN_DELEGATEE_CHANGE);
 
         //Emit the Event
         emit ChangeLoanDelegatee(
@@ -648,6 +650,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         uint _cash = underlyingBalance();
         uint _borrows = totalBorrowed;
         uint _reserves = totalReserve;
+        uint _accruedFees = accruedFees;
         uint _oldBorrowIndex = borrowIndex;
 
         //Get the Borrow Rate from the Interest Module
@@ -661,17 +664,20 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         Accumulated Interests = Interest Factor * Borrows
         Total Borrows = Borrows + Accumulated Interests
         Total Reserve = Reserve + Accumulated Interests * Reserve Factor
+        Accrued Fees = Accrued Fees + Accumulated Interests * (Reserve Factor - Killer Ratio) -> (available fees should not count potential fees to send to killers)
         Borrow Index = old Borrow Index + old Borrow Index * Interest Factor 
         */
         uint _interestFactor = _borrowRate.mul(_ellapsedBlocks);
         uint _accumulatedInterest = _interestFactor.mul(_borrows).div(mantissaScale);
         uint _newBorrows = _borrows.add(_accumulatedInterest);
         uint _newReserve = _reserves.add(reserveFactor.mul(_accumulatedInterest).div(mantissaScale));
-        uint _newBorrowIndex = _oldBorrowIndex.add((_interestFactor.mul(1e18)).mul(_oldBorrowIndex).div(1e36));
+        uint _newAccruedFees = _accruedFees.add((reserveFactor.sub(killerRatio)).mul(_accumulatedInterest).div(mantissaScale));
+        uint _newBorrowIndex = _oldBorrowIndex.add(_interestFactor.mul(_oldBorrowIndex).div(1e18));
 
         //Update storage
         totalBorrowed = _newBorrows;
         totalReserve = _newReserve;
+        accruedFees = _newAccruedFees;
         borrowIndex = _newBorrowIndex;
         accrualBlockNumber = _currentBlock;
 
@@ -758,7 +764,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
     * @dev Transfer underlying token from the Pool to the admin
     * @param _amount Amount of underlying to transfer
     */
-    function removeReserve(uint _amount, address _recipient) external override controllerOnly { //add system so Controller can also fetch Fees
+    function removeReserve(uint _amount) external override adminOnly {
         //Check if there is enough in the reserve
         require(_updateInterest());
         require(_amount <= underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
@@ -766,9 +772,31 @@ contract PalPool is IPalPool, PalPoolStorage, Admin {
         totalReserve = totalReserve.sub(_amount);
 
         //Transfer underlying to the admin
-        underlying.safeTransfer(_recipient, _amount);
+        underlying.safeTransfer(admin, _amount);
 
         emit RemoveReserve(_amount);
+    }
+
+    /**
+    * @notice Method to allow the Controller (or admin) to withdraw protocol fees
+    * @dev Transfer underlying token from the Pool to the controller (or admin)
+    * @param _amount Amount of underlying to transfer
+    * @param _recipient Address to receive the token
+    */
+    function withdrawFees(uint _amount, address _recipient) external override controllerOnly {
+        //Check if there is enough in the reserve
+        require(_updateInterest());
+        require(_amount<= accruedFees && _amount <= totalReserve, Errors.FEES_ACCRUED_INSUFFICIENT);
+
+        //Substract from accruedFees (to track how much fees the Controller can withdraw since last time)
+        //And also from the REserve, since the fees are part of the Reserve
+        accruedFees = accruedFees.sub(_amount);
+        totalReserve = totalReserve.sub(_amount);
+
+        //Transfer fees to the recipient
+        underlying.safeTransfer(_recipient, _amount);
+
+        emit WithdrawFees(_amount);
     }
 
 }

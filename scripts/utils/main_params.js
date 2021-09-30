@@ -3,16 +3,22 @@ const { ethers } = require("hardhat");
 // Addresses for all_deploy :
 
 const TOKENS = {
-    UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-    COMP: "0xA114F91be7829E6B4945f3D35abFD98dDD7b311C"
+    COMP: "0xc00e94Cb662C3520282E6f5717214004A7f26888",
+    AAVE: "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+    STKAAVE: "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+    UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"
 }
 
 const DELEGATOR_NAMES = {
-    BASIC_DELEGATOR: 'BasicDelegator'
+    BASIC_DELEGATOR: 'BasicDelegator',
+    AAVE_DELEGATOR: 'AaveDelegator',
+    AAVE_DELEGATOR_CLAIMER: 'AaveDelegatorClaimer',
+    SNAPSHOT_DELEGATOR: 'SnapshotDelegator'
 }
 
 const MULTIPLIER_NAMES = {
-    GOVERNOR: 'GovernorMultiplier'
+    GOVERNOR: 'GovernorMultiplier',
+    AAVE: 'AaveMultiplier'
 }
 
 const MULTIPLIER_CONTRACTS = {
@@ -24,14 +30,22 @@ const MULTIPLIER_CONTRACTS = {
     UNI: {
         NAME: MULTIPLIER_NAMES.GOVERNOR,
         GOV: 'Uniswap',
-        GOVERNOR_ADDRESS: "0x5e4be8Bc9637f0EAA1A755019e06A68ce081D58F"
+        GOVERNOR_ADDRESS: "0x408ED6354d4973f66138C91495F2f2FCbd8724C3"
+    },
+    AAVE: {
+        NAME: MULTIPLIER_NAMES.AAVE,
+        GOV: 'Aave',
+        GOVERNANCE_ADDRESS: "0xEC568fffba86c094cf06b22134B23074DFE2252c",
+        STRATEGY_ADDRESS: "0xEE56e2B3D491590B5b31738cC34d5232F378a8D5",
     }
 }
 
 const MULTIPLIER_KEYS = {
     'COMP': MULTIPLIER_CONTRACTS.COMP,
-    'UNI': MULTIPLIER_CONTRACTS.UNI
+    'UNI': MULTIPLIER_CONTRACTS.UNI,
+    'AAVE': MULTIPLIER_CONTRACTS.AAVE,
 }
+
 
 const POOLS_PARAMS = {
     COMP: {
@@ -47,6 +61,20 @@ const POOLS_PARAMS = {
         NAME: 'Paladin UNI',
         SYMBOL: 'palUNI',
         MUTIPLIER: 'UNI'
+    },
+    AAVE: {
+        UNDERLYING: TOKENS.AAVE,
+        DELEGATOR: 'AAVE_DELEGATOR',
+        NAME: 'Paladin AAVE',
+        SYMBOL: 'palAAVE',
+        MUTIPLIER: 'AAVE'
+    },
+    STKAAVE: {
+        UNDERLYING: TOKENS.STKAAVE,
+        DELEGATOR: 'AAVE_DELEGATOR_CLAIMER',
+        NAME: 'Paladin stkAAVE',
+        SYMBOL: 'palStkAAVE',
+        MUTIPLIER: 'AAVE'
     }
 }
 
@@ -60,36 +88,49 @@ const INTEREST_MODULE_VALUES = {
 
 
 //Already deployed contracts : 
+
+
 const POOLS = {
     COMP: {
-        POOL: "0x75e102fa52127326bF7ea00533cdCb94B5047cCa",
-        TOKEN: "0xa98eB74a9DBd7Ddae0DCEb627e0b360ce9edEA22"
+        POOL: "",
+        TOKEN: ""
     },
     UNI: {
-        POOL: "0xe184D5a39e8F523D3F71f329dDD444041441cd1F",
-        TOKEN: "0x3D8596bE7CFDdF6743E2a988750215F516461D06"
+        POOL: "",
+        TOKEN: ""
+    },
+    AAVE: {
+        POOL: "",
+        TOKEN: ""
+    },
+    STKAAVE: {
+        POOL: "",
+        TOKEN: ""
     }
 }
 
-const PAL_LOAN_TOKEN = "0x4B40851217b4ce8Fb603957beb1133b4C94dad83";
+const PAL_LOAN_TOKEN = "";
 
-const CONTROLLER = "0xf03aA92c50c389c0F4308aff7B6Ac5A47C518A5A";
+const CONTROLLER = "";
 
 const INTEREST_MODULE = "";
 
-const INTEREST_MODULE_V2 = "0x859510410e9cD84F0E889E7d5Fb22f5acdf882d7";
+const INTEREST_MODULE_V2 = "";
 
-const ADDRESS_REGISTRY = "0x1008be0793d0fc4541829C01996291832C171b42";
+const ADDRESS_REGISTRY = "";
 
 const DELEGATORS = {
-    BASIC_DELEGATOR: "0x6B393F1D1Df25E80388A0A51B00456Abb6ef1c52"
+    BASIC_DELEGATOR: "",
+    AAVE_DELEGATOR: "",
+    AAVE_DELEGATOR_CLAIMER: "",
+    SNAPSHOT_DELEGATOR: ""
 }
 
 const MULTIPLIERS = {
     COMP: {
         NAME: MULTIPLIER_NAMES.GOVERNOR,
         CONTRACT: MULTIPLIER_CONTRACTS.COMP,
-        ADDRESS: "0x20D7E8F3Bd666dDcF00f4fB2549e8bd2807817ed",
+        ADDRESS: "",
         POOLS: [
             POOLS.COMP.POOL
         ]
@@ -97,12 +138,22 @@ const MULTIPLIERS = {
     UNI: {
         NAME: MULTIPLIER_NAMES.GOVERNOR,
         CONTRACT: MULTIPLIER_CONTRACTS.UNI,
-        ADDRESS: "0x202088C7016409b42f946575553182c251ff76b6",
+        ADDRESS: "",
         POOLS: [
             POOLS.UNI.POOL
         ]
+    },
+    AAVE: {
+        NAME: MULTIPLIER_NAMES.AAVE,
+        CONTRACT: MULTIPLIER_CONTRACTS.AAVE,
+        ADDRESS: "",
+        POOLS: [
+            POOLS.AAVE.POOL,
+            POOLS.STKAAVE.POOL
+        ]
     }
 }
+
 
 module.exports = {
     TOKENS,
