@@ -20,15 +20,13 @@ const param_file_path = params_path();
 
 const { CONTROLLER, PAL_LOAN_TOKEN, ADDRESS_REGISTRY, INTEREST_MODULE_V2, POOLS } = require(param_file_path);
 
-const PalPool = require("../../artifacts/contracts/interfaces/IPalPool.sol/IPalPool.json");
 
-
-const new_admin = ''
+const new_admin = ""
 
 
 async function main() {
 
-    if(new_admin === ""){
+    if(!new_admin){
         console.log('No admin address given')
         process.exit(1);
     }
@@ -39,10 +37,13 @@ async function main() {
 
     const admin = (await hre.ethers.getSigners())[0];
 
+    let tx;
+
     const Controller = await ethers.getContractFactory("PaladinController");
     const Registry = await ethers.getContractFactory("AddressRegistry");
     const PalLoanToken = await ethers.getContractFactory("PalLoanToken");
     const Interest = await ethers.getContractFactory("InterestCalculatorV2");
+    const Pool = await ethers.getContractFactory("PalPool");
 
     const controller = Controller.attach(CONTROLLER);
     const registry = Registry.attach(ADDRESS_REGISTRY);
@@ -50,7 +51,7 @@ async function main() {
     const interest = Interest.attach(INTEREST_MODULE_V2);
 
 
-    let tx = await controller.setNewAdmin(new_admin)
+    tx = await controller.setNewAdmin(new_admin)
 
     await tx.wait(10)
 
@@ -71,7 +72,7 @@ async function main() {
     for (let p in POOLS) {
         let pool_data = POOLS[p];
 
-        let pool = new ethers.Contract(pool_data.POOL, PalPool.abi, provider);
+        let pool = Pool.attach(pool_data.POOL);
 
         tx = await pool.setNewAdmin(new_admin)
 

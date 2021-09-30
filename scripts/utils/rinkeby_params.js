@@ -61,11 +61,11 @@ const INTEREST_MODULE_VALUES = {
 
 //Already deployed contracts : 
 const POOLS = {
-    UNI: {
+    COMP: {
         POOL: "0x75e102fa52127326bF7ea00533cdCb94B5047cCa",
         TOKEN: "0xa98eB74a9DBd7Ddae0DCEb627e0b360ce9edEA22"
     },
-    COMP: {
+    UNI: {
         POOL: "0xe184D5a39e8F523D3F71f329dDD444041441cd1F",
         TOKEN: "0x3D8596bE7CFDdF6743E2a988750215F516461D06"
     }

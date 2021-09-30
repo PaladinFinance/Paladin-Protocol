@@ -604,6 +604,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         _approve(address(0), tokenId);
 
         //Update data in storage
+        totalSupply = totalSupply.sub(1);
         _removeTokenToOwner(owner, tokenId);
         owners[tokenId] = address(0);
 
