@@ -18,7 +18,7 @@ const params_path = () => {
   
 const param_file_path = params_path();
 
-const { CONTROLLER, PAL_LOAN_TOKEN, ADDRESS_REGISTRY, INTEREST_MODULE_V2, POOLS } = require(param_file_path);
+const { CONTROLLER, PAL_LOAN_TOKEN, ADDRESS_REGISTRY, INTEREST_MODULE_V2, POOLS, MULTIPLIERS, MULTIPLIER_NAMES } = require(param_file_path);
 
 
 const new_admin = ""
@@ -44,6 +44,8 @@ async function main() {
     const PalLoanToken = await ethers.getContractFactory("PalLoanToken");
     const Interest = await ethers.getContractFactory("InterestCalculatorV2");
     const Pool = await ethers.getContractFactory("PalPool");
+    const GovernorMultiplier = await ethers.getContractFactory("GovernorMultiplier");
+    const AaveMultiplier = await ethers.getContractFactory("AaveMultiplier");
 
     const controller = Controller.attach(CONTROLLER);
     const registry = Registry.attach(ADDRESS_REGISTRY);
@@ -51,32 +53,64 @@ async function main() {
     const interest = Interest.attach(INTEREST_MODULE_V2);
 
 
+    console.log('Controller')
+    
     tx = await controller.setNewAdmin(new_admin)
 
     await tx.wait(10)
 
+    console.log('Registry')
+    
     tx = await registry.setNewAdmin(new_admin)
 
     await tx.wait(10)
 
+    console.log('PalLoanToken')
+    
     tx = await loanToken.setNewAdmin(new_admin)
 
     await tx.wait(10)
 
+    console.log('Interest')
+    
     tx = await interest.setNewAdmin(new_admin)
 
     await tx.wait(10)
 
-
+    
     console.log('Updating all Pools admin ... ')
     for (let p in POOLS) {
         let pool_data = POOLS[p];
-
+        
+        console.log(p)
+    
         let pool = Pool.attach(pool_data.POOL);
 
         tx = await pool.setNewAdmin(new_admin)
 
         await tx.wait(10)
+
+    }
+
+
+    console.log('Updating all Multipliers admin ... ')
+    for (let m in MULTIPLIERS) {
+      console.log(m)
+    
+      if(MULTIPLIERS[m].NAME == MULTIPLIER_NAMES.GOVERNOR){
+        let multiplier = GovernorMultiplier.attach(MULTIPLIERS[m].ADDRESS)
+
+        tx = await multiplier.setNewAdmin(new_admin)
+
+        await tx.wait(10)
+      }
+      else if(MULTIPLIERS[m].NAME == MULTIPLIER_NAMES.AAVE){
+        let multiplier = AaveMultiplier.attach(MULTIPLIERS[m].ADDRESS)
+
+        tx = await multiplier.setNewAdmin(new_admin)
+
+        await tx.wait(10)
+      }
 
     }
 
