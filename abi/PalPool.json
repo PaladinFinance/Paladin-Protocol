@@ -339,17 +339,17 @@
         "type": "event"
     },
     {
-        "inputs": [],
-        "name": "_underlyingBalance",
-        "outputs": [
+        "anonymous": false,
+        "inputs": [
             {
+                "indexed": false,
                 "internalType": "uint256",
-                "name": "",
+                "name": "amount",
                 "type": "uint256"
             }
         ],
-        "stateMutability": "view",
-        "type": "function"
+        "name": "WithdrawFees",
+        "type": "event"
     },
     {
         "inputs": [],
@@ -367,6 +367,19 @@
     {
         "inputs": [],
         "name": "accrualBlockNumber",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "accruedFees",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -500,7 +513,7 @@
         "name": "controller",
         "outputs": [
             {
-                "internalType": "contract PaladinControllerInterface",
+                "internalType": "contract IPaladinController",
                 "name": "",
                 "type": "address"
             }
@@ -821,7 +834,7 @@
         "name": "palLoanToken",
         "outputs": [
             {
-                "internalType": "contract PalLoanTokenInterface",
+                "internalType": "contract IPalLoanToken",
                 "name": "",
                 "type": "address"
             }
@@ -834,7 +847,7 @@
         "name": "palToken",
         "outputs": [
             {
-                "internalType": "contract PalToken",
+                "internalType": "contract IPalToken",
                 "name": "",
                 "type": "address"
             }
@@ -848,11 +861,6 @@
                 "internalType": "uint256",
                 "name": "_amount",
                 "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "_recipient",
-                "type": "address"
             }
         ],
         "name": "removeReserve",
@@ -978,6 +986,19 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "underlyingBalance",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
@@ -1043,6 +1064,24 @@
                 "type": "uint256"
             }
         ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_recipient",
+                "type": "address"
+            }
+        ],
+        "name": "withdrawFees",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     }

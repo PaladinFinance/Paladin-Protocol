@@ -339,7 +339,7 @@
         "name": "controller",
         "outputs": [
             {
-                "internalType": "contract PaladinControllerInterface",
+                "internalType": "contract IPaladinController",
                 "name": "",
                 "type": "address"
             }
@@ -694,6 +694,30 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "tokenIndex",
+                "type": "uint256"
+            }
+        ],
+        "name": "tokenOfByIndex",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "uint256",
                 "name": "tokenId",
                 "type": "uint256"
@@ -724,6 +748,19 @@
                 "internalType": "uint256[]",
                 "name": "",
                 "type": "uint256[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
