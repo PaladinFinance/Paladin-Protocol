@@ -124,6 +124,8 @@ describe('PalPool : 3 - Borrows tests', () => {
 
         it(' should execute correctly (with correct Event)', async () => {
 
+            const borrow_count_before = await pool.numberActiveLoans()
+
             const borrow_call = pool.connect(user1).borrow(user2.address, borrow_amount, fees_amount)
 
             await borrow_call
@@ -145,7 +147,10 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             const pool_totalBorrowed = await pool.totalBorrowed()
 
+            const borrow_count_after = await pool.numberActiveLoans()
+
             expect(pool_totalBorrowed).to.be.eq(borrow_amount)
+            expect(borrow_count_before.add(1)).to.be.eq(borrow_count_after)
             
         });
 
@@ -591,7 +596,7 @@ describe('PalPool : 3 - Borrows tests', () => {
         });
 
 
-        it(' should update totalBorrowed, totalReserve & accruedFees correctly', async () => {
+        it(' should update numberActiveLoans, totalBorrowed, totalReserve & accruedFees correctly', async () => {
 
             const reserveFactor = await pool.reserveFactor()
 
@@ -599,6 +604,8 @@ describe('PalPool : 3 - Borrows tests', () => {
             
             const old_totalReserve = await pool.totalReserve()
             const old_accruedFees = await pool.accruedFees()
+
+            const borrow_count_before = await pool.numberActiveLoans()
 
             const loan_address = (await pool.getLoansPools())[0]
             const minBorrowLength = await pool.minBorrowLength()
@@ -611,6 +618,8 @@ describe('PalPool : 3 - Borrows tests', () => {
             const new_totalReserve = await pool.totalReserve()
             const new_accruedFees = await pool.accruedFees()
 
+            const borrow_count_after = await pool.numberActiveLoans()
+
             const loan_data = await pool.getBorrowData(loan_address)
 
             const expected_totalReserve = loan_data._feesUsed.mul(reserveFactor).div(mantissaScale)
@@ -619,6 +628,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             expect(+(new_totalBorrowed.toString())).to.be.closeTo(0,10) //case where 1 wei is remaining
             expect(new_totalReserve).to.be.closeTo(old_totalReserve.add(expected_totalReserve), 10)
             expect(new_accruedFees).to.be.closeTo(old_accruedFees.add(expected_accruedFees), 10)
+            expect(borrow_count_after).to.be.eq(borrow_count_before.sub(1))
 
         });
 
@@ -732,12 +742,14 @@ describe('PalPool : 3 - Borrows tests', () => {
         });
 
 
-        it(' should update totalBorrowed, totalReserve & accruedFees correctly', async () => {
+        it(' should update numberActiveLoans, totalBorrowed, totalReserve & accruedFees correctly', async () => {
 
             const reserveFactor = await pool.reserveFactor()
             
             const old_totalReserve = await pool.totalReserve()
             const old_accruedFees = await pool.accruedFees()
+
+            const borrow_count_before = await pool.numberActiveLoans()
 
             const loan_address = (await pool.getLoansPools())[0]
 
@@ -749,6 +761,8 @@ describe('PalPool : 3 - Borrows tests', () => {
             const new_totalReserve = await pool.totalReserve()
             const new_accruedFees = await pool.accruedFees()
 
+            const borrow_count_after = await pool.numberActiveLoans()
+
             const loan_data = await pool.getBorrowData(loan_address)
 
             const expected_totalReserve = loan_data._feesUsed.mul(reserveFactor.sub(killerRatio)).div(mantissaScale)
@@ -757,6 +771,7 @@ describe('PalPool : 3 - Borrows tests', () => {
             expect(new_totalBorrowed).to.be.closeTo(BigNumber.from('0'),10) //case where 1 wei is remaining
             expect(new_totalReserve).to.be.closeTo(old_totalReserve.add(expected_totalReserve), 10)
             expect(new_accruedFees).to.be.closeTo(old_accruedFees.add(expected_accruedFees), 10)
+            expect(borrow_count_after).to.be.eq(borrow_count_before.sub(1))
 
         });
 

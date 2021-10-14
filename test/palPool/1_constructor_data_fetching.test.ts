@@ -141,9 +141,13 @@ describe('PalPool : 1 - constructor and storage tests', () => {
 
             
             const pool_borrowIndex: BigNumber = await pool.borrowIndex()
-            const expected_borrowIndex: BigNumber = ethers.utils.parseEther('1000000000000000000')
+            const expected_borrowIndex: BigNumber = ethers.utils.parseEther('1')
 
             expect(pool_borrowIndex).to.be.eq(expected_borrowIndex)
+
+            const pool_numberActiveLoans: BigNumber = await pool.numberActiveLoans()
+
+            expect(pool_numberActiveLoans).to.be.eq(0)
 
         });
 

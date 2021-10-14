@@ -85,7 +85,7 @@ contract PalPoolStorage {
     uint public reserveFactor = 0.2e18;
     /** @notice Last block where the interest where updated for this pool */
     uint public accrualBlockNumber;
-    /** @notice Borrow Index : increase at each interest update to represent borrows interests increasing (scaled 1e36) */
+    /** @notice Borrow Index : increase at each interest update to represent borrows interests increasing */
     uint public borrowIndex;
 
     /** @dev Scale used to represent decimal values */
@@ -93,9 +93,10 @@ contract PalPoolStorage {
 
     /** @dev Mapping of Loan Pool contract address to Borrow struct */
     mapping (address => Borrow) internal loanToBorrow;
-    /** @dev List of all loans (current & closed) */
+    /** @dev List of all Loans (active & closed) */
     address[] internal loans;
-
+    /** @dev Current number of active Loans */
+    uint public numberActiveLoans;
 
     //Modules
 

@@ -62,7 +62,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         underlying = IERC20(_underlying);
         accrualBlockNumber = block.number;
         interestModule = InterestInterface(_interestModule);
-        borrowIndex = 1e36;
+        borrowIndex = 1e18;
         delegator = _delegator;
         palLoanToken = IPalLoanToken(_palLoanToken);
     }
@@ -162,7 +162,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         address _borrower = msg.sender;
 
-        //Update Total Borrowed
+        //Update Total Borrowed & number active Loans
+        numberActiveLoans = numberActiveLoans.add(1);
         totalBorrowed = totalBorrowed.add(_amount);
 
         IPalLoan _newLoan = IPalLoan(Clones.clone(delegator));
@@ -316,7 +317,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Remove the borrowed tokens + fees from the TotalBorrowed
         //Add to the Reserve the reserveFactor of Penalty Fees (if there is Penalty Fees)
         //And add the fees counted as potential Killer Fees to the Accrued Fees, since no killing was necessary
-        totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
+
+        numberActiveLoans = numberActiveLoans.sub(1);
+
+        totalBorrowed = numberActiveLoans == 0 ? 0 : totalBorrowed.sub((_borrow.amount).add(_feesUsed)); //If not current active Loan, we can just reset the totalBorrowed to 0
+
         uint _realPenaltyFees = _totalFees.sub(_feesUsed);
         uint _killerFees = _feesUsed.mul(killerRatio).div(mantissaScale);
         totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
@@ -379,7 +384,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Remove the amount paid as killer fees from the Reserve, and any over accrued interest in the Reserve & AccruedFees
         uint _overAccruedInterest = _loanHealthFactor <= mantissaScale ? 0 : _feesUsed.sub(_borrow.feesAmount);
         uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(mantissaScale);
-        totalBorrowed = totalBorrowed.sub((_borrow.amount).add(_feesUsed));
+
+        numberActiveLoans = numberActiveLoans.sub(1);
+
+        totalBorrowed = numberActiveLoans == 0 ? 0 : totalBorrowed.sub((_borrow.amount).add(_feesUsed)); //If not current active Loan, we can just reset the totalBorrowed to 0
+
         totalReserve = totalReserve.sub(_killerFees).sub(_overAccruedInterest.mul(reserveFactor).div(mantissaScale));
         accruedFees = accruedFees.sub(_overAccruedInterest.mul(reserveFactor.sub(killerRatio)).div(mantissaScale));
 
