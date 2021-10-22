@@ -169,6 +169,7 @@ async function main() {
   console.log('Deploying Multipliers ...')
 
   for(let m in MULTIPLIER_KEYS){
+    console.log('Deploying Multiplier' + m + ' ...')
     let mult_data = MULTIPLIER_KEYS[m]
     let multiplier: any
 
