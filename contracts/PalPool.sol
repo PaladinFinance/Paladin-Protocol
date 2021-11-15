@@ -256,6 +256,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         require(_palLoan.expand(_feeAmount), Errors.FAIL_LOAN_EXPAND);
 
+        require(
+            controller.expandBorrowVerify(address(this), _loan, _feeAmount), 
+            Errors.FAIL_LOAN_EXPAND
+        );
+
         emit ExpandLoan(
             _loanOwner,
             _borrow.delegatee,

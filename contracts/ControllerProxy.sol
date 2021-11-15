@@ -20,13 +20,18 @@ contract ControllerProxy is Admin {
 
     event NewImplementation(address oldImplementation, address newImplementation);
 
+    /** @notice Implementation currently used through delegatecalls */
     address public currentIplementation;
+    /** @notice Proposed future Implementation */
     address public pendingImplementation;
 
     constructor(){
         admin = msg.sender;
     }
 
+    /**
+     * @dev Proposes the address of a new Implementation (the new Controller contract)
+     */
     function proposeImplementation(address newPendingImplementation) public adminOnly {
 
         address oldPendingImplementation = pendingImplementation;
@@ -36,8 +41,12 @@ contract ControllerProxy is Admin {
         emit NewPendingImplementation(oldPendingImplementation, newPendingImplementation);
     }
 
+    /**
+     * @dev Accpets the Pending Implementation as new Current Implementation
+     * Only callable by the Pending Implementation contract
+     */
     function acceptImplementation() public returns(bool) {
-        require(msg.sender == pendingImplementation, Errors.CALLER_NOT_IMPLEMENTATION);
+        require(msg.sender == pendingImplementation || pendingImplementation == address(0), Errors.CALLER_NOT_IMPLEMENTATION);
 
         address oldImplementation = currentIplementation;
         address oldPendingImplementation = pendingImplementation;

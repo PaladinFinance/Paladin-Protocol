@@ -57,5 +57,6 @@ library Errors {
     string public constant POOL_NOT_LISTED = '39';
     string public constant CALLER_NOT_POOL = '40';
     string public constant REWARDS_CASH_TOO_LOW = '41';
-    string public constant FAIL_BECOME_IMPLEMENTATION = '41';
+    string public constant FAIL_BECOME_IMPLEMENTATION = '42';
+    string public constant INSUFFICIENT_DEPOSITED = '43';
 }
