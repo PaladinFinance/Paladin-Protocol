@@ -38,7 +38,7 @@ contract DoomsdayController is IPaladinController, Admin {
 
     uint224 public constant initialRewardsIndex = 1e36;
 
-    address public rewardTokenAddress = address(0); // Address 0x00
+    address public rewardTokenAddress; // Address 0x00
     mapping(address => PoolRewardsState) public supplyRewardState;
     mapping(address => uint) public supplySpeeds;
     mapping(address => mapping(address => uint)) public supplierRewardIndex;
@@ -145,7 +145,7 @@ contract DoomsdayController is IPaladinController, Admin {
         for(uint i = 0; i < _pools.length; i++){
             if(_pools[i] == _palPool){
                 //get the address of the PalToken for the Event
-                address _palToken = _pools[i];
+                address _palToken = palTokens[i];
 
                 delete palTokenToPalPool[_palToken];
 

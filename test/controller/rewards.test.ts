@@ -14,7 +14,8 @@ import { ContractFactory } from "@ethersproject/contracts";
 chai.use(solidity);
 const { expect } = chai;
 
-const mantisaa = ethers.utils.parseEther('1')
+const mantissa = ethers.utils.parseEther('1')
+const doubleMantissa = ethers.utils.parseEther('1000000000000000000')
 
 let controllerFactory: ContractFactory
 let erc20Factory: ContractFactory
@@ -145,12 +146,11 @@ describe('Paladin Controller - Rewards System tests', () => {
         it(' should have the correct base values in storage', async () => {
             
             const expected_initial_index = ethers.utils.parseUnits("1", 36);
-            const pal_contract_address = "0xAB846Fb6C81370327e784Ae7CbB6d6a6af6Ff4BF";
 
-            const pal_address = await controller.rewardToken();
+            const reward_token_address = await controller.rewardToken();
             const initialIndex = await controller.initialRewardsIndex();
 
-            expect(pal_address).to.be.eq(pal_contract_address)
+            expect(reward_token_address).to.be.eq(ethers.constants.AddressZero)
             expect(initialIndex).to.be.eq(expected_initial_index)
 
 
@@ -215,6 +215,22 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             expect(await controller.supplySpeeds(pool1.address)).to.be.eq(new_supplySpeed)
             expect(await controller.borrowRatios(pool1.address)).to.be.eq(new_borrowRatio)
+
+        });
+    
+        it(' should allow admin to set reward token', async () => {
+
+            const pal_contract_address = "0xAB846Fb6C81370327e784Ae7CbB6d6a6af6Ff4BF";
+            
+            await controller.connect(admin).updateRewardToken(pal_contract_address)
+
+            const reward_token_address = await controller.rewardToken();
+
+            expect(reward_token_address).to.be.eq(pal_contract_address)
+
+            await expect(
+                controller.connect(user1).updateRewardToken(rewardToken.address)
+            ).to.be.revertedWith('1')
 
         });
     
@@ -361,9 +377,17 @@ describe('Paladin Controller - Rewards System tests', () => {
 
         });
     
-        it(' should not accrue rewards if PalTokens are not deposited', async () => {
-            
-            
+        it(' should not accrue rewards if PalTokens are not deposited in the Controller', async () => {
+
+            //user1 deposited in pool1 before, but not in the controller
+
+            expect(await controller.claimable(user1.address)).to.be.eq(0)
+
+            await mineBlocks(150)
+
+            await controller.connect(user1).updateUserRewards(user1.address)
+
+            expect(await controller.claimable(user1.address)).to.be.eq(0)
 
         });
     
@@ -374,7 +398,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await token1.connect(user1).approve(controller.address, user1_palToken_amount)
 
-            const deposit_tx = controller.connect(user1).deposit(token1.address, user1_palToken_amount)
+            const deposit_tx = await controller.connect(user1).deposit(token1.address, user1_palToken_amount)
 
             const supplyRewardState1 = await controller.supplyRewardState(pool1.address)
             expect(await controller.supplierRewardIndex(pool1.address, user1.address)).to.be.eq(supplyRewardState1.index)
@@ -399,7 +423,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             expect(user_claimable).to.be.eq(estimated_accrued_rewards)
 
-            /*const old_balance = await rewardToken.balanceOf(user1.address)
+            const old_balance = await rewardToken.balanceOf(user1.address)
 
             const claim_tx = await controller.connect(user1).claim(user1.address)
             const claim_block = (await claim_tx).blockNumber || 0
@@ -409,37 +433,238 @@ describe('Paladin Controller - Rewards System tests', () => {
             const estimated_accrued_rewards_2 = supplySpeed.mul(claim_block - update_block)
 
             expect(await controller.claimable(user1.address)).to.be.eq(0)
-            expect(new_balance.sub(old_balance)).to.be.eq(estimated_accrued_rewards.add(estimated_accrued_rewards_2))*/
+            expect(new_balance.sub(old_balance)).to.be.eq(estimated_accrued_rewards.add(estimated_accrued_rewards_2))
             
         });
     
-        it(' should accrue rewards with multiple depositors in the Pool + set the correct SupplyRewardStates', async () => {
+        it(' should accrue rewards with multiple depositors in the Pool', async () => {
+
+            await underlying.connect(admin).transfer(user2.address, deposit_amount2)
+            await underlying.connect(user2).approve(pool1.address, deposit_amount2)
+            await pool1.connect(user2).deposit(deposit_amount2)
             
+            const user1_palToken_amount = await token1.balanceOf(user1.address)
+            const user2_palToken_amount = await token1.balanceOf(user2.address)
+
+            await token1.connect(user1).approve(controller.address, user1_palToken_amount)
+            await token1.connect(user2).approve(controller.address, user2_palToken_amount)
+
+
+            const deposit_tx1 = await controller.connect(user1).deposit(token1.address, user1_palToken_amount)
+
+            const supplyRewardState1 = await controller.supplyRewardState(pool1.address)
+            expect(await controller.supplierRewardIndex(pool1.address, user1.address)).to.be.eq(supplyRewardState1.index)
+            const deposit_block1 = (await deposit_tx1).blockNumber || 0
+            expect(supplyRewardState1.blockNumber).to.be.eq(deposit_block1)
+
+
+            const deposit_tx2 = await controller.connect(user2).deposit(token1.address, user2_palToken_amount)
+
+            const supplyRewardState2 = await controller.supplyRewardState(pool1.address)
+            expect(await controller.supplierRewardIndex(pool1.address, user2.address)).to.be.eq(supplyRewardState2.index)
+            const deposit_block2 = (await deposit_tx2).blockNumber || 0
+            expect(supplyRewardState2.blockNumber).to.be.eq(deposit_block2)
+
+
+            await mineBlocks(123)
+
+
+            const totalDeposited = await controller.totalSupplierDeposits(pool1.address)
+
+
+            const update_tx1 = await controller.connect(user1).updateUserRewards(user1.address)
+            const update_block1 = (await update_tx1).blockNumber || 0
+
+            const user1_claimable = await controller.claimable(user1.address)
+
+            const estimated_accrued_rewards_user1 = supplySpeed.mul(deposit_block2 - deposit_block1).add(
+                supplySpeed.mul(update_block1 - deposit_block2).mul(
+                    user1_palToken_amount.mul(doubleMantissa).div(totalDeposited)
+                ).div(doubleMantissa)
+            )
+
+            
+            const update_tx2 = await controller.connect(user2).updateUserRewards(user2.address)
+            const update_block2 = (await update_tx2).blockNumber || 0
+
+            const user2_claimable = await controller.claimable(user2.address)
+
+            const estimated_accrued_rewards_user2 = supplySpeed.mul(update_block2 - deposit_block2).mul(
+                user2_palToken_amount.mul(doubleMantissa).div(totalDeposited)
+            ).div(doubleMantissa)
+
+            const new_supplyRewardState1 = await controller.supplyRewardState(pool1.address)
+            expect(await controller.supplierRewardIndex(pool1.address, user2.address)).to.be.eq(new_supplyRewardState1.index)
+            expect(new_supplyRewardState1.blockNumber).to.be.eq(update_block2)
+
+            expect(user1_claimable).to.be.closeTo(estimated_accrued_rewards_user1, 10)
+            expect(user2_claimable).to.be.closeTo(estimated_accrued_rewards_user2, 10)
+
+
+            const old_balance1 = await rewardToken.balanceOf(user1.address)
+
+            const claim1_tx = await controller.connect(user1).claim(user1.address)
+            const claim1_block = (await claim1_tx).blockNumber || 0
+
+            const new_balance1 = await rewardToken.balanceOf(user1.address)
+
+            const estimated_accrued_rewards_user1_2 = supplySpeed.mul(claim1_block - update_block1).mul(
+                user1_palToken_amount.mul(doubleMantissa).div(totalDeposited)
+            ).div(doubleMantissa)
+
+            expect(await controller.claimable(user1.address)).to.be.eq(0)
+            expect(new_balance1.sub(old_balance1)).to.be.closeTo(estimated_accrued_rewards_user1.add(estimated_accrued_rewards_user1_2), 10)
+
+
+            const old_balance2 = await rewardToken.balanceOf(user2.address)
+
+            const claim2_tx = await controller.connect(user2).claim(user2.address)
+            const claim2_block = (await claim2_tx).blockNumber || 0
+
+            const new_balance2 = await rewardToken.balanceOf(user2.address)
+
+            const estimated_accrued_rewards_user2_2 = supplySpeed.mul(claim1_block - update_block2).mul(
+                user2_palToken_amount.mul(doubleMantissa).div(totalDeposited)
+            ).div(doubleMantissa).add(
+                supplySpeed.mul(claim2_block - claim1_block).mul(
+                    user2_palToken_amount.mul(doubleMantissa).div(totalDeposited)
+                ).div(doubleMantissa)
+            )
+
+            expect(await controller.claimable(user2.address)).to.be.eq(0)
+            expect(new_balance2.sub(old_balance2)).to.be.closeTo(estimated_accrued_rewards_user2.add(estimated_accrued_rewards_user2_2), 10)
+
         });
     
         it(' should not accrue rewards if no speed was set + set the correct SupplyRewardStates', async () => {
             
+            await underlying.connect(admin).transfer(user2.address, deposit_amount)
+            await underlying.connect(user2).approve(pool2.address, deposit_amount)
+
+            await pool2.connect(user2).deposit(deposit_amount)
+
+            const user2_palToken_amount = await token2.balanceOf(user2.address)
+
+            await token2.connect(user2).approve(controller.address, user2_palToken_amount)
+
+            await controller.connect(user2).deposit(token2.address, user2_palToken_amount)
+
+            await mineBlocks(180)
+
+            expect(await controller.claimable(user2.address)).to.be.eq(0)
+
         });
     
         it(' should accrue the reward from 2 pools at the same time + set the correct SupplyRewardStates', async () => {
             
+            await underlying.connect(admin).transfer(user1.address, deposit_amount)
+            await underlying.connect(user1).approve(pool2.address, deposit_amount)
+            await pool2.connect(user1).deposit(deposit_amount)
+
+            const supplySpeed2 = ethers.utils.parseEther("0.45")
+
+            await controller.connect(admin).updatePoolRewards(pool2.address, supplySpeed2, 0);
+
+            const user1_palToken1_amount = await token1.balanceOf(user1.address)
+            const user1_palToken2_amount = await token2.balanceOf(user1.address)
+
+            await token1.connect(user1).approve(controller.address, user1_palToken1_amount)
+            await token2.connect(user1).approve(controller.address, user1_palToken2_amount)
+
+            const deposit1_tx = await controller.connect(user1).deposit(token1.address, user1_palToken1_amount)
+            const deposit2_tx = await controller.connect(user1).deposit(token2.address, user1_palToken2_amount)
+
+            const supplyRewardState1 = await controller.supplyRewardState(pool1.address)
+            const supplyRewardState2 = await controller.supplyRewardState(pool2.address)
+            expect(await controller.supplierRewardIndex(pool1.address, user1.address)).to.be.eq(supplyRewardState1.index)
+            expect(await controller.supplierRewardIndex(pool2.address, user1.address)).to.be.eq(supplyRewardState2.index)
+
+            const deposit1_block = (await deposit1_tx).blockNumber || 0
+            const deposit2_block = (await deposit2_tx).blockNumber || 0
+            expect(supplyRewardState1.blockNumber).to.be.eq(deposit1_block)
+            expect(supplyRewardState2.blockNumber).to.be.eq(deposit2_block)
+
+            await mineBlocks(180)
+
+            const update_tx = await controller.connect(user1).updateUserRewards(user1.address)
+            const update_block = (await update_tx).blockNumber || 0
+
+            const user_claimable = await controller.claimable(user1.address)
+
+            const estimated_accrued_rewards1 = supplySpeed.mul(update_block - deposit1_block)
+            const estimated_accrued_rewards2 = supplySpeed2.mul(update_block - deposit2_block)
+
+            const new_supplyRewardState1 = await controller.supplyRewardState(pool1.address)
+            const new_supplyRewardState2 = await controller.supplyRewardState(pool2.address)
+            expect(await controller.supplierRewardIndex(pool1.address, user1.address)).to.be.eq(new_supplyRewardState1.index)
+            expect(await controller.supplierRewardIndex(pool2.address, user1.address)).to.be.eq(new_supplyRewardState2.index)
+            expect(new_supplyRewardState1.blockNumber).to.be.eq(update_block)
+            expect(new_supplyRewardState2.blockNumber).to.be.eq(update_block)
+
+            expect(user_claimable).to.be.eq(estimated_accrued_rewards1.add(estimated_accrued_rewards2))
+
         });
     
         it(' should do a correct update when Supply Speed is updated', async () => {
             
+            const new_supplySpeed = ethers.utils.parseEther("0.45")
+
+            const update_tx = await controller.connect(admin).updatePoolRewards(pool1.address, new_supplySpeed, 0);
+
+            const update_block = (await update_tx).blockNumber || 0
+
+            const supplyRewardState = await controller.supplyRewardState(pool1.address)
+            expect(supplyRewardState.blockNumber).to.be.eq(update_block)
+
         });
     
-        it(' should stop accruing fees if the Pool speed is set back to 0', async () => {
+        it(' should stop accruing rewards if the Pool speed is set back to 0', async () => {
             
+            const user1_palToken_amount = await token1.balanceOf(user1.address)
+
+            await token1.connect(user1).approve(controller.address, user1_palToken_amount)
+
+            await controller.connect(user1).deposit(token1.address, user1_palToken_amount)
+
+            await mineBlocks(150)
+
+            await controller.connect(admin).updatePoolRewards(pool1.address, 0, 0);
+
+            const old_claimable_amount = await controller.claimable(user1.address)
+
+            await mineBlocks(200)
+
+            const new_claimable_amount = await controller.claimable(user1.address)
+
+            expect(new_claimable_amount).to.be.eq(old_claimable_amount)
+
         });
     
         it(' should stop accruing rewards if depositor withdraw palTokens', async () => {
             
+            const user1_palToken_amount = await token1.balanceOf(user1.address)
+
+            await token1.connect(user1).approve(controller.address, user1_palToken_amount)
+
+            await controller.connect(user1).deposit(token1.address, user1_palToken_amount)
+
+            await mineBlocks(150)
+
+            await controller.connect(user1).withdraw(token1.address, user1_palToken_amount)
+
+            const old_claimable_amount = await controller.claimable(user1.address)
+
+            await mineBlocks(200)
+
+            const new_claimable_amount = await controller.claimable(user1.address)
+
+            expect(new_claimable_amount).to.be.eq(old_claimable_amount)
+
         });
 
     });
 
-/*
+
     describe('Borrow Rewards', async () => {
 
         const borrowRatio = ethers.utils.parseEther("0.75")
@@ -489,7 +714,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             const loan_data = await pool1.getBorrowData(loan_address)
 
-            const expected_rewards = (loan_data._feesUsed).mul(borrowRatio).div(mantisaa)
+            const expected_rewards = (loan_data._feesUsed).mul(borrowRatio).div(mantissa)
 
             const user_claimable_rewards = await controller.claimable(user2.address)
 
@@ -523,7 +748,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             const loan_data = await pool1.getBorrowData(loan_address)
 
-            const expected_rewards = (loan_data._feesUsed).mul(loan_ratio).div(mantisaa)
+            const expected_rewards = (loan_data._feesUsed).mul(loan_ratio).div(mantissa)
 
             const user_claimable_rewards = await controller.claimable(user2.address)
 
@@ -599,5 +824,5 @@ describe('Paladin Controller - Rewards System tests', () => {
         });
 
     });
-*/
+
 });

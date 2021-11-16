@@ -46,7 +46,7 @@ contract PaladinController is IPaladinController, Admin {
     /** @notice Initial index for Rewards */
     uint224 public constant initialRewardsIndex = 1e36;
 
-    address public rewardTokenAddress = address(0xAB846Fb6C81370327e784Ae7CbB6d6a6af6Ff4BF); // PAL token address
+    address public rewardTokenAddress; // PAL token address to put here
 
     /** @notice State of the Rewards for each Pool */
     mapping(address => PoolRewardsState) public supplyRewardState;
@@ -196,7 +196,7 @@ contract PaladinController is IPaladinController, Admin {
         for(uint i = 0; i < _pools.length; i++){
             if(_pools[i] == _palPool){
                 //get the address of the PalToken for the Event
-                address _palToken = _pools[i];
+                address _palToken = palTokens[i];
 
                 delete palTokenToPalPool[_palToken];
 

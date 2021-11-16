@@ -184,12 +184,9 @@ describe('Controller Proxy contract tests', () => {
         it(' should have correct Storage', async () => {
 
             const expected_initial_index = ethers.utils.parseUnits("1", 36);
-            const pal_contract_address = "0xAB846Fb6C81370327e784Ae7CbB6d6a6af6Ff4BF";
 
-            const pal_address = await proxyWithImpl.rewardToken();
             const initialIndex = await proxyWithImpl.initialRewardsIndex();
 
-            expect(pal_address).to.be.eq(pal_contract_address)
             expect(initialIndex).to.be.eq(expected_initial_index)
 
         });
