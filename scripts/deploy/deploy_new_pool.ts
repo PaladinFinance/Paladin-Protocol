@@ -20,7 +20,7 @@ const param_file_path = params_path();
 const { POOLS_PARAMS, TOKENS, DELEGATORS, CONTROLLER, INTEREST_MODULE_V2, PAL_LOAN_TOKEN } = require(param_file_path);
 
 
-const KEY = 'COMP'
+const KEY = 'IDLE'
 
 
 async function main() {
