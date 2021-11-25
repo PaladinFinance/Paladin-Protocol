@@ -31,3 +31,31 @@ export async function getAAVE(
         params: [AAVE_holder],
     });
 }
+
+export async function getTokens(
+    admin: SignerWithAddress,
+    erc20_contract: Contract,
+    holder: string,
+    recipient: string,
+    amount: BigNumber
+) {
+
+    await hre.network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [holder],
+    });
+
+    await admin.sendTransaction({
+        to: holder,
+        value: ethers.utils.parseEther("10"),
+      });
+
+    const signer = await ethers.getSigner(holder)
+
+    await erc20_contract.connect(signer).transfer(recipient, amount);
+
+    await hre.network.provider.request({
+        method: "hardhat_stopImpersonatingAccount",
+        params: [holder],
+    });
+}

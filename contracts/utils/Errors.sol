@@ -48,4 +48,8 @@ library Errors {
     string public constant FAIL_LOAN_TOKEN_BURN = '33';
     string public constant FEES_ACCRUED_INSUFFICIENT = '34';
 
+    // MultiPool Errors
+    string public constant INEQUAL_ARRAYS = '35';
+    string public constant UNDERLYING_NOT_LISTED = '36';
+    string public constant PALTOKEN_NOT_LISTED = '37';
 }
