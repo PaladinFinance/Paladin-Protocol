@@ -51,6 +51,7 @@ async function main() {
 
 
   const Controller = await ethers.getContractFactory("PaladinController");
+  const Proxy = await ethers.getContractFactory("ControllerProxy");
   const Interest = await ethers.getContractFactory("InterestCalculatorV2");
   const PalLoanToken = await ethers.getContractFactory("PalLoanToken");
   const BurnedPalLoanToken = await ethers.getContractFactory("BurnedPalLoanToken");
@@ -66,10 +67,15 @@ async function main() {
   const AaveMultiplier = await ethers.getContractFactory("AaveMultiplier");
 
 
-  console.log('Deploying the Paladin Controller ...')
+  console.log('Deploying the Paladin Controller (Implementation & Proxy) ...')
+  console.log('Deploying Implementation ...')
   const controller = await Controller.deploy();
 
   await controller.deployTransaction.wait(5);
+
+  console.log('Deploying Proxy ...')
+  const proxy = await Proxy.deploy();
+  await proxy.deployTransaction.wait(5);
 
   console.log('Deploying the Interest Calculator Module V2 ...')
   const interest = await Interest.deploy();
@@ -78,13 +84,20 @@ async function main() {
 
   await Promise.all([
     controller.deployed(),
+    proxy.deployed(),
     interest.deployed(),
   ]);
+
+  console.log('Setting Implementation for Proxy ...')
+  console.log('Propose Implementation ...')
+  await proxy.proposeImplementation(controller.address)
+  console.log('Accept Implementation ...')
+  await controller.becomeImplementation(proxy.address)
 
 
 
   console.log('Deploying PalLoanToken (ERC721) contract ...')
-  const loanToken = await PalLoanToken.deploy(controller.address, PAL_LOAN_TOKEN_URI);
+  const loanToken = await PalLoanToken.deploy(proxy.address, PAL_LOAN_TOKEN_URI);
   await loanToken.deployed();
 
 
@@ -119,7 +132,7 @@ async function main() {
     if (params.SYMBOL === 'palStkAAVE') {
       palPool = await stkAavePalPool.deploy(
         palToken.address,
-        controller.address,
+        proxy.address,
         params.UNDERLYING,
         interest.address,
         delegators[params.DELEGATOR],
@@ -130,7 +143,7 @@ async function main() {
     else {
       palPool = await PalPool.deploy(
         palToken.address,
-        controller.address,
+        proxy.address,
         params.UNDERLYING,
         interest.address,
         delegators[params.DELEGATOR],
@@ -161,7 +174,8 @@ async function main() {
 
   }
 
-  const tx = await controller.setInitialPools(tokens, pools);
+  const poxy_controller_interface = Controller.attach(proxy.address);
+  const tx = await poxy_controller_interface.setInitialPools(tokens, pools);
 
   await tx.wait(15);
 
@@ -196,7 +210,7 @@ async function main() {
 
   console.log('Deploying the Address Registry ...')
   const registry = await Registry.deploy(
-    controller.address,
+    proxy.address,
     loanToken.address,
     underlyings,
     pools,
@@ -231,6 +245,10 @@ async function main() {
   await controller.deployTransaction.wait(5);
   await hre.run("verify:verify", {
     address: controller.address,
+    constructorArguments: [],
+  });
+  await hre.run("verify:verify", {
+    address: proxy.address,
     constructorArguments: [],
   });
   console.log()
@@ -332,6 +350,9 @@ async function main() {
 
   console.log('Controller : ')
   console.log(controller.address)
+  console.log()
+  console.log('Controller Proxy : ')
+  console.log(proxy.address)
   console.log()
   console.log('Interest Calculator : ')
   console.log(interest.address)

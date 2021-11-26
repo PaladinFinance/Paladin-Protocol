@@ -1,5 +1,11 @@
-Controller : 
+old Controller : 
 0xafF55941113bd838abEF4Dd9d4A0b7E5a010470e
+
+new Controller (with LM) : 
+Proxy : 
+0xc83002c2CCf48d40BC400092CD6b5E3ee15D314b
+Implementation : 
+0x070c6c2eF0023EfFea10ee572fE7B999ffFd6F90
 
 Interest Calculator : 
 0x0A06DfeCBABECAa6887B0D8e680A45E9e86a9838
