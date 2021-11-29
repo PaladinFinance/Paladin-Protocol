@@ -386,7 +386,8 @@ contract MultiPalPoolPSP is IMultiPalPool, MultiPalPoolStorage, Admin, Reentranc
         _state.accruedFees = _state.accruedFees.add(_killerFees).add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
         
         //Close and destroy the loan
-        _palLoan.closeLoan(_totalFees);
+        //We use msg.sender as loanOwner since we confirmed earlier the caller was the owner
+        _palLoan.closeLoan(_totalFees, msg.sender);
 
         //Burn the palLoanToken for this Loan
         require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
