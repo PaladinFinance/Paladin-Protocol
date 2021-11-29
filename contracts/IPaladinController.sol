@@ -55,6 +55,7 @@ interface IPaladinController {
     // Rewards functions
     function totalSupplyRewardSpeed() external view returns(uint);
     function claimable(address user) external view returns(uint);
+    function estimateClaimable(address user) external view returns(uint);
     function updateUserRewards(address user) external;
     function claim(address user) external;
 

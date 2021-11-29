@@ -477,6 +477,46 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
     }
 
     /**
+    * @notice Returns the current amount of reward tokens the user can claim + the estimation from last Supplier Index updates
+    * @param user address of user
+    */
+    function estimateClaimable(address user) external view override returns(uint){
+        //All the rewards already accrued and not claimed
+        uint _total = accruedRewards[user];
+
+        //Calculate the estimated pending rewards for all Pools for the user
+        //(depending on the last Pool's updateSupplyIndex)
+        address[] memory _pools = palPools;
+        for(uint i = 0; i < _pools.length; i++){
+            // Get the current reward index for the Pool
+            // And the user last reward index
+            uint currentSupplyIndex = supplyRewardState[_pools[i]].index;
+            uint userSupplyIndex = supplierRewardIndex[_pools[i]][user];
+
+            if(userSupplyIndex == 0 && currentSupplyIndex >= initialRewardsIndex){
+                // Set the initial Index for the user
+                userSupplyIndex = initialRewardsIndex;
+            }
+
+            // Get the difference of index with the last one for user
+            uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+
+            if(indexDiff > 0){
+                // And using the user PalToken balance deposited in the Controller,
+                // we can get how much rewards where accrued
+                uint userBalance = supplierDeposits[_pools[i]][user];
+
+                uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+
+                // Add the new amount of rewards to the user total claimable balance
+                _total = _total.add(userAccruedRewards);
+            }
+        }
+
+        return _total;
+    }
+
+    /**
     * @notice Update the claimable rewards for a given user
     * @param user address of user
     */
