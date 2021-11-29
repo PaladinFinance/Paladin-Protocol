@@ -256,6 +256,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         require(_palLoan.expand(_feeAmount), Errors.FAIL_LOAN_EXPAND);
 
+        require(
+            controller.expandBorrowVerify(address(this), _loan, _feeAmount), 
+            Errors.FAIL_LOAN_EXPAND
+        );
+
         emit ExpandLoan(
             _loanOwner,
             _borrow.delegatee,
@@ -328,7 +333,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         accruedFees = accruedFees.add(_killerFees).add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
         
         //Close and destroy the loan
-        _palLoan.closeLoan(_totalFees);
+        _palLoan.closeLoan(_totalFees, _loanOwner);
 
         //Burn the palLoanToken for this Loan
         require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);

@@ -45,7 +45,7 @@ describe('Delegator implementation contract tests', () => {
         ).to.be.reverted
 
         await expect(
-            delegator.connect(admin).closeLoan(0)
+            delegator.connect(admin).closeLoan(0, borrower.address)
         ).to.be.reverted
 
         await expect(

@@ -31,7 +31,7 @@ interface IPalLoan {
         uint _feesAmount
     ) external returns(bool);
     function expand(uint _newFeesAmount) external returns(bool);
-    function closeLoan(uint _usedAmount) external;
+    function closeLoan(uint _usedAmount, address _currentBorrower) external;
     function killLoan(address _killer, uint _killerRatio) external;
     function changeDelegatee(address _delegatee) external returns(bool);
 }
