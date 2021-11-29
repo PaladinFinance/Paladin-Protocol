@@ -11,6 +11,7 @@ pragma solidity ^0.7.6;
 
 import "./utils/SafeMath.sol";
 import "./IPaladinController.sol";
+import "./ControllerStorage.sol";
 import "./ControllerProxy.sol";
 import "./PalPool.sol";
 import "./IPalPool.sol";
@@ -22,67 +23,9 @@ import "./utils/Errors.sol";
 
 /** @title Paladin Controller contract  */
 /// @author Paladin
-contract PaladinController is IPaladinController, Admin {
+contract PaladinController is IPaladinController, ControllerStorage, Admin {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
-
-    /** @notice Layout for the Proxy contract */
-    address public currentIplementation;
-    address public pendingImplementation;
-
-    /** @notice List of current active palToken Pools */
-    address[] public palTokens;
-    address[] public palPools;
-    mapping(address => address) public palTokenToPalPool;
-
-    bool private initialized = false;
-
-    /** @notice Struct with current SupplyIndex for a Pool, and the block of the last update */
-    struct PoolRewardsState {
-        uint224 index;
-        uint32 blockNumber;
-    }
-
-    /** @notice Initial index for Rewards */
-    uint224 public constant initialRewardsIndex = 1e36;
-
-    address public rewardTokenAddress; // PAL token address to put here
-
-    /** @notice State of the Rewards for each Pool */
-    mapping(address => PoolRewardsState) public supplyRewardState;
-
-    /** @notice Amount of reward tokens to disitribute each block */
-    mapping(address => uint) public supplySpeeds;
-
-    /** @notice Last reward index for each Pool for each user */
-    /** PalPool => User => Index */
-    mapping(address => mapping(address => uint)) public supplierRewardIndex;
-
-    /** @notice Deposited amoutns by user for each palToken (indexed by corresponding PalPool address) */
-    /** PalPool => User => Amount */
-    mapping(address => mapping(address => uint)) public supplierDeposits;
-
-    /** @notice Total amount of each palToken deposited (indexed by corresponding PalPool address) */
-    /** PalPool => Total Amount */
-    mapping(address => uint) public totalSupplierDeposits;
-
-    /** @notice Ratio to distribute Borrow Rewards */
-    mapping(address => uint) public borrowRatios; // scaled 1e18
-
-    /** @notice Ratio for each PalLoan (set at PalLoan creation) */
-    mapping(address => uint) public loansBorrowRatios; // scaled 1e18
-
-    /** @notice Amount of reward Tokens accrued by the user, and claimable */
-    mapping(address => uint) public accruedRewards;
-
-    /*
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!! ALWAYS PUT NEW STORAGE AT THE BOTTOM !!!!!!!!!!!!!!!!!!
-    !!!!!!!!! WE DON'T WANT COLLISION WHEN SWITCHING IMPLEMENTATIONS !!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    */
-
 
     constructor(){
         admin = msg.sender;
@@ -173,7 +116,7 @@ contract PaladinController is IPaladinController, Admin {
         //The other Reward values should already be set at 0 :
         //BorrowRatio : 0
         //SupplySpeed : 0
-        //If not set as 0, we want ot use last values (or change them with the adequate function beforehand)
+        //If not set as 0, we want to use last values (or change them with the adequate function beforehand)
         
         emit NewPalPool(_palPool, _palToken);
 
@@ -183,18 +126,18 @@ contract PaladinController is IPaladinController, Admin {
     
     /**
     * @notice Remove a PalPool from the list (& the related PalToken)
-    * @param _palPool address of the PalPool contract to remove
+    * @param palPool address of the PalPool contract to remove
     * @return bool : Success
     */ 
-    function removePool(address _palPool) external override adminOnly returns(bool){
+    function removePool(address palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(isPalPool(_palPool), Errors.POOL_NOT_LISTED);
+        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
 
         address[] memory _pools = palPools;
         
         uint lastIndex = (_pools.length).sub(1);
         for(uint i = 0; i < _pools.length; i++){
-            if(_pools[i] == _palPool){
+            if(_pools[i] == palPool){
                 //get the address of the PalToken for the Event
                 address _palToken = palTokens[i];
 
@@ -208,7 +151,7 @@ contract PaladinController is IPaladinController, Admin {
                 palPools.pop();
                 palTokens.pop();
 
-                emit RemovePalPool(_palPool, _palToken);
+                emit RemovePalPool(palPool, _palToken);
              
                 return true;
             }
@@ -537,7 +480,7 @@ contract PaladinController is IPaladinController, Admin {
     * @notice Update the claimable rewards for a given user
     * @param user address of user
     */
-    function updateUserRewards(address user) external override {
+    function updateUserRewards(address user) public override {
         address[] memory _pools = palPools;
         for(uint i = 0; i < _pools.length; i++){
             // Need to update the Supply Index
@@ -555,15 +498,7 @@ contract PaladinController is IPaladinController, Admin {
     */
     function claim(address user) external override {
         // Accrue any claimable rewards for all the Pools for the user
-        address[] memory _pools = palPools;
-        for(uint i = 0; i < _pools.length; i++){
-            // Need to update the Supply Index
-            updateSupplyIndex(_pools[i]);
-            // To then accrue the user rewards for that Pool
-            //set at 0 & true for amount & positive, since no change in user LP position
-            accrueSupplyRewards(_pools[i], user);
-            // No need to do it for the Borrower rewards
-        }
+        updateUserRewards(user);
 
         // Get current amount claimable for the user
         uint toClaim = accruedRewards[user];
@@ -618,19 +553,19 @@ contract PaladinController is IPaladinController, Admin {
     }
 
 
-    function setPoolsNewController(address _newController) external override adminOnly returns(bool){
+    function setPoolsNewController(address newController) external override adminOnly returns(bool){
         address[] memory _pools = palPools;
         for(uint i = 0; i < _pools.length; i++){
             IPalPool _palPool = IPalPool(_pools[i]);
-            _palPool.setNewController(_newController);
+            _palPool.setNewController(newController);
         }
         return true;
     }
 
 
-    function withdrawFromPool(address _pool, uint _amount, address _recipient) external override adminOnly returns(bool){
-        IPalPool _palPool = IPalPool(_pool);
-        _palPool.withdrawFees(_amount, _recipient);
+    function withdrawFromPool(address pool, uint amount, address recipient) external override adminOnly returns(bool){
+        IPalPool _palPool = IPalPool(pool);
+        _palPool.withdrawFees(amount, recipient);
         return true;
     }
 

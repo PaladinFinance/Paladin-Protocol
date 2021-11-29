@@ -36,7 +36,7 @@ interface IPaladinController {
     function getPalPools() external view returns(address[] memory);
     function setInitialPools(address[] memory palTokens, address[] memory palPools) external returns(bool);
     function addNewPool(address palToken, address palPool) external returns(bool);
-    function removePool(address _palPool) external returns(bool);
+    function removePool(address palPool) external returns(bool);
 
     function withdrawPossible(address palPool, uint amount) external view returns(bool);
     function borrowPossible(address palPool, uint amount) external view returns(bool);
@@ -62,7 +62,7 @@ interface IPaladinController {
     function becomeImplementation(ControllerProxy proxy) external;
     function updateRewardToken(address newRewardTokenAddress) external;
     function updatePoolRewards(address palPool, uint newSupplyspeed, uint newBorrowRatio) external;
-    function setPoolsNewController(address _newController) external returns(bool);
-    function withdrawFromPool(address _pool, uint _amount, address _recipient) external returns(bool);
+    function setPoolsNewController(address newController) external returns(bool);
+    function withdrawFromPool(address pool, uint amount, address recipient) external returns(bool);
 
 }

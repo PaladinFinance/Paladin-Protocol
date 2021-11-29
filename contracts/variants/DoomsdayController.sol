@@ -11,6 +11,7 @@ pragma solidity ^0.7.6;
 
 import "../utils/SafeMath.sol";
 import "../IPaladinController.sol";
+import "../ControllerStorage.sol";
 import "../PalPool.sol";
 import "../IPalPool.sol";
 import "../utils/IERC20.sol";
@@ -18,42 +19,8 @@ import "../utils/Admin.sol";
 
 /** @title DoomsdayController contract -> blocks any transaction from the PalPools  */
 /// @author Paladin
-contract DoomsdayController is IPaladinController, Admin {
+contract DoomsdayController is IPaladinController, ControllerStorage, Admin {
     using SafeMath for uint;
-
-    /** @notice Layout for the Proxy contract */
-    address public currentIplementation;
-    address public pendingImplementation;
-    
-    address[] public palTokens;
-    address[] public palPools;
-    mapping(address => address) public palTokenToPalPool;
-
-    bool private initialized = false;
-
-    struct PoolRewardsState {
-        uint224 index;
-        uint32 blockNumber;
-    }
-
-    uint224 public constant initialRewardsIndex = 1e36;
-
-    address public rewardTokenAddress; // Address 0x00
-    mapping(address => PoolRewardsState) public supplyRewardState;
-    mapping(address => uint) public supplySpeeds;
-    mapping(address => mapping(address => uint)) public supplierRewardIndex;
-    mapping(address => mapping(address => uint)) public supplierDeposits;
-    mapping(address => uint) public totalSupplierDeposits;
-    mapping(address => uint) public borrowRatios; // scaled 1e18
-    mapping(address => uint) public accruedRewards;
-
-    /*
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!! ALWAYS PUT NEW STORAGE AT THE BOTTOM !!!!!!!!!!!!!!!!!!
-    !!!!!!!!! WE DON'T WANT COLLISION WHEN SWITCHING IMPLEMENTATIONS !!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    */
 
     constructor(){
         admin = msg.sender;
