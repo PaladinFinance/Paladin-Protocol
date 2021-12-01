@@ -3,7 +3,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 
-const delegator_name = ''
+const delegator_name = 'BasicDelegator'
 
 
 async function main() {
@@ -25,6 +25,7 @@ async function main() {
   await hre.run("verify:verify", {
     address: delegator.address,
     constructorArguments: [],
+    contract: "contracts/delegators/"+delegator_name+".sol:"+delegator_name
   });
   
 }
