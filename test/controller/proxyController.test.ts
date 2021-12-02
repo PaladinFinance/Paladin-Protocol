@@ -113,7 +113,7 @@ describe('Controller Proxy contract tests', () => {
                 .to.emit(proxy, 'NewPendingImplementation')
                 .withArgs(controller.address, ethers.constants.AddressZero);
 
-            expect(await proxy.currentIplementation()).to.be.eq(controller.address)
+            expect(await proxy.currentImplementation()).to.be.eq(controller.address)
             expect(await proxy.pendingImplementation()).to.be.eq(ethers.constants.AddressZero)
 
         });
@@ -251,7 +251,7 @@ describe('Controller Proxy contract tests', () => {
 
             await proxy.connect(admin).acceptImplementation()
 
-            expect(await proxy.currentIplementation()).to.be.eq(ethers.constants.AddressZero)
+            expect(await proxy.currentImplementation()).to.be.eq(ethers.constants.AddressZero)
 
         });
 

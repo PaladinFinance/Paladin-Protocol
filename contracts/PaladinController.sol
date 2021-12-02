@@ -240,7 +240,9 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
         feesAmount;
 
         // Set the borrowRatio for this new Loan
-        setLoanBorrowRewards(palPool, loanAddress);
+        if(autoBorrowRewards[palPool]) setLoanBorrowRewards(palPool, loanAddress); //Because some PalPool call this method as view
+        //So we need to know if the call can update storage or not
+        //If not, will need to use the Manual Borrow Reward claim system
         
         //no method yet 
         return true;
@@ -258,7 +260,9 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
         newFeesAmount;
 
         // In case the Loan is expanded, the new ratio is used (in case the ratio changed)
-        setLoanBorrowRewards(palPool, loanAddress);
+        if(autoBorrowRewards[palPool]) setLoanBorrowRewards(palPool, loanAddress); //Because some PalPool call this method as view
+        //So we need to know if the call can update storage or not
+        //If not, will need to use the Manual Borrow Reward claim system
         
         //no method yet 
         return true;
@@ -278,7 +282,9 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
         borrower;
 
         //Accrue Rewards to the Loan's owner
-        accrueBorrowRewards(palPool, loanAddress);
+        if(autoBorrowRewards[palPool]) accrueBorrowRewards(palPool, loanAddress); //Because some PalPool call this method as view
+        //So we need to know if the call can update storage or not
+        //If not, will need to use the Manual Borrow Reward claim system
         
         //no method yet 
         return true;
@@ -298,7 +304,9 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
         killer;
 
         //Accrue Rewards to the Loan's owner
-        accrueBorrowRewards(palPool, loanAddress);
+        if(autoBorrowRewards[palPool]) accrueBorrowRewards(palPool, loanAddress); //Because some PalPool call this method as view
+        //So we need to know if the call can update storage or not
+        //If not, will need to use the Manual Borrow Reward claim system
         
         //no method yet 
         return true;
@@ -449,22 +457,71 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
         uint loanBorrowRatio = loansBorrowRatios[loanAddress];
 
         // Skip if no rewards set for the PalLoan
-        if(loanBorrowRatio > 0){
+        if(loanBorrowRatio > 0 && !isLoanRewardClaimed[loanAddress]){
             IPalPool pool = IPalPool(palPool);
 
             // Get the Borrower, and the amount of fees used by the Loan
             // And using the borrowRatio, accrue rewards for the borrower
             // The amount ot be accrued is calculated as feesUsed * borrowRatio
-            address borrower;
-            uint feesUsedAmount;
-
-            (borrower,,,,,,,feesUsedAmount,,,,) = pool.getBorrowData(loanAddress);
+            (address borrower,,,,,,,uint feesUsedAmount,,,,) = pool.getBorrowData(loanAddress);
 
             uint userAccruedRewards = feesUsedAmount.mul(loanBorrowRatio).div(1e18);
 
             // Add the new amount of rewards to the user total claimable balance
             accruedRewards[borrower] = accruedRewards[borrower].add(userAccruedRewards);
+
+            // Set this Loan rewards as claimed/distributed
+            isLoanRewardClaimed[loanAddress] = true;
         }
+
+    }
+
+
+    function _calculateLoanRewards(address palPool, address loanAddress) internal view returns(uint){
+        // Rewards already claimed
+        if(isLoanRewardClaimed[loanAddress]) return 0;
+
+        IPalPool pool = IPalPool(palPool);
+        (,,,,,,,uint feesUsedAmount,,,bool closed,) = pool.getBorrowData(loanAddress);
+
+        // Need the Loan to be closed before accruing rewards
+        if(!closed) return 0;
+
+        // Calculate the amount of rewards based on the Pool ratio & the amount of usedFees in the Loan
+        uint poolBorrowRatio = loansBorrowRatios[loanAddress] > 0 ? loansBorrowRatios[loanAddress] : borrowRatios[palPool];
+
+        return feesUsedAmount.mul(poolBorrowRatio).div(1e18);
+    }
+
+    /**
+    * @notice Returns the current amount of reward tokens the user can claim for a PalLoan
+    * @param palPool address of the PalPool
+    * @param loanAddress address of the PalLoan
+    */
+    function claimableLoanRewards(address palPool, address loanAddress) external view override returns(uint) {
+        return _calculateLoanRewards(palPool, loanAddress);
+    }
+
+    function claimLoanRewards(address palPool, address loanAddress) external override {
+        IPalPool pool = IPalPool(palPool);
+        (address borrower,,,,,,,,,,bool closed,) = pool.getBorrowData(loanAddress);
+
+        // Check if the PalLoan has some claimable rewards, and if it was not claimed already
+        require(msg.sender == borrower, Errors.NOT_LOAN_OWNER);
+        uint claimableAmount = _calculateLoanRewards(palPool, loanAddress);
+
+        require(closed && claimableAmount != 0, Errors.NOT_CLAIMABLE);
+
+        // Set this Loan rewards as claimed/distributed
+        isLoanRewardClaimed[loanAddress] = true;
+        
+        // Transfer the rewards to the borrower
+        IERC20 token = IERC20(rewardToken());
+        require(claimableAmount <= token.balanceOf(address(this)), Errors.REWARDS_CASH_TOO_LOW);
+
+        token.transfer(borrower, claimableAmount);
+
+        emit ClaimRewards(borrower, claimableAmount);
 
     }
 
@@ -610,7 +667,7 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
     }
 
     // set a pool rewards values (admin)
-    function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio) external override adminOnly {
+    function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward) external override adminOnly {
         require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
 
         if(newSupplySpeed != supplySpeeds[palPool]){
@@ -624,7 +681,9 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
             borrowRatios[palPool] = newBorrowRatio;
         }
 
-        emit PoolRewardsUpdated(palPool, newSupplySpeed, newBorrowRatio);
+        autoBorrowRewards[palPool] = autoBorrowReward;
+
+        emit PoolRewardsUpdated(palPool, newSupplySpeed, newBorrowRatio, autoBorrowReward);
     }
 
     // (admin) send all unclaimed/non-accrued rewards to other contract / to multisig / to admin ?

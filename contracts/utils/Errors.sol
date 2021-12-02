@@ -59,4 +59,5 @@ library Errors {
     string public constant REWARDS_CASH_TOO_LOW = '41';
     string public constant FAIL_BECOME_IMPLEMENTATION = '42';
     string public constant INSUFFICIENT_DEPOSITED = '43';
+    string public constant NOT_CLAIMABLE = '44';
 }

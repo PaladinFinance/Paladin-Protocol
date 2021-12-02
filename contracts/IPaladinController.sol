@@ -27,7 +27,7 @@ interface IPaladinController {
 
     event ClaimRewards(address indexed user, uint amount);
 
-    event PoolRewardsUpdated(address palPool, uint newSupplySpeed, uint newBorrowRatio);
+    event PoolRewardsUpdated(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward);
 
 
     //Functions
@@ -58,11 +58,13 @@ interface IPaladinController {
     function estimateClaimable(address user) external view returns(uint);
     function updateUserRewards(address user) external;
     function claim(address user) external;
+    function claimableLoanRewards(address palPool, address loanAddress) external view returns(uint);
+    function claimLoanRewards(address palPool, address loanAddress) external;
 
     //Admin functions
     function becomeImplementation(ControllerProxy proxy) external;
     function updateRewardToken(address newRewardTokenAddress) external;
-    function updatePoolRewards(address palPool, uint newSupplyspeed, uint newBorrowRatio) external;
+    function updatePoolRewards(address palPool, uint newSupplyspeed, uint newBorrowRatio, bool autoBorrowReward) external;
     function setPoolsNewController(address newController) external returns(bool);
     function withdrawFromPool(address pool, uint amount, address recipient) external returns(bool);
 

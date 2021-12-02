@@ -63,6 +63,12 @@ contract ControllerStorage {
     /** @notice Amount of reward Tokens accrued by the user, and claimable */
     mapping(address => uint) public accruedRewards;
 
+    /** @notice Is Auto Borrow Rewards is activated for the PalPool  */
+    mapping(address => bool) public autoBorrowRewards;
+
+    /** @notice Was PalLoan Borrow Rewards distributed & claimed */
+    mapping(address => bool) public isLoanRewardClaimed;
+
     /*
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

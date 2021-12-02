@@ -400,6 +400,37 @@ contract DoomsdayController is IPaladinController, ControllerStorage, Admin {
 
     }
 
+    function _calculateLoanRewards(address palPool, address loanAddress) internal view returns(uint){
+        // Rewards already claimed
+        if(isLoanRewardClaimed[loanAddress]) return 0;
+
+        IPalPool pool = IPalPool(palPool);
+        (,,,,,,,uint feesUsedAmount,,,bool closed,) = pool.getBorrowData(loanAddress);
+
+        // Need the Loan to be closed before accruing rewards
+        if(!closed) return 0;
+
+        // Calculate the amount of rewards based on the Pool ratio & the amount of usedFees in the Loan
+        uint poolBorrowRatio = loansBorrowRatios[loanAddress] > 0 ? loansBorrowRatios[loanAddress] : borrowRatios[palPool];
+
+        return feesUsedAmount.mul(poolBorrowRatio).div(1e18);
+    }
+
+    /**
+    * @notice Returns the current amount of reward tokens the user can claim for a PalLoan
+    * @param palPool address of the PalPool
+    * @param loanAddress address of the PalLoan
+    */
+    function claimableLoanRewards(address palPool, address loanAddress) external view override returns(uint) {
+        return _calculateLoanRewards(palPool, loanAddress);
+    }
+
+    function claimLoanRewards(address palPool, address loanAddress) external override {
+        palPool;
+        loanAddress;
+        revert();
+    }
+
     /**
     * @notice Returns the current amount of reward tokens the user can claim
     * @param user address of user
@@ -452,18 +483,18 @@ contract DoomsdayController is IPaladinController, ControllerStorage, Admin {
     * @notice Update the claimable rewards for a given user
     * @param user address of user
     */
-    function updateUserRewards(address user) external pure override {
+    function updateUserRewards(address user) external override {
         user;
-        return;
+        revert();
     }
 
     /**
     * @notice Accrues rewards for the user, then send all rewards tokens claimable
     * @param user address of user
     */
-    function claim(address user) external pure override {
+    function claim(address user) external override {
         user;
-        return;
+        revert();
     }
 
     /**
@@ -516,7 +547,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage, Admin {
     }
 
     // set a pool rewards values (admin)
-    function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio) external override adminOnly {
+    function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward) external override adminOnly {
         require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
 
         if(newSupplySpeed != supplySpeeds[palPool]){
@@ -530,7 +561,9 @@ contract DoomsdayController is IPaladinController, ControllerStorage, Admin {
             borrowRatios[palPool] = newBorrowRatio;
         }
 
-        emit PoolRewardsUpdated(palPool, newSupplySpeed, newBorrowRatio);
+        autoBorrowRewards[palPool] = autoBorrowReward;
+
+        emit PoolRewardsUpdated(palPool, newSupplySpeed, newBorrowRatio, autoBorrowReward);
     }
     
     
