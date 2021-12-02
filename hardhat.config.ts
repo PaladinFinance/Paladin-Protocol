@@ -48,6 +48,9 @@ const config: HardhatUserConfig = {
     rinkeby: {
       url: process.env.RINKEBY_URI,
       accounts: [process.env.RINKEBY_PRIVATE_KEY || ''],
+      /*accounts: {
+        mnemonic: process.env.RINKEBY_MNEMONIC,
+      },*/
     },
     mainnet: {
       url: process.env.MAINNET_URI,
