@@ -18,12 +18,11 @@ import "./IPalPool.sol";
 import "./IPalToken.sol";
 import "./utils/IERC20.sol";
 import "./utils/SafeERC20.sol";
-import "./utils/Admin.sol";
 import "./utils/Errors.sol";
 
 /** @title Paladin Controller contract  */
 /// @author Paladin
-contract PaladinController is IPaladinController, ControllerStorage, Admin {
+contract PaladinController is IPaladinController, ControllerStorage {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
@@ -482,10 +481,13 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
         if(isLoanRewardClaimed[loanAddress]) return 0;
 
         IPalPool pool = IPalPool(palPool);
-        (,,,,,,,uint feesUsedAmount,,,bool closed,) = pool.getBorrowData(loanAddress);
+        (,,,,,,,uint feesUsedAmount,uint loanStartBlock,,bool closed,) = pool.getBorrowData(loanAddress);
 
         // Need the Loan to be closed before accruing rewards
         if(!closed) return 0;
+
+        // Loan as taken before Borrow Rewards were set
+        if(borrowRewardsStartBlock[palPool] == 0 || borrowRewardsStartBlock[palPool] > loanStartBlock) return 0;
 
         // Calculate the amount of rewards based on the Pool ratio & the amount of usedFees in the Loan
         uint poolBorrowRatio = loansBorrowRatios[loanAddress] > 0 ? loansBorrowRatios[loanAddress] : borrowRatios[palPool];
@@ -679,6 +681,13 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
 
         if(newBorrowRatio != borrowRatios[palPool]){
             borrowRatios[palPool] = newBorrowRatio;
+        }
+
+        if(borrowRewardsStartBlock[palPool] == 0 && newBorrowRatio != 0){
+            borrowRewardsStartBlock[palPool] = block.number;
+        }
+        else if(newBorrowRatio == 0){
+            borrowRewardsStartBlock[palPool] = 0;
         }
 
         autoBorrowRewards[palPool] = autoBorrowReward;

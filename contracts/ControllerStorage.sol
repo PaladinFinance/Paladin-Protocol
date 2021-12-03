@@ -9,10 +9,11 @@
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
+import "./utils/Admin.sol";
 
 /** @title Paladin Controller contract  */
 /// @author Paladin
-contract ControllerStorage {
+contract ControllerStorage is Admin {
 
     /** @notice Layout for the Proxy contract */
     address public currentImplementation;
@@ -68,6 +69,11 @@ contract ControllerStorage {
 
     /** @notice Was PalLoan Borrow Rewards distributed & claimed */
     mapping(address => bool) public isLoanRewardClaimed;
+
+    /** @notice Block at which Borrow Rewards Ratio where set for the PalPool (if Ratio is put back to 0, this block number is set back to 0 too) */
+    /** So PalLoan started when no Borrow Rewards where set do not receive rewards */
+    /** PalPool => Block Number */
+    mapping(address => uint) public borrowRewardsStartBlock;
 
     /*
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

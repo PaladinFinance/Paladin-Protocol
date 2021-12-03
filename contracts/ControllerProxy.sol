@@ -9,13 +9,12 @@
 pragma solidity ^0.7.6;
 //SPDX-License-Identifier: MIT
 
-import "./utils/Admin.sol";
 import "./utils/Errors.sol";
 import "./ControllerStorage.sol";
 
 /** @title Paladin Controller contract  */
 /// @author Paladin
-contract ControllerProxy is ControllerStorage, Admin {
+contract ControllerProxy is ControllerStorage {
 
     event NewPendingImplementation(address oldPendingImplementation, address newPendingImplementation);
 

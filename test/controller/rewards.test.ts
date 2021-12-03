@@ -195,17 +195,23 @@ describe('Paladin Controller - Rewards System tests', () => {
             expect(await controller.claimable(user2.address)).to.be.eq(0)
             expect(await controller.claimable(user3.address)).to.be.eq(0)
 
+            expect(await controller.borrowRewardsStartBlock(pool1.address)).to.be.eq(0)
+            expect(await controller.borrowRewardsStartBlock(pool2.address)).to.be.eq(0)
+
         });
     
         it(' should allow admin to set rewards for PalPool', async () => {
+
+            const updateSetting_tx = await controller.connect(admin).updatePoolRewards(pool1.address, supplySpeed, borrowRatio, true)
             
-            await expect(controller.connect(admin).updatePoolRewards(pool1.address, supplySpeed, borrowRatio, true))
+            await expect(updateSetting_tx)
                 .to.emit(controller, 'PoolRewardsUpdated')
                 .withArgs(pool1.address, supplySpeed, borrowRatio, true);
 
             expect(await controller.supplySpeeds(pool1.address)).to.be.eq(supplySpeed)
             expect(await controller.borrowRatios(pool1.address)).to.be.eq(borrowRatio)
             expect(await controller.autoBorrowRewards(pool1.address)).to.be.eq(true)
+            expect(await controller.borrowRewardsStartBlock(pool1.address)).to.be.eq((await updateSetting_tx).blockNumber)
 
             const new_supplySpeed = ethers.utils.parseEther("0.35")
             const new_borrowRatio = ethers.utils.parseEther("0.55")
@@ -215,12 +221,14 @@ describe('Paladin Controller - Rewards System tests', () => {
             expect(await controller.supplySpeeds(pool1.address)).to.be.eq(new_supplySpeed)
             expect(await controller.borrowRatios(pool1.address)).to.be.eq(borrowRatio)
             expect(await controller.autoBorrowRewards(pool1.address)).to.be.eq(false)
+            expect(await controller.borrowRewardsStartBlock(pool1.address)).to.be.eq((await updateSetting_tx).blockNumber)
 
             await controller.connect(admin).updatePoolRewards(pool1.address, new_supplySpeed, new_borrowRatio, true);
 
             expect(await controller.supplySpeeds(pool1.address)).to.be.eq(new_supplySpeed)
             expect(await controller.borrowRatios(pool1.address)).to.be.eq(new_borrowRatio)
             expect(await controller.autoBorrowRewards(pool1.address)).to.be.eq(true)
+            expect(await controller.borrowRewardsStartBlock(pool1.address)).to.be.eq((await updateSetting_tx).blockNumber)
 
         });
     
@@ -288,6 +296,18 @@ describe('Paladin Controller - Rewards System tests', () => {
             const controller_totalSpeed = await controller.totalSupplyRewardSpeed()
 
             expect(controller_totalSpeed).to.be.eq(supplySpeed1.add(supplySpeed2))
+
+        });
+
+        it(' should reset borrowRewardsStartBlock when Borrow Rewards Ratio is set back to 0', async () => {
+
+            const updateSetting_tx = await controller.connect(admin).updatePoolRewards(pool1.address, supplySpeed, borrowRatio, false)
+
+            expect(await controller.borrowRewardsStartBlock(pool1.address)).to.be.eq((await updateSetting_tx).blockNumber)
+
+            await controller.connect(admin).updatePoolRewards(pool1.address, supplySpeed, 0, false)
+
+            expect(await controller.borrowRewardsStartBlock(pool1.address)).to.be.eq(0)
 
         });
 
@@ -1046,6 +1066,29 @@ describe('Paladin Controller - Rewards System tests', () => {
             expect(new_balance.sub(old_balance)).to.be.eq(expected_rewards)
 
             expect(await controller.isLoanRewardClaimed(loan_address)).to.be.true
+
+        });
+
+        it(' should not give rewards to a PalLoan taken before rewards were set', async () => {
+
+            await underlying.connect(admin).transfer(user1.address, deposit_amount)
+            await underlying.connect(user1).approve(pool2.address, deposit_amount)
+            await pool2.connect(user1).deposit(deposit_amount)
+
+            await underlying.connect(admin).transfer(user2.address, borrow_fees)
+            await underlying.connect(user2).approve(pool2.address, borrow_fees)
+
+            await pool2.connect(user2).borrow(user2.address, borrow_amount, borrow_fees)
+
+            const loan_address = (await pool2.getLoansByBorrower(user2.address)).slice(-1)[0]
+            
+            await controller.connect(admin).updatePoolRewards(pool2.address, 0, borrowRatio, false);
+
+            await pool2.connect(user2).closeBorrow(loan_address)
+
+            await expect(
+                controller.connect(user2).claimLoanRewards(pool2.address, loan_address)
+            ).to.be.revertedWith('44')
 
         });
 
