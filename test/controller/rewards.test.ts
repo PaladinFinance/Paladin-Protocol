@@ -45,6 +45,8 @@ describe('Paladin Controller - Rewards System tests', () => {
     let underlying: Comp
     let rewardToken: Comp
 
+    let fakeLoan: SignerWithAddress
+
     let name1: string = "Paladin MOCK 1"
     let symbol1: string = "palMOCK1"
     let name2: string = "Paladin MOCK 2"
@@ -74,7 +76,8 @@ describe('Paladin Controller - Rewards System tests', () => {
             admin,
             user1,
             user2,
-            user3
+            user3,
+            fakeLoan
         ] = await ethers.getSigners();
 
         controller = (await controllerFactory.deploy()) as PaladinController;
@@ -1043,6 +1046,28 @@ describe('Paladin Controller - Rewards System tests', () => {
             expect(new_balance.sub(old_balance)).to.be.eq(expected_rewards)
 
             expect(await controller.isLoanRewardClaimed(loan_address)).to.be.true
+
+        });
+
+        it(' should fail if not correct PalPool for PalLoan', async () => {
+            
+            await pool1.connect(user2).borrow(user2.address, borrow_amount, borrow_fees)
+
+            const loan_address = (await pool1.getLoansByBorrower(user2.address)).slice(-1)[0]
+
+            await pool1.connect(user2).closeBorrow(loan_address)
+
+            await expect(
+                controller.connect(user2).claimLoanRewards(pool2.address, loan_address)
+            ).to.be.reverted
+
+        });
+
+        it(' should fail if not a PalLoan', async () => {
+
+            await expect(
+                controller.connect(user2).claimLoanRewards(pool1.address, fakeLoan.address)
+            ).to.be.reverted
 
         });
 

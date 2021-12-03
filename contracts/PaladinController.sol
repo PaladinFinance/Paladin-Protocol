@@ -448,7 +448,7 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
     }
 
     /**
-    * @notice Internal - Accrues reward to the PalLoan owner when the Loan is closed
+    * @notice Internal - Accrues reward to the PalLoan owner when the Loan is closed (if the auto-accrue rewards is on for the Pool)
     * @param palPool address of the PalPool the Loan comes from
     * @param loanAddress address of the PalLoan contract
     */
@@ -456,7 +456,7 @@ contract PaladinController is IPaladinController, ControllerStorage, Admin {
         // Get the PalLoan BorrowRatio for rewards
         uint loanBorrowRatio = loansBorrowRatios[loanAddress];
 
-        // Skip if no rewards set for the PalLoan
+        // Skip if no rewards set for the PalLoan OR if rewards were already claimed for the PalLoan
         if(loanBorrowRatio > 0 && !isLoanRewardClaimed[loanAddress]){
             IPalPool pool = IPalPool(palPool);
 
