@@ -1,3 +1,8 @@
+[![Build & Tests](https://github.com/PaladinFinance/Paladin-Protocol/actions/workflows/main.yml/badge.svg)](https://github.com/PaladinFinance/Paladin-Protocol/actions/workflows/main.yml)
+[![Coverage Status](https://coveralls.io/repos/github/PaladinFinance/Paladin-Protocol/badge.svg?branch=main&service=github)](https://coveralls.io/github/PaladinFinance/Paladin-Protocol?branch=main)
+
+
+
 # Paladin
 
 
