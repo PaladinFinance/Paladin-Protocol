@@ -21,7 +21,7 @@ const param_file_path = params_path();
 
 const { MULTIPLIERS, MULTIPLIER_NAMES } = require(param_file_path);
 
-const multiplierName = MULTIPLIERS.UNI;
+const multiplierName = MULTIPLIERS.INDEX;
 
 async function main() {
 

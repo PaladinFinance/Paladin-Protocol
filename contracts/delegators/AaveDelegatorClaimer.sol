@@ -59,13 +59,13 @@ contract AaveDelegatorClaimer is AaveDelegator {
     * @dev Return the non-used fees to the Borrower, the loaned tokens and the used fees to the PalPool, then destroy the contract
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
-    function closeLoan(uint _usedAmount) public override(AaveDelegator) motherPoolOnly {
+    function closeLoan(uint _usedAmount, address _currentBorrower) public override(AaveDelegator) motherPoolOnly {
         //Claim the reward from the StkAave contract and send them to the PalPool
         IStakedAave _stkAave = IStakedAave(underlying);
         uint _pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
         _stkAave.claimRewards(motherPool, _pendingRewards);
 
-        super.closeLoan(_usedAmount);
+        super.closeLoan(_usedAmount, _currentBorrower);
     }
 
     /**

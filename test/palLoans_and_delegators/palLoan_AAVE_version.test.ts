@@ -115,7 +115,7 @@ describe('PalLoan (Delegator clone) tests (Aave Delegator version)', () => {
         });
 
         after( async () => {
-            await loan.connect(pool).closeLoan(ethers.utils.parseEther('5'))
+            await loan.connect(pool).closeLoan(ethers.utils.parseEther('5'), borrower.address)
         })
 
     });
@@ -152,7 +152,7 @@ describe('PalLoan (Delegator clone) tests (Aave Delegator version)', () => {
         it(' should return the right amount of tokens to the Borrower', async () => {
             const oldBalance = await aave.balanceOf(borrower.address)
 
-            await loan.connect(pool).closeLoan(usedFees)
+            await loan.connect(pool).closeLoan(usedFees, borrower.address)
 
             const newBalance = await aave.balanceOf(borrower.address)
 
@@ -162,7 +162,7 @@ describe('PalLoan (Delegator clone) tests (Aave Delegator version)', () => {
         it(' should return the right amount of tokens to the Pool', async () => {
             const oldBalance = await aave.balanceOf(pool.address)
 
-            await loan.connect(pool).closeLoan(usedFees)
+            await loan.connect(pool).closeLoan(usedFees, borrower.address)
 
             const newBalance = await aave.balanceOf(pool.address)
 
@@ -170,7 +170,7 @@ describe('PalLoan (Delegator clone) tests (Aave Delegator version)', () => {
         });
 
         it(' should remove the voting power given to the delegatee', async () => {
-            await loan.connect(pool).closeLoan(usedFees)
+            await loan.connect(pool).closeLoan(usedFees, borrower.address)
 
             const votes: BigNumber = await aavePower.getPowerCurrent(delegatee.address, 0)
 
@@ -283,7 +283,7 @@ describe('PalLoan (Delegator clone) tests (Aave Delegator version)', () => {
             ).to.be.reverted
     
             await expect(
-                loan.connect(borrower).closeLoan(0)
+                loan.connect(borrower).closeLoan(0, borrower.address)
             ).to.be.reverted
     
             await expect(

@@ -10,6 +10,10 @@ import "hardhat-gas-reporter";
 require("dotenv").config();
 
 
+const TEST_MNEMONIC = "test test test test test test test test test test test junk";
+const TEST_ACCOUNT = { mnemonic: TEST_MNEMONIC, }
+
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   solidity: {
@@ -39,19 +43,22 @@ const config: HardhatUserConfig = {
       }
     },
     kovan: {
-      url: process.env.KOVAN_URI,
-      accounts: [process.env.KOVAN_PRIVATE_KEY || ''],
+      url: process.env.KOVAN_URI || '',
+      accounts: process.env.KOVAN_PRIVATE_KEY ? [process.env.KOVAN_PRIVATE_KEY] : TEST_ACCOUNT,
       /*accounts: {
         mnemonic: process.env.KOVAN_MNEMONIC,
       },*/
     },
     rinkeby: {
-      url: process.env.RINKEBY_URI,
-      accounts: [process.env.RINKEBY_PRIVATE_KEY || ''],
+      url: process.env.RINKEBY_URI || '',
+      accounts: process.env.RINKEBY_PRIVATE_KEY ? [process.env.RINKEBY_PRIVATE_KEY] : TEST_ACCOUNT,
+      /*accounts: {
+        mnemonic: process.env.RINKEBY_MNEMONIC,
+      },*/
     },
     mainnet: {
-      url: process.env.MAINNET_URI,
-      accounts: [process.env.MAINNET_PRIVATE_KEY || ''],
+      url: process.env.MAINNET_URI || '',
+      accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : TEST_ACCOUNT,
       /*accounts: {
         mnemonic: process.env.MAINNET_MNEMONIC,
       },*/

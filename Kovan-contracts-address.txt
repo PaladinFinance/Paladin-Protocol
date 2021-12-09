@@ -16,6 +16,7 @@ PalLoanToken :
 Address Registry : 
 0xD0d13c2790372ca63d5932E59d0c4e88e682D417
 
+Old Delegators : 
 BasicDelegator : 
 0xB365A44F64b3a868ff6060302FA9a8BDD041483c
 AaveDelegator : 
@@ -24,6 +25,16 @@ AaveDelegatorClaimer :
 0x35d6eFe343791274a07d00cFdb2D9B7C2aF078bE
 SnapshotDelegator : 
 0xaC399a5FE326feF8B3B7f8E6126E637484144393
+
+New Delegators : 
+BasicDelegator : 
+0xe1e623dE48d9753e285884f2e93da50ac264aE81
+AaveDelegator : 
+xxx
+AaveDelegatorClaimer : 
+xxx
+SnapshotDelegator : 
+xxx
 
 GovernorMultiplier (Compound Governance) : 
 0xD634F6B19d2e63433adFEBe148Be8d0Fe90D2E06
@@ -44,3 +55,6 @@ PalToken :  0xbeda4e6081E09F7B8dc2b79B33aB1c60bDFa6a0C
 palStkAAVE
 PalPool :  0xeef13A28b0dBE30a4C6c128819B651697CE7961d
 PalToken :  0xeF89a9C8DF770A8964c339AA1073FB97F13BB943
+palINDEX
+PalPool :  0x8808ea9ad2b7E49D4FdB707166dEA20Dfd262a0e
+PalToken :  0x6625121F7AA0aEae65bDab28239043231Ae6Fa94

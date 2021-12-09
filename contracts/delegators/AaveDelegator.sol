@@ -95,7 +95,7 @@ contract AaveDelegator {
     * @dev Return the non-used fees to the Borrower, the loaned tokens and the used fees to the PalPool, then destroy the contract
     * @param _usedAmount Amount of fees to be used as interest for the Loan
     */
-    function closeLoan(uint _usedAmount) public virtual motherPoolOnly {
+    function closeLoan(uint _usedAmount, address _currentBorrower) public virtual motherPoolOnly {
         IERC20 _underlying = IERC20(underlying);
         
         //Return the remaining amount to the borrower
@@ -104,7 +104,7 @@ contract AaveDelegator {
         uint _balance = _underlying.balanceOf(address(this));
         uint _keepAmount = _balance.sub(_returnAmount);
         if(_returnAmount > 0){
-            _underlying.safeTransfer(borrower, _returnAmount);
+            _underlying.safeTransfer(_currentBorrower, _returnAmount);
         }
         _underlying.safeTransfer(motherPool, _keepAmount);
 
