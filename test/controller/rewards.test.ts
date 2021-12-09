@@ -631,6 +631,50 @@ describe('Paladin Controller - Rewards System tests', () => {
 
         });
     
+        it(' should show good estimateClaimable if Pool SupplyRewardState was updated but user rewards were not accrued', async () => {
+            
+            await underlying.connect(admin).transfer(user2.address, deposit_amount)
+            await underlying.connect(user2).approve(pool1.address, deposit_amount)
+            await pool1.connect(user2).deposit(deposit_amount)
+
+            const user1_palToken_amount = await token1.balanceOf(user1.address)
+
+            await token1.connect(user1).approve(controller.address, user1_palToken_amount)
+
+            const user2_palToken_amount = await token1.balanceOf(user2.address)
+
+            await token1.connect(user2).approve(controller.address, user2_palToken_amount)
+
+
+
+            const deposit_tx = await controller.connect(user1).deposit(token1.address, user1_palToken_amount)
+
+            const supplyRewardState1 = await controller.supplyRewardState(pool1.address)
+            expect(await controller.supplierRewardIndex(pool1.address, user1.address)).to.be.eq(supplyRewardState1.index)
+
+            const deposit_block = (await deposit_tx).blockNumber || 0
+            expect(supplyRewardState1.blockNumber).to.be.eq(deposit_block)
+
+            await mineBlocks(150)
+
+            const update_tx = await controller.connect(user2).deposit(token1.address, user2_palToken_amount) //use this method with the same values to update
+            const update_block = (await update_tx).blockNumber || 0                                          //the Pool Supply Reward State
+
+            const user_estimateClaimable = await controller.estimateClaimable(user1.address)
+
+            const estimated_accrued_rewards = supplySpeed.mul(update_block - deposit_block)
+
+            const new_supplyRewardState1 = await controller.supplyRewardState(pool1.address)
+            expect(await controller.supplierRewardIndex(pool1.address, user1.address)).to.be.eq(supplyRewardState1.index)
+            expect(new_supplyRewardState1.blockNumber).to.be.eq(update_block)
+
+            expect(user_estimateClaimable).to.be.eq(estimated_accrued_rewards)
+
+            //Since user2 deposit was the last update, its estimation should be at 0
+            expect(await controller.estimateClaimable(user2.address)).to.be.eq(0)
+
+        });
+    
         it(' should do a correct update when Supply Speed is updated', async () => {
             
             const new_supplySpeed = ethers.utils.parseEther("0.45")
