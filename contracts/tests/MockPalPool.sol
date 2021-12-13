@@ -15,6 +15,7 @@ contract MockPalPool is Admin {
     uint public totalReserve;
     uint public accruedFees;
     IPaladinController public controller;
+    bool public lastControllerCallResult;
 
     modifier controllerOnly() {
         require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
@@ -49,5 +50,29 @@ contract MockPalPool is Admin {
 
     function setNewController(address _newController) external controllerOnly {
         controller = IPaladinController(_newController);
+    }
+
+    function testDepositVerify(address palPool, address dest, uint amount) public {
+        lastControllerCallResult = controller.depositVerify(palPool, dest, amount);
+    }
+
+    function testWithdrawVerify(address palPool, address dest, uint amount) public {
+        lastControllerCallResult = controller.withdrawVerify(palPool, dest, amount);
+    }
+
+    function testBorrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanAddress) public {
+        lastControllerCallResult = controller.borrowVerify(palPool, borrower, delegatee, amount, feesAmount, loanAddress);
+    }
+
+    function testExpandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) public {
+        lastControllerCallResult = controller.expandBorrowVerify(palPool, loanAddress, newFeesAmount);
+    }
+
+    function testCloseBorrowVerify(address palPool, address borrower, address loanAddress) public {
+        lastControllerCallResult = controller.closeBorrowVerify(palPool, borrower, loanAddress);
+    }
+
+    function testKillBorrowVerify(address palPool, address killer, address loanAddress) public {
+        lastControllerCallResult = controller.killBorrowVerify(palPool, killer, loanAddress);
     }
 }

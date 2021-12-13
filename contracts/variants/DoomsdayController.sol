@@ -11,22 +11,15 @@ pragma solidity ^0.7.6;
 
 import "../utils/SafeMath.sol";
 import "../IPaladinController.sol";
+import "../ControllerStorage.sol";
 import "../PalPool.sol";
 import "../IPalPool.sol";
 import "../utils/IERC20.sol";
-import "../utils/Admin.sol";
 
 /** @title DoomsdayController contract -> blocks any transaction from the PalPools  */
 /// @author Paladin
-contract DoomsdayController is IPaladinController, Admin {
+contract DoomsdayController is IPaladinController, ControllerStorage {
     using SafeMath for uint;
-    
-
-    /** @notice List of current active palToken Pools */
-    address[] public palTokens;
-    address[] public palPools;
-
-    bool private initialized = false;
 
     constructor(){
         admin = msg.sender;
@@ -69,11 +62,24 @@ contract DoomsdayController is IPaladinController, Admin {
     * @return bool : Success
     */ 
     function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override adminOnly returns(bool){
-        require(!initialized, "Lists already set");
-        require(_palTokens.length == _palPools.length, "List sizes not equal");
+        require(!initialized, Errors.POOL_LIST_ALREADY_SET);
+        require(_palTokens.length == _palPools.length, Errors.LIST_SIZES_NOT_EQUAL);
         palPools = _palPools;
         palTokens = _palTokens;
         initialized = true;
+
+        for(uint i = 0; i < _palPools.length; i++){
+            //Update the Reward State for the new Pool
+            PoolRewardsState storage supplyState = supplyRewardState[_palPools[i]];
+            if(supplyState.index == 0){
+                supplyState.index = initialRewardsIndex;
+            }
+            supplyState.blockNumber = safe32(block.number);
+
+            //Link PalToken with PalPool
+            palTokenToPalPool[_palTokens[i]] = _palPools[i];
+        }
+        
         return true;
     }
     
@@ -97,7 +103,7 @@ contract DoomsdayController is IPaladinController, Admin {
     */ 
     function removePool(address _palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(isPalPool(_palPool), "Not listed");
+        require(isPalPool(_palPool), Errors.POOL_NOT_LISTED);
 
         address[] memory _pools = palPools;
         
@@ -105,7 +111,9 @@ contract DoomsdayController is IPaladinController, Admin {
         for(uint i = 0; i < _pools.length; i++){
             if(_pools[i] == _palPool){
                 //get the address of the PalToken for the Event
-                address _palToken = _pools[i];
+                address _palToken = palTokens[i];
+
+                delete palTokenToPalPool[_palToken];
 
                 //Replace the address to remove with the last one of the array
                 palPools[i] = palPools[lastIndex];
@@ -158,7 +166,7 @@ contract DoomsdayController is IPaladinController, Admin {
     * @return bool : Verification Success
     */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
 
         palPool;
         dest;
@@ -177,7 +185,7 @@ contract DoomsdayController is IPaladinController, Admin {
     * @return bool : Verification Success
     */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
         
         palPool;
         dest;
@@ -198,7 +206,7 @@ contract DoomsdayController is IPaladinController, Admin {
     * @return bool : Verification Success
     */
     function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
-        require(isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
         
         palPool;
         borrower;
@@ -218,7 +226,7 @@ contract DoomsdayController is IPaladinController, Admin {
     * @return bool : Verification Success
     */
     function expandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) external view override returns(bool){
-        require(isPalPool(msg.sender), "Call not allowed");
+        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
 
         palPool;
         loanAddress;
@@ -232,15 +240,16 @@ contract DoomsdayController is IPaladinController, Admin {
     * @notice Check if Borrow Closing was correctly done
     * @param palPool address of PalPool
     * @param borrower borrower's address
-    * @param loanPool address of the PalLoan contract to close
+    * @param loanAddress address of the PalLoan contract to close
     * @return bool : Verification Success
     */
-    function closeBorrowVerify(address palPool, address borrower, address loanPool) external view override returns(bool){
-        require(isPalPool(msg.sender), "Call not allowed");
+    function closeBorrowVerify(address palPool, address borrower, address loanAddress) external override returns(bool){
+        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
         
-        palPool;
         borrower;
-        loanPool;
+
+        //Accrue Rewards to the Loan's owner
+        accrueBorrowRewards(palPool, loanAddress);
         
         //no method yet 
         return true;
@@ -251,24 +260,277 @@ contract DoomsdayController is IPaladinController, Admin {
     * @notice Check if Borrow Killing was correctly done
     * @param palPool address of PalPool
     * @param killer killer's address
-    * @param loanPool address of the PalLoan contract to kill
+    * @param loanAddress address of the PalLoan contract to kill
     * @return bool : Verification Success
     */
-    function killBorrowVerify(address palPool, address killer, address loanPool) external view override returns(bool){
-        require(isPalPool(msg.sender), "Call not allowed");
+    function killBorrowVerify(address palPool, address killer, address loanAddress) external override returns(bool){
+        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
         
-        palPool;
         killer;
-        loanPool;
+
+        //Accrue Rewards to the Loan's owner
+        accrueBorrowRewards(palPool, loanAddress);
         
         //no method yet 
         return true;
     }
 
+
+    // PalToken Deposit/Withdraw functions
+
+    function deposit(address palToken, uint amount) external pure override returns(bool){
+        palToken;
+        amount;
+        revert();
+    }
+
+
+    function withdraw(address palToken, uint amount) external pure override returns(bool){
+        palToken;
+        amount;
+        revert();
+    }
+
         
+    // Rewards functions
+    
+    /**
+    * @notice Internal - Updates the Supply Index of a Pool for reward distribution
+    * @param palPool address of the Pool to update the Supply Index for
+    */
+    function updateSupplyIndex(address palPool) internal {
+        // Get last Pool Supply Rewards state
+        PoolRewardsState storage state = supplyRewardState[palPool];
+        // Get the current block number, and the Supply Speed for the given Pool
+        uint currentBlock = block.number;
+        uint supplySpeed = supplySpeeds[palPool];
+
+        // Calculate the number of blocks since last update
+        uint ellapsedBlocks = currentBlock.sub(uint(state.blockNumber));
+
+        // If an update is needed : block ellapsed & non-null speed (rewards to distribute)
+        if(ellapsedBlocks > 0 && supplySpeed > 0){
+            // Get the Total Amount deposited in the Controller of PalToken associated to the Pool
+            uint totalDeposited = totalSupplierDeposits[palPool];
+
+            // Calculate the amount of rewards token accrued since last update
+            uint accruedAmount = ellapsedBlocks.mul(supplySpeed);
+
+            // And the new ratio for reward distribution to user
+            // Based on the amount of rewards accrued, and the change in the TotalSupply
+            uint ratio = totalDeposited > 0 ? accruedAmount.mul(1e36).div(totalDeposited) : 0;
+
+            // Write new Supply Rewards values in the storage
+            state.index = safe224(uint(state.index).add(ratio));
+            state.blockNumber = safe32(currentBlock);
+        }
+        else if(ellapsedBlocks > 0){
+            // If blocks ellapsed, but no rewards to distribute (speed == 0),
+            // just write the last update block number
+            state.blockNumber = safe32(currentBlock);
+        }
+
+    }
+
+    /**
+    * @notice Internal - Accrues rewards token to the user claimable balance, depending on the Pool SupplyRewards state
+    * @param palPool address of the PalPool the user interracted with
+    * @param user address of the user to accrue rewards to
+    */
+    function accrueSupplyRewards(address palPool, address user) internal {
+        // Get the Pool current SupplyRewards state
+        PoolRewardsState storage state = supplyRewardState[palPool];
+
+        // Get the current reward index for the Pool
+        // And the user last reward index
+        uint currentSupplyIndex = state.index;
+        uint userSupplyIndex = supplierRewardIndex[palPool][user];
+
+        // Update the Index in the mapping, the local value is used after
+        supplierRewardIndex[palPool][user] = currentSupplyIndex;
+
+        if(userSupplyIndex == 0 && currentSupplyIndex >= initialRewardsIndex){
+            // Set the initial Index for the user
+            userSupplyIndex = initialRewardsIndex;
+        }
+
+        // Get the difference of index with the last one for user
+        uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+
+        if(indexDiff > 0){
+            // And using the user PalToken balance deposited in the Controller,
+            // we can get how much rewards where accrued
+            uint userBalance = supplierDeposits[palPool][user];
+
+            uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+
+            // Add the new amount of rewards to the user total claimable balance
+            accruedRewards[user] = accruedRewards[user].add(userAccruedRewards);
+        }
+
+    }
+
+    /**
+    * @notice Internal - Accrues reward to the PalLoan owner when the Loan is closed
+    * @param palPool address of the PalPool the Loan comes from
+    * @param loanAddress address of the PalLoan contract
+    */
+    function accrueBorrowRewards(address palPool, address loanAddress) internal {
+        // Get the Pool BorrowRatio for rewards
+        uint poolBorrowRatio = borrowRatios[palPool];
+
+        // Skip if no rewards set for the Pool
+        if(poolBorrowRatio > 0){
+            IPalPool pool = IPalPool(palPool);
+
+            // Get the Borrower, and the amount of fees used by the Loan
+            // And using the borrowRatio, accrue rewards for the borrower
+            // The amount ot be accrued is calculated as feesUsed * borrowRatio
+            address borrower;
+            uint feesUsedAmount;
+
+            (borrower,,,,,,,feesUsedAmount,,,,) = pool.getBorrowData(loanAddress);
+
+            uint userAccruedRewards = feesUsedAmount.mul(feesUsedAmount).div(1e18);
+
+            // Add the new amount of rewards to the user total claimable balance
+            accruedRewards[borrower] = accruedRewards[borrower].add(userAccruedRewards);
+        }
+
+    }
+
+    function _calculateLoanRewards(address palPool, address loanAddress) internal view returns(uint){
+        // Rewards already claimed
+        if(isLoanRewardClaimed[loanAddress]) return 0;
+
+        IPalPool pool = IPalPool(palPool);
+        (,,,,,,,uint feesUsedAmount,uint loanStartBlock,,bool closed,) = pool.getBorrowData(loanAddress);
+
+        // Need the Loan to be closed before accruing rewards
+        if(!closed) return 0;
+
+        // Loan as taken before Borrow Rewards were set
+        if(borrowRewardsStartBlock[palPool] == 0 || borrowRewardsStartBlock[palPool] > loanStartBlock) return 0;
+
+        // Calculate the amount of rewards based on the Pool ratio & the amount of usedFees in the Loan
+        uint poolBorrowRatio = loansBorrowRatios[loanAddress] > 0 ? loansBorrowRatios[loanAddress] : borrowRatios[palPool];
+
+        return feesUsedAmount.mul(poolBorrowRatio).div(1e18);
+    }
+
+    /**
+    * @notice Returns the current amount of reward tokens the user can claim for a PalLoan
+    * @param palPool address of the PalPool
+    * @param loanAddress address of the PalLoan
+    */
+    function claimableLoanRewards(address palPool, address loanAddress) external view override returns(uint) {
+        return _calculateLoanRewards(palPool, loanAddress);
+    }
+
+    function claimLoanRewards(address palPool, address loanAddress) external override {
+        palPool;
+        loanAddress;
+        revert();
+    }
+
+    /**
+    * @notice Returns the current amount of reward tokens the user can claim
+    * @param user address of user
+    */
+    function claimable(address user) external view override returns(uint) {
+        return accruedRewards[user];
+    }
+
+    /**
+    * @notice Returns the current amount of reward tokens the user can claim + the estimation from last Supplier Index updates
+    * @param user address of user
+    */
+    function estimateClaimable(address user) external view override returns(uint){
+        //All the rewards already accrued and not claimed
+        uint _total = accruedRewards[user];
+
+        //Calculate the estimated pending rewards for all Pools for the user
+        //(depending on the last Pool's updateSupplyIndex)
+        address[] memory _pools = palPools;
+        for(uint i = 0; i < _pools.length; i++){
+            // Get the current reward index for the Pool
+            // And the user last reward index
+            uint currentSupplyIndex = supplyRewardState[_pools[i]].index;
+            uint userSupplyIndex = supplierRewardIndex[_pools[i]][user];
+
+            if(userSupplyIndex == 0 && currentSupplyIndex >= initialRewardsIndex){
+                // Set the initial Index for the user
+                userSupplyIndex = initialRewardsIndex;
+            }
+
+            // Get the difference of index with the last one for user
+            uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+
+            if(indexDiff > 0){
+                // And using the user PalToken balance deposited in the Controller,
+                // we can get how much rewards where accrued
+                uint userBalance = supplierDeposits[_pools[i]][user];
+
+                uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+
+                // Add the new amount of rewards to the user total claimable balance
+                _total = _total.add(userAccruedRewards);
+            }
+        }
+
+        return _total;
+    }
+
+    /**
+    * @notice Update the claimable rewards for a given user
+    * @param user address of user
+    */
+    function updateUserRewards(address user) external override {
+        user;
+        revert();
+    }
+
+    /**
+    * @notice Accrues rewards for the user, then send all rewards tokens claimable
+    * @param user address of user
+    */
+    function claim(address user) external override {
+        user;
+        revert();
+    }
+
+    /**
+    * @notice Returns the global Supply distribution speed
+    * @return uint : Total Speed
+    */
+    function totalSupplyRewardSpeed() external view override returns(uint) {
+        // Sum up the SupplySpeed for all the listed PalPools
+        address[] memory _pools = palPools;
+        uint totalSpeed = 0;
+        for(uint i = 0; i < _pools.length; i++){
+            totalSpeed = totalSpeed.add(supplySpeeds[_pools[i]]);
+        }
+        return totalSpeed;
+    }
+
+
+    /** @notice Address of the reward Token (PAL token) */
+    function rewardToken() public view returns(address) {
+        return rewardTokenAddress;
+    }
+
     
     //Admin function
 
+    function becomeImplementation(ControllerProxy proxy) external override adminOnly {
+        // Only to call after the contract was set as Pending Implementation in the Proxy contract
+        // To accept the delegatecalls, and update the Implementation address in the Proxy
+        require(proxy.acceptImplementation(), Errors.FAIL_BECOME_IMPLEMENTATION);
+    }
+
+    function updateRewardToken(address newRewardTokenAddress) external override adminOnly {
+        rewardTokenAddress = newRewardTokenAddress;
+    }
 
     function setPoolsNewController(address _newController) external override adminOnly returns(bool){
         address[] memory _pools = palPools;
@@ -284,6 +546,46 @@ contract DoomsdayController is IPaladinController, Admin {
         IPalPool _palPool = IPalPool(_pool);
         _palPool.withdrawFees(_amount, _recipient);
         return true;
+    }
+
+    // set a pool rewards values (admin)
+    function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward) external override adminOnly {
+        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+
+        if(newSupplySpeed != supplySpeeds[palPool]){
+            //Make sure it's updated before setting the new speed
+            updateSupplyIndex(palPool);
+
+            supplySpeeds[palPool] = newSupplySpeed;
+        }
+
+        if(newBorrowRatio != borrowRatios[palPool]){
+            borrowRatios[palPool] = newBorrowRatio;
+        }
+
+        if(borrowRewardsStartBlock[palPool] == 0 && newBorrowRatio != 0){
+            borrowRewardsStartBlock[palPool] = block.number;
+        }
+        else if(newBorrowRatio == 0){
+            borrowRewardsStartBlock[palPool] = 0;
+        }
+
+        autoBorrowRewards[palPool] = autoBorrowReward;
+
+        emit PoolRewardsUpdated(palPool, newSupplySpeed, newBorrowRatio, autoBorrowReward);
+    }
+    
+    
+    //Math utils
+
+    function safe224(uint n) internal pure returns (uint224) {
+        require(n < 2**224, "Number is over 224 bits");
+        return uint224(n);
+    }
+
+    function safe32(uint n) internal pure returns (uint32) {
+        require(n < 2**32, "Number is over 32 bits");
+        return uint32(n);
     }
 
 

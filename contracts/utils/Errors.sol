@@ -15,6 +15,7 @@ library Errors {
     string public constant CALLER_NOT_CONTROLLER = '29'; // 'The caller must be the admin or the controller'
     string public constant CALLER_NOT_ALLOWED_POOL = '30';  // 'The caller must be a palPool listed in the controller'
     string public constant CALLER_NOT_MINTER = '31';
+    string public constant CALLER_NOT_IMPLEMENTATION = '35'; // 'The caller must be the pending Implementation'
 
     // ERC20 type errors
     string public constant FAIL_TRANSFER = '2';
@@ -48,4 +49,15 @@ library Errors {
     string public constant FAIL_LOAN_TOKEN_BURN = '33';
     string public constant FEES_ACCRUED_INSUFFICIENT = '34';
 
+
+    //Controller errors
+    string public constant LIST_SIZES_NOT_EQUAL = '36';
+    string public constant POOL_LIST_ALREADY_SET = '37';
+    string public constant POOL_ALREADY_LISTED = '38';
+    string public constant POOL_NOT_LISTED = '39';
+    string public constant CALLER_NOT_POOL = '40';
+    string public constant REWARDS_CASH_TOO_LOW = '41';
+    string public constant FAIL_BECOME_IMPLEMENTATION = '42';
+    string public constant INSUFFICIENT_DEPOSITED = '43';
+    string public constant NOT_CLAIMABLE = '44';
 }
