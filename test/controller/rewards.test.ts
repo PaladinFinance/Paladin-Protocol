@@ -732,6 +732,36 @@ describe('Paladin Controller - Rewards System tests', () => {
 
         });
 
+        it(' should fail deposit if the goven palToken is not listed', async () => {
+
+            await controller.connect(admin).removePool(pool2.address)
+
+            const user1_palToken_amount = await token2.balanceOf(user1.address)
+
+            await token2.connect(user1).approve(controller.address, user1_palToken_amount)
+
+            await expect(
+                controller.connect(user1).deposit(token2.address, user1_palToken_amount)
+            ).to.be.revertedWith('39')
+
+        });
+
+        it(' should fail withdraw if the goven palToken is not listed', async () => {
+
+            const user1_palToken_amount = await token2.balanceOf(user1.address)
+
+            await token2.connect(user1).approve(controller.address, user1_palToken_amount)
+
+            await controller.connect(user1).deposit(token2.address, user1_palToken_amount)
+
+            await controller.connect(admin).removePool(pool2.address)
+
+            await expect(
+                controller.connect(user1).withdraw(token2.address, user1_palToken_amount)
+            ).to.be.revertedWith('39')
+
+        });
+
     });
 
 

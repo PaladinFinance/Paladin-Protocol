@@ -26,6 +26,14 @@ contract PaladinController is IPaladinController, ControllerStorage {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
+    // Prevent reentry in deposit & withdraw
+    modifier lock() {
+        require(!locked, Errors.LOCKED);
+        locked = true;
+        _;
+        locked = false;
+    }
+
     constructor(){
         admin = msg.sender;
     }
@@ -315,8 +323,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     // PalToken Deposit/Withdraw functions
 
-    function deposit(address palToken, uint amount) external override returns(bool){
+    function deposit(address palToken, uint amount) external lock override returns(bool){
         address palPool = palTokenToPalPool[palToken];
+        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
         address user = msg.sender;
         IERC20 token = IERC20(palToken);
 
@@ -336,8 +345,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
     }
 
 
-    function withdraw(address palToken, uint amount) external override returns(bool){
+    function withdraw(address palToken, uint amount) external lock override returns(bool){
         address palPool = palTokenToPalPool[palToken];
+        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
         address user = msg.sender;
 
         require(amount <= supplierDeposits[palPool][user], Errors.INSUFFICIENT_DEPOSITED);
@@ -504,7 +514,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
         return _calculateLoanRewards(palPool, loanAddress);
     }
 
-    function claimLoanRewards(address palPool, address loanAddress) external override {
+    function claimLoanRewards(address palPool, address loanAddress) external lock override {
         IPalPool pool = IPalPool(palPool);
         (address borrower,,,,,,,,,,bool closed,) = pool.getBorrowData(loanAddress);
 
@@ -521,7 +531,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
         IERC20 token = IERC20(rewardToken());
         require(claimableAmount <= token.balanceOf(address(this)), Errors.REWARDS_CASH_TOO_LOW);
 
-        token.transfer(borrower, claimableAmount);
+        token.safeTransfer(borrower, claimableAmount);
 
         emit ClaimRewards(borrower, claimableAmount);
 
@@ -595,7 +605,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @notice Accrues rewards for the user, then send all rewards tokens claimable
     * @param user address of user
     */
-    function claim(address user) external override {
+    function claim(address user) external lock override {
         // Accrue any claimable rewards for all the Pools for the user
         updateUserRewards(user);
 
@@ -611,7 +621,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
             accruedRewards[user] = 0;
 
             // Transfer the tokens to the user
-            token.transfer(user, toClaim);
+            token.safeTransfer(user, toClaim);
 
             emit ClaimRewards(user, toClaim);
         }
