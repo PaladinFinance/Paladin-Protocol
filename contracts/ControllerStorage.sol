@@ -75,6 +75,9 @@ contract ControllerStorage is Admin {
     /** PalPool => Block Number */
     mapping(address => uint) public borrowRewardsStartBlock;
 
+    /** @dev Prevent reentry in some functions */
+    bool internal locked;
+
     /*
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
