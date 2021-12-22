@@ -331,7 +331,7 @@ describe('MultiPalPool - PSP : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user2).borrow(spsp_token7.address, user1.address, borrow_amount, fees_amount)
-            ).to.be.revertedWith('36')
+            ).to.be.revertedWith('47')
             
         });
 

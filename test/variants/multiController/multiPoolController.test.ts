@@ -1,9 +1,9 @@
 import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { MultiPoolController } from "../../typechain/MultiPoolController";
-import { Comp } from "../../typechain/Comp";
-import { MockMultiPool } from "../../typechain/MockMultiPool";
+import { MultiPoolController } from "../../../typechain/MultiPoolController";
+import { Comp } from "../../../typechain/Comp";
+import { MockMultiPool } from "../../../typechain/MockMultiPool";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
@@ -81,25 +81,33 @@ describe('Paladin MultiPoolController contract tests', () => {
 
             await controller.connect(admin).addNewPool(fakePool.address, tokens_list1)
     
-            const tokens = await controller.getPalTokens(fakePool.address);
-            const pools = await controller.getPalPools();
+            const tokens = await controller['getPalTokens(address)'](fakePool.address);
+            const pools = await controller.getPools();
+            const allTokens = await controller['getPalTokens()']()
     
             expect(pools).to.contain(fakePool.address)
             expect(tokens).to.contain(fakeToken.address)
             expect(tokens).to.contain(fakeToken2.address)
+            expect(allTokens).to.contain(fakeToken2.address)
+            expect(allTokens).to.contain(fakeToken2.address)
 
             expect(pools).not.to.contain(fakePool2.address)
             expect(tokens).not.to.contain(fakeToken4.address)
+            expect(allTokens).not.to.contain(fakeToken4.address)
 
             expect(await controller.isPalPool(fakePool.address)).to.be.true;
             expect(await controller.isPalPool(fakePool2.address)).to.be.false;
 
+            expect(await controller.isPalToken(fakeToken.address)).to.be.true;
+            expect(await controller.isPalToken(fakeToken2.address)).to.be.true;
+            expect(await controller.isPalToken(fakeToken4.address)).to.be.false;
+
             expect(await controller.isPalTokenForPool(fakePool.address, fakeToken.address)).to.be.true;
             expect(await controller.isPalTokenForPool(fakePool.address, fakeToken2.address)).to.be.true;
 
-            expect(await controller.palTokenToPalPool(fakeToken.address)).to.be.eq(fakePool.address);
-            expect(await controller.palTokenToPalPool(fakeToken2.address)).to.be.eq(fakePool.address);
-            expect(await controller.palTokenToPalPool(fakeToken3.address)).to.be.eq(ethers.constants.AddressZero);
+            expect(await controller.palTokenToPool(fakeToken.address)).to.be.eq(fakePool.address);
+            expect(await controller.palTokenToPool(fakeToken2.address)).to.be.eq(fakePool.address);
+            expect(await controller.palTokenToPool(fakeToken3.address)).to.be.eq(ethers.constants.AddressZero);
         });
 
         it(' should not add same MultiPool (& PalTokens) twice', async () => {
@@ -110,7 +118,7 @@ describe('Paladin MultiPoolController contract tests', () => {
     
             await expect(
                 controller.connect(admin).addNewPool(fakePool.address, tokens_list1)
-            ).to.be.revertedWith('Already added')
+            ).to.be.revertedWith('38')
         });
     
         it(' should block non-admin to add MultiPool', async () => {
@@ -133,17 +141,22 @@ describe('Paladin MultiPoolController contract tests', () => {
     
             await controller.connect(admin).removePool(fakePool2.address)
     
-            const tokens1 = await controller.getPalTokens(fakePool.address);
-            const tokens2 = await controller.getPalTokens(fakePool2.address);
-            const pools = await controller.getPalPools();
+            const tokens1 = await controller['getPalTokens(address)'](fakePool.address);
+            const tokens2 = await controller['getPalTokens(address)'](fakePool2.address);
+            const pools = await controller.getPools();
+            const allTokens = await controller['getPalTokens()']()
     
             expect(pools).to.contain(fakePool.address)
             expect(tokens1).to.contain(fakeToken.address)
             expect(tokens1).to.contain(fakeToken2.address)
+            expect(allTokens).to.contain(fakeToken2.address)
+            expect(allTokens).to.contain(fakeToken2.address)
     
             expect(pools).not.to.contain(fakePool2.address)
             expect(tokens2).not.to.contain(fakeToken3.address)
             expect(tokens2).not.to.contain(fakeToken4.address)
+            expect(allTokens).not.to.contain(fakeToken3.address)
+            expect(allTokens).not.to.contain(fakeToken4.address)
 
             expect(tokens2).to.be.empty; //since it was deleted
 
@@ -154,9 +167,13 @@ describe('Paladin MultiPoolController contract tests', () => {
             expect(await controller.isPalPool(fakePool.address)).to.be.true;
             expect(await controller.isPalPool(fakePool2.address)).to.be.false;
 
-            expect(await controller.palTokenToPalPool(fakeToken.address)).to.be.eq(fakePool.address);
-            expect(await controller.palTokenToPalPool(fakeToken2.address)).to.be.eq(fakePool.address);
-            expect(await controller.palTokenToPalPool(fakeToken3.address)).to.be.eq(ethers.constants.AddressZero);
+            expect(await controller.isPalToken(fakeToken2.address)).to.be.true;
+            expect(await controller.isPalToken(fakeToken3.address)).to.be.false;
+            expect(await controller.isPalToken(fakeToken4.address)).to.be.false;
+
+            expect(await controller.palTokenToPool(fakeToken.address)).to.be.eq(fakePool.address);
+            expect(await controller.palTokenToPool(fakeToken2.address)).to.be.eq(fakePool.address);
+            expect(await controller.palTokenToPool(fakeToken3.address)).to.be.eq(ethers.constants.AddressZero);
         });
     
         it(' should not remove not-listed MultiPool', async () => {
@@ -167,8 +184,8 @@ describe('Paladin MultiPoolController contract tests', () => {
     
             await expect(
                 controller.connect(admin).removePool(fakePool2.address),
-                'Not listed'
-            ).to.be.revertedWith('Not listed')
+                '39'
+            ).to.be.revertedWith('39')
         });
     
         it(' should not remove a MultiPool twice', async () => {
@@ -182,8 +199,8 @@ describe('Paladin MultiPoolController contract tests', () => {
             await controller.connect(admin).removePool(fakePool.address)
             await expect(
                 controller.connect(admin).removePool(fakePool.address),
-                'Not listed'
-            ).to.be.revertedWith('Not listed')
+                '39'
+            ).to.be.revertedWith('39')
         });
     
         it(' should block non-admin to remove MultiPool', async () => {
@@ -206,10 +223,10 @@ describe('Paladin MultiPoolController contract tests', () => {
 
             await controller.connect(admin).addNewPalToken(fakePool.address, fakeToken5.address)
 
-            const tokens1 = await controller.getPalTokens(fakePool.address);
+            const tokens1 = await controller['getPalTokens(address)'](fakePool.address);
             expect(tokens1).to.contain(fakeToken5.address)
 
-            expect(await controller.palTokenToPalPool(fakeToken.address)).to.be.eq(fakePool.address);
+            expect(await controller.palTokenToPool(fakeToken.address)).to.be.eq(fakePool.address);
 
             expect(await controller.isPalTokenForPool(fakePool.address, fakeToken5.address)).to.be.true;
             
@@ -225,13 +242,13 @@ describe('Paladin MultiPoolController contract tests', () => {
     
             await expect(
                 controller.connect(admin).addNewPalToken(fakePool.address, fakeToken5.address)
-            ).to.be.revertedWith('Already added')
+            ).to.be.revertedWith('49')
         });
     
         it(' should not add if the Pool is not listed', async () => {
             await expect(
                 controller.connect(admin).addNewPalToken(fakePool2.address, fakeToken5.address)
-            ).to.be.revertedWith('Not listed')
+            ).to.be.revertedWith('39')
         });
     
         it(' should block non-admin to add PalToken', async () => {
@@ -289,7 +306,7 @@ describe('Paladin MultiPoolController contract tests', () => {
                 await controller.connect(admin).borrowPossible(mockPool.address, underlying1.address, invalidAmount)
             ).to.be.false
 
-            expect(
+            /*expect(
                 await controller.connect(fakePool.address).depositVerify(fakePool.address, user1.address, 10)
             ).to.be.true
 
@@ -319,6 +336,46 @@ describe('Paladin MultiPoolController contract tests', () => {
 
             expect(
                 await controller.connect(fakePool.address).killBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
+            ).to.be.true*/
+
+            await mockPool.testDepositVerify(fakePool.address, user1.address, 10)
+            expect(
+                await mockPool.lastControllerCallResult()
+            ).to.be.true
+
+            await mockPool.testWithdrawVerify(fakePool.address, user1.address, 10)
+            expect(
+                await mockPool.lastControllerCallResult()
+            ).to.be.true
+
+            await mockPool.testDepositVerify(fakePool.address, user1.address, 0)
+            expect(
+                await mockPool.lastControllerCallResult()
+            ).to.be.false
+
+            await mockPool.testWithdrawVerify(fakePool.address, user1.address, 0)
+            expect(
+                await mockPool.lastControllerCallResult()
+            ).to.be.false
+
+            await mockPool.testBorrowVerify(fakePool.address, user1.address, user1.address, 10, 5, fakeLoan.address)
+            expect(
+                await mockPool.lastControllerCallResult()
+            ).to.be.true
+
+            await mockPool.testExpandBorrowVerify(fakePool.address, fakeLoan.address, 5)
+            expect(
+                await mockPool.lastControllerCallResult()
+            ).to.be.true
+
+            await mockPool.testCloseBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
+            expect(
+                await mockPool.lastControllerCallResult()
+            ).to.be.true
+
+            await mockPool.testKillBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
+            expect(
+                await mockPool.lastControllerCallResult()
             ).to.be.true
 
         });
@@ -326,28 +383,28 @@ describe('Paladin MultiPoolController contract tests', () => {
 
         it(' should block PalPool functions to be called', async () => {
             await expect(
-                controller.depositVerify(fakePool.address, user1.address, 10)
-            ).to.be.revertedWith('Call not allowed')
+                controller.connect(user1).depositVerify(fakePool.address, user1.address, 10)
+            ).to.be.revertedWith('40')
     
             await expect(
-                controller.withdrawVerify(fakePool.address, user1.address, 10)
-            ).to.be.revertedWith('Call not allowed')
+                controller.connect(user1).withdrawVerify(fakePool.address, user1.address, 10)
+            ).to.be.revertedWith('40')
     
             await expect(
-                controller.borrowVerify(fakePool.address, user1.address, user1.address, 10, 5, fakeLoan.address)
-            ).to.be.revertedWith('Call not allowed')
+                controller.connect(user1).borrowVerify(fakePool.address, user1.address, user1.address, 10, 5, fakeLoan.address)
+            ).to.be.revertedWith('40')
 
             await expect(
-                controller.expandBorrowVerify(fakePool.address, fakeLoan.address, 5)
-            ).to.be.revertedWith('Call not allowed')
+                controller.connect(user1).expandBorrowVerify(fakePool.address, fakeLoan.address, 5)
+            ).to.be.revertedWith('40')
     
             await expect(
-                controller.closeBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
-            ).to.be.revertedWith('Call not allowed')
+                controller.connect(user1).closeBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
+            ).to.be.revertedWith('40')
     
             await expect(
-                controller.killBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
-            ).to.be.revertedWith('Call not allowed')
+                controller.connect(user1).killBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
+            ).to.be.revertedWith('40')
         });
 
     });
@@ -386,8 +443,8 @@ describe('Paladin MultiPoolController contract tests', () => {
     
             await controller.connect(user1).addNewPool(fakePool2.address, [fakeToken4.address, fakeToken5.address]);
     
-            const pools = await controller.getPalPools();
-            const tokens_of_pool = await controller.getPalTokens(fakePool2.address)
+            const pools = await controller.getPools();
+            const tokens_of_pool = await controller['getPalTokens(address)'](fakePool2.address)
     
             expect(pools).to.contain(fakePool2.address)
             expect(tokens_of_pool).to.contain(fakeToken4.address)

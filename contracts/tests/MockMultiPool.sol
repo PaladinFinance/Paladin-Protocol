@@ -5,7 +5,7 @@ pragma abicoder v2;
 import "../utils/SafeMath.sol";
 import "../utils/IERC20.sol";
 import "../utils/Admin.sol";
-import "../IPaladinController.sol";
+import "../variants/MultiPalPool/IMultiPoolController.sol";
 import {Errors} from  "../utils/Errors.sol";
 
 contract MockMultiPool is Admin {
@@ -19,7 +19,8 @@ contract MockMultiPool is Admin {
         uint numberActiveLoans;
     }
     mapping (address => PoolState) public poolStates;
-    IPaladinController public controller;
+    IMultiPoolController public controller;
+    bool public lastControllerCallResult;
 
     modifier controllerOnly() {
         require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
@@ -34,7 +35,7 @@ contract MockMultiPool is Admin {
     ){
         admin = msg.sender;
 
-        controller = IPaladinController(_controller);
+        controller = IMultiPoolController(_controller);
         underlyings = _underlyings;
 
         for(uint i = 0; i < _underlyings.length; i++){
@@ -56,6 +57,30 @@ contract MockMultiPool is Admin {
     }
 
     function setNewController(address _newController) external controllerOnly {
-        controller = IPaladinController(_newController);
+        controller = IMultiPoolController(_newController);
+    }
+
+    function testDepositVerify(address palPool, address dest, uint amount) public {
+        lastControllerCallResult = controller.depositVerify(palPool, dest, amount);
+    }
+
+    function testWithdrawVerify(address palPool, address dest, uint amount) public {
+        lastControllerCallResult = controller.withdrawVerify(palPool, dest, amount);
+    }
+
+    function testBorrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanAddress) public {
+        lastControllerCallResult = controller.borrowVerify(palPool, borrower, delegatee, amount, feesAmount, loanAddress);
+    }
+
+    function testExpandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) public {
+        lastControllerCallResult = controller.expandBorrowVerify(palPool, loanAddress, newFeesAmount);
+    }
+
+    function testCloseBorrowVerify(address palPool, address borrower, address loanAddress) public {
+        lastControllerCallResult = controller.closeBorrowVerify(palPool, borrower, loanAddress);
+    }
+
+    function testKillBorrowVerify(address palPool, address killer, address loanAddress) public {
+        lastControllerCallResult = controller.killBorrowVerify(palPool, killer, loanAddress);
     }
 }

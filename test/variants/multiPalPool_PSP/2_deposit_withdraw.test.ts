@@ -56,6 +56,8 @@ describe('MultiPalPool - PSP : 2 - Deposit & Withdraw tests', () => {
     let interest: InterestCalculator
     let psp_token: IERC20
 
+    let fakePalToken: SignerWithAddress
+
     let spsp_token1: ISPSP
     let spsp_token2: ISPSP
     let spsp_token3: ISPSP
@@ -76,7 +78,7 @@ describe('MultiPalPool - PSP : 2 - Deposit & Withdraw tests', () => {
         delegatorFactory = await ethers.getContractFactory("SnapshotDelegator");
         interestFactory = await ethers.getContractFactory("InterestCalculator");
 
-        [admin, user1, user2] = await ethers.getSigners();
+        [admin, user1, user2, fakePalToken] = await ethers.getSigners();
 
 
         psp_token = IERC20__factory.connect(PSP_address, provider);
@@ -450,6 +452,15 @@ describe('MultiPalPool - PSP : 2 - Deposit & Withdraw tests', () => {
             await expect(
                 pool.connect(user1).withdraw(token2.address, paltoken_amount)
             ).to.be.revertedWith('10')
+            
+        });
+
+        
+        it(' should fail if incorrect palToken', async () => {
+
+            await expect(
+                pool.connect(user1).withdraw(fakePalToken.address, paltoken_amount)
+            ).to.be.revertedWith('48')
             
         });
 

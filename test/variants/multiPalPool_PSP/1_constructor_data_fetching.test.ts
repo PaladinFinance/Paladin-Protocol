@@ -162,7 +162,7 @@ describe('MultiPalPool - PSP : 1 - constructor and storage tests', () => {
                     delegator.address,
                     loanToken.address
                 )
-            ).to.be.revertedWith('35')
+            ).to.be.revertedWith('46')
 
             await expect(
                 poolFactory.connect(admin).deploy(
@@ -173,7 +173,7 @@ describe('MultiPalPool - PSP : 1 - constructor and storage tests', () => {
                     delegator.address,
                     loanToken.address
                 )
-            ).to.be.revertedWith('35')
+            ).to.be.revertedWith('46')
             
         });
 
