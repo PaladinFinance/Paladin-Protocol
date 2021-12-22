@@ -2,6 +2,7 @@ import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { PaladinController } from "../../typechain/PaladinController";
+import { ControllerProxy } from "../../typechain/ControllerProxy";
 import { Comp } from "../../typechain/Comp";
 import { MockPalPool } from "../../typechain/MockPalPool";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -11,6 +12,7 @@ chai.use(solidity);
 const { expect } = chai;
 
 let controllerFactory: ContractFactory
+let controllerProxyFactory: ContractFactory
 let mockPoolFactory: ContractFactory
 let erc20Factory: ContractFactory
 
@@ -20,6 +22,7 @@ describe('Paladin Controller contract tests', () => {
     let user1: SignerWithAddress
 
     let controller: PaladinController
+    let proxy: ControllerProxy
 
     let mockPool: MockPalPool
     let underlying: Comp
@@ -34,6 +37,7 @@ describe('Paladin Controller contract tests', () => {
 
     before( async () => {
         controllerFactory = await ethers.getContractFactory("PaladinController");
+        controllerProxyFactory = await ethers.getContractFactory("ControllerProxy");
         mockPoolFactory = await ethers.getContractFactory("MockPalPool");
         erc20Factory = await ethers.getContractFactory("Comp");
     })
@@ -53,6 +57,12 @@ describe('Paladin Controller contract tests', () => {
 
         controller = (await controllerFactory.deploy()) as PaladinController;
         await controller.deployed();
+
+        proxy = (await controllerProxyFactory.deploy()) as ControllerProxy;
+        await proxy.deployed();
+
+        await proxy.proposeImplementation(controller.address);
+        await controller.becomeImplementation(proxy.address);
 
         underlying = (await erc20Factory.connect(admin).deploy(admin.address)) as Comp;
         await underlying.deployed();
@@ -83,6 +93,10 @@ describe('Paladin Controller contract tests', () => {
             expect(pools).not.to.contain(fakePool3.address)
             expect(tokens).not.to.contain(fakeToken3.address)
 
+            expect(await controller.palTokenToPalPool(fakeToken.address)).to.be.eq(fakePool.address)
+            expect(await controller.palTokenToPalPool(fakeToken2.address)).to.be.eq(fakePool2.address)
+            expect(await controller.palTokenToPalPool(fakeToken3.address)).to.be.eq(ethers.constants.AddressZero)
+
             expect(await controller.isPalPool(fakePool.address)).to.be.true;
             expect(await controller.isPalPool(fakePool2.address)).to.be.true;
             expect(await controller.isPalPool(fakePool3.address)).to.be.false;
@@ -99,7 +113,7 @@ describe('Paladin Controller contract tests', () => {
     
             await expect(
                 controller.connect(admin).setInitialPools([fakeToken.address], [fakePool.address])
-            ).to.be.revertedWith('Lists already set')
+            ).to.be.revertedWith('37')
         });
 
     });
@@ -127,6 +141,10 @@ describe('Paladin Controller contract tests', () => {
             expect(await controller.isPalPool(fakePool.address)).to.be.true;
             expect(await controller.isPalPool(fakePool2.address)).to.be.true;
             expect(await controller.isPalPool(fakePool3.address)).to.be.true;
+
+            expect(await controller.palTokenToPalPool(fakeToken.address)).to.be.eq(fakePool.address)
+            expect(await controller.palTokenToPalPool(fakeToken2.address)).to.be.eq(fakePool2.address)
+            expect(await controller.palTokenToPalPool(fakeToken3.address)).to.be.eq(fakePool3.address)
         });
 
         it(' should not add same PalPool (& PalToken) twice', async () => {
@@ -134,7 +152,7 @@ describe('Paladin Controller contract tests', () => {
     
             await expect(
                 controller.connect(admin).addNewPool(fakeToken.address, fakePool.address)
-            ).to.be.revertedWith('Already added')
+            ).to.be.revertedWith('38')
         });
     
         it(' should block non-admin to add PalPool', async () => {
@@ -166,6 +184,10 @@ describe('Paladin Controller contract tests', () => {
             expect(await controller.isPalPool(fakePool.address)).to.be.true;
             expect(await controller.isPalPool(fakePool2.address)).to.be.false;
             expect(await controller.isPalPool(fakePool3.address)).to.be.true;
+
+            expect(await controller.palTokenToPalPool(fakeToken.address)).to.be.eq(fakePool.address)
+            expect(await controller.palTokenToPalPool(fakeToken2.address)).to.be.eq(ethers.constants.AddressZero)
+            expect(await controller.palTokenToPalPool(fakeToken3.address)).to.be.eq(fakePool3.address)
         });
     
         it(' should not remove not-listed PalPool', async () => {
@@ -175,8 +197,8 @@ describe('Paladin Controller contract tests', () => {
     
             await expect(
                 controller.connect(admin).removePool(fakePool3.address),
-                'Not listed'
-            ).to.be.revertedWith('Not listed')
+                '39'
+            ).to.be.revertedWith('39')
         });
     
         it(' should not remove a PalPool twice', async () => {
@@ -187,8 +209,8 @@ describe('Paladin Controller contract tests', () => {
             await controller.connect(admin).removePool(fakePool2.address)
             await expect(
                 controller.connect(admin).removePool(fakePool2.address),
-                'Not listed'
-            ).to.be.revertedWith('Not listed')
+                '39'
+            ).to.be.revertedWith('39')
         });
     
         it(' should block non-admin to remove PalPool', async () => {
@@ -239,36 +261,45 @@ describe('Paladin Controller contract tests', () => {
                 await controller.connect(admin).borrowPossible(mockPool.address, invalidAmount)
             ).to.be.false
 
+
+            await mockPool.testDepositVerify(fakePool.address, user1.address, 10)
             expect(
-                await controller.connect(fakePool.address).depositVerify(fakePool.address, user1.address, 10)
+                await mockPool.lastControllerCallResult()
             ).to.be.true
 
+            await mockPool.testWithdrawVerify(fakePool.address, user1.address, 10)
             expect(
-                await controller.connect(fakePool.address).withdrawVerify(fakePool.address, user1.address, 10)
+                await mockPool.lastControllerCallResult()
             ).to.be.true
 
+            await mockPool.testDepositVerify(fakePool.address, user1.address, 0)
             expect(
-                await controller.connect(fakePool.address).depositVerify(fakePool.address, user1.address, 0)
+                await mockPool.lastControllerCallResult()
             ).to.be.false
 
+            await mockPool.testWithdrawVerify(fakePool.address, user1.address, 0)
             expect(
-                await controller.connect(fakePool.address).withdrawVerify(fakePool.address, user1.address, 0)
+                await mockPool.lastControllerCallResult()
             ).to.be.false
 
+            await mockPool.testBorrowVerify(fakePool.address, user1.address, user1.address, 10, 5, fakeLoan.address)
             expect(
-                await controller.connect(fakePool.address).borrowVerify(fakePool.address, user1.address, user1.address, 10, 5, fakeLoan.address)
+                await mockPool.lastControllerCallResult()
             ).to.be.true
 
+            await mockPool.testExpandBorrowVerify(fakePool.address, fakeLoan.address, 5)
             expect(
-                await controller.connect(fakePool.address).expandBorrowVerify(fakePool.address, fakeLoan.address, 5)
+                await mockPool.lastControllerCallResult()
             ).to.be.true
 
+            await mockPool.testCloseBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
             expect(
-                await controller.connect(fakePool.address).closeBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
+                await mockPool.lastControllerCallResult()
             ).to.be.true
 
+            await mockPool.testKillBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
             expect(
-                await controller.connect(fakePool.address).killBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
+                await mockPool.lastControllerCallResult()
             ).to.be.true
 
         });
@@ -277,27 +308,27 @@ describe('Paladin Controller contract tests', () => {
         it(' should block PalPool functions to be called', async () => {
             await expect(
                 controller.depositVerify(fakePool.address, user1.address, 10)
-            ).to.be.revertedWith('Call not allowed')
+            ).to.be.revertedWith('40')
     
             await expect(
                 controller.withdrawVerify(fakePool.address, user1.address, 10)
-            ).to.be.revertedWith('Call not allowed')
+            ).to.be.revertedWith('40')
     
             await expect(
                 controller.borrowVerify(fakePool.address, user1.address, user1.address, 10, 5, fakeLoan.address)
-            ).to.be.revertedWith('Call not allowed')
+            ).to.be.revertedWith('40')
 
             await expect(
                 controller.expandBorrowVerify(fakePool.address, fakeLoan.address, 5)
-            ).to.be.revertedWith('Call not allowed')
+            ).to.be.revertedWith('40')
     
             await expect(
                 controller.closeBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
-            ).to.be.revertedWith('Call not allowed')
+            ).to.be.revertedWith('40')
     
             await expect(
                 controller.killBorrowVerify(fakePool.address, user1.address, fakeLoan.address)
-            ).to.be.revertedWith('Call not allowed')
+            ).to.be.revertedWith('40')
         });
 
     });

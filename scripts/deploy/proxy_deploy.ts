@@ -22,33 +22,36 @@ const { POOLS } = require(param_file_path);
 let pools: String[] = [];
 let tokens: String[] = [];
 
-
 async function main() {
 
   console.log('Deploying a new Paladin Controller ...')
 
   const deployer = (await hre.ethers.getSigners())[0];
 
-  /*for (let p in POOLS) {
+  for (let p in POOLS) {
     pools.push(POOLS[p].POOL)
     tokens.push(POOLS[p].TOKEN)
-  }*/
+  }
 
+  const Proxy = await ethers.getContractFactory("ControllerProxy");
   const Controller = await ethers.getContractFactory("PaladinController");
 
-  const controller = await Controller.deploy();
-  await controller.deployed();
+  const proxy = await Proxy.deploy();
+  await proxy.deployed();
 
-  //await controller.setInitialPools(tokens, pools);
 
-  console.log('New Paladin Controller Implementation : ')
-  console.log(controller.address)
-  console.log('(need to propose & accept for the Proxy)')
 
-  await controller.deployTransaction.wait(30);
+  await proxy.setInitialPools(tokens, pools);
+
+  console.log('New Paladin Controller (proxy) : ')
+  console.log(proxy.address)
+  console.log('(need to set implementation & accept it)')
+  console.log('(controller address needs to be updated for PalPools & for PalLoanToken)')
+
+  await proxy.deployTransaction.wait(30);
 
   await hre.run("verify:verify", {
-    address: controller.address,
+    address: proxy.address,
     constructorArguments: [],
   });
 
