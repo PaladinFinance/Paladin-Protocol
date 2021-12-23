@@ -97,11 +97,11 @@ describe('Controller Proxy contract tests', () => {
             other_controller = (await controllerFactory.deploy()) as PaladinController;
             await other_controller.deployed();
 
-            await proxy.connect(admin).proposeImplementation(controller.address)
-
         });
     
         it(' should be able to become Implementation (& with correct Events)', async () => {
+
+            await proxy.connect(admin).proposeImplementation(controller.address)
 
             const become_tx = controller.connect(admin).becomeImplementation(proxy.address)
 
@@ -120,6 +120,8 @@ describe('Controller Proxy contract tests', () => {
     
         it(' should only accept pending implementations', async () => {
 
+            await proxy.connect(admin).proposeImplementation(controller.address)
+
             await expect(
                 proxy.connect(fakeImplementation).acceptImplementation()
             ).to.be.revertedWith('35')
@@ -132,9 +134,19 @@ describe('Controller Proxy contract tests', () => {
     
         it(' should only allow admin to call becomeImplementation', async () => {
 
+            await proxy.connect(admin).proposeImplementation(controller.address)
+
             await expect(
                 controller.connect(user).becomeImplementation(proxy.address)
             ).to.be.revertedWith('1')
+
+        });
+    
+        it(' should not be callable by non-implementation', async () => {
+
+            await expect(
+                proxy.connect(user).acceptImplementation()
+            ).to.be.revertedWith('35')
 
         });
 
@@ -231,27 +243,6 @@ describe('Controller Proxy contract tests', () => {
             expect(await proxyWithImpl.isPalPool(fakePool.address)).to.be.true;
             expect(await proxyWithImpl.isPalPool(fakePool2.address)).to.be.false;
             expect(await proxyWithImpl.isPalPool(fakePool3.address)).to.be.true;
-
-        });
-
-    });
-
-    
-    describe('Drop Implementation', async () => {
-    
-        it(' should accept address 0x000...000 as pending implementation', async () => {
-
-            await proxy.connect(admin).proposeImplementation(ethers.constants.AddressZero)
-
-            expect(await proxy.pendingImplementation()).to.be.eq(ethers.constants.AddressZero)
-
-        });
-    
-        it(' should set address 0x000...000 as current implementation', async () => {
-
-            await proxy.connect(admin).acceptImplementation()
-
-            expect(await proxy.currentImplementation()).to.be.eq(ethers.constants.AddressZero)
 
         });
 
