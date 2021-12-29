@@ -23,12 +23,31 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            //runs: 99999,
-            runs: 25000,
+            runs: 999999,
           },
         }
       }
     ],
+    overrides: {
+      "contracts/PalPool.sol" : {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 25000,
+          }
+        }
+      },
+      "contracts/variants/PalPoolStkAave.sol" : {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 25000,
+          }
+        }
+      },
+    },
   },
   contractSizer: {
     alphaSort: true,
