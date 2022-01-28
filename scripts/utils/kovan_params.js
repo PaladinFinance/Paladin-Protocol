@@ -114,6 +114,36 @@ const INTEREST_MODULE_VALUES = {
     JUMP_MULTIPLIER_PER_YEAR: ethers.utils.parseEther('13.25')
 }
 
+const ORACLE_BASE_SOURCE = "0x9326BFA02ADD2366b30bacB125260Af641031331"
+
+const ORACLE_ASSET_LIST = {
+    UNI: {
+        ASSET: "0xFE32e7B30de865882f0DcDA353D40c40969F4531",
+        SOURCE: ethers.constants.AddressZero,
+        SOURCE_USD: "0xDA5904BdBfB4EF12a3955aEcA103F51dc87c7C39"
+    },
+    COMP: {
+        ASSET: "0xB2224F5653b2b5094E465e3f676479763a015916",
+        SOURCE: ethers.constants.AddressZero,
+        SOURCE_USD: "0xECF93D14d25E02bA2C13698eeDca9aA98348EFb6"
+    },
+    AAVE: {
+        ASSET: "0xbeda4e6081E09F7B8dc2b79B33aB1c60bDFa6a0C",
+        SOURCE: "0xd04647B7CB523bb9f26730E9B6dE1174db7591Ad",
+        SOURCE_USD: ethers.constants.AddressZero
+    },
+    STKAAVE: {
+        ASSET: "0xeF89a9C8DF770A8964c339AA1073FB97F13BB943",
+        SOURCE: "0xd04647B7CB523bb9f26730E9B6dE1174db7591Ad",
+        SOURCE_USD: ethers.constants.AddressZero
+    },
+    IDLE: {
+        ASSET: "0xD948412eaD3E12150E6357e2d8c3058933c3f47b",
+        SOURCE: ethers.constants.AddressZero,
+        SOURCE_USD: ethers.constants.AddressZero
+    },
+}
+
 
 //Already deployed contracts : 
 
@@ -154,6 +184,8 @@ const INTEREST_MODULE = "";
 const INTEREST_MODULE_V2 = "0x0A06DfeCBABECAa6887B0D8e680A45E9e86a9838";
 
 const ADDRESS_REGISTRY = "0xD0d13c2790372ca63d5932E59d0c4e88e682D417";
+
+const PRICE_ORACLE = "0x01C7470B4Bd7E25Acc40962B2aa84B423Dc74AeC";
 
 const OLD_DELEGATORS = {
     BASIC_DELEGATOR: "0x60F1604c521dE75B1A1c8Ee48614F08BBd01bD3C",
@@ -231,5 +263,8 @@ module.exports = {
     MULTIPLIER_NAMES,
     INTEREST_MODULE_VALUES,
     MULTIPLIERS,
-    MULTIPLIER_KEYS
+    MULTIPLIER_KEYS,
+    ORACLE_BASE_SOURCE,
+    ORACLE_ASSET_LIST,
+    PRICE_ORACLE
 };
