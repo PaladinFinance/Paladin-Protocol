@@ -1190,4 +1190,76 @@ describe('Paladin Controller - Rewards System tests', () => {
 
     });
 
+
+    describe('withdrawRewardToken', async () => {
+
+        const supplySpeed = ethers.utils.parseEther("0.25")
+
+        const reward_amount = ethers.utils.parseEther('100')
+
+        const reward_withdraw_amount = ethers.utils.parseEther('30')
+
+        const deposit_amount = ethers.utils.parseEther('500')
+
+        beforeEach( async () => {
+            await underlying.connect(admin).transfer(user1.address, deposit_amount)
+            await underlying.connect(user1).approve(pool1.address, deposit_amount)
+
+            await pool1.connect(user1).deposit(deposit_amount)
+            
+            await controller.connect(admin).updatePoolRewards(pool1.address, supplySpeed, 0, true);
+
+            await controller.connect(admin).updateRewardToken(rewardToken.address)
+
+            await rewardToken.connect(admin).transfer(controller.address, reward_amount)
+
+        });
+
+        it(' should allow to withdraw reward tokens', async () => {
+
+            const old_admin_balance = await rewardToken.balanceOf(admin.address)
+            const old_controller_balance = await rewardToken.balanceOf(controller.address)
+
+            await controller.connect(admin).withdrawRewardToken(reward_withdraw_amount, admin.address)
+
+            const new_admin_balance = await rewardToken.balanceOf(admin.address)
+            const new_controller_balance = await rewardToken.balanceOf(controller.address)
+
+            expect(new_admin_balance).to.be.eq(old_admin_balance.add(reward_withdraw_amount))
+            expect(new_controller_balance).to.be.eq(old_controller_balance.sub(reward_withdraw_amount))
+
+        });
+
+        it(' should fail if given incorrect parameters', async () => {
+
+            await expect(
+                controller.connect(admin).withdrawRewardToken(reward_withdraw_amount, ethers.constants.AddressZero)
+            ).to.be.revertedWith('22')
+
+            await expect(
+                controller.connect(admin).withdrawRewardToken(0, admin.address)
+            ).to.be.revertedWith('28')
+
+        });
+
+        it(' should not allow to withdraw more than the current Controller balance', async () => {
+
+            const incorrect_reward_withdraw_amount = ethers.utils.parseEther('120')
+
+            await expect(
+                controller.connect(admin).withdrawRewardToken(incorrect_reward_withdraw_amount, admin.address)
+            ).to.be.revertedWith('4')
+
+        });
+
+        it(' should only be allowed for admin', async () => {
+
+            await expect(
+                controller.connect(user1).withdrawRewardToken(reward_withdraw_amount, admin.address)
+            ).to.be.revertedWith('1')
+
+        });
+
+    });
+
 });

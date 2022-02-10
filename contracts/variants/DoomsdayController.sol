@@ -20,6 +20,7 @@ import "../utils/IERC20.sol";
 /// @author Paladin
 contract DoomsdayController is IPaladinController, ControllerStorage {
     using SafeMath for uint;
+    using SafeERC20 for IERC20;
 
     constructor(){
         admin = msg.sender;
@@ -530,6 +531,18 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
     function updateRewardToken(address newRewardTokenAddress) external override adminOnly {
         rewardTokenAddress = newRewardTokenAddress;
+    }
+
+    // Allows to withdraw reward tokens from the Controller if rewards are removed or changed
+    function withdrawRewardToken(uint256 amount, address recipient) external override adminOnly {
+        require(recipient != address(0), Errors.ZERO_ADDRESS);
+        require(amount > 0, Errors.INVALID_PARAMETERS);
+
+        IERC20 token = IERC20(rewardToken());
+
+        require(amount <= token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+
+        token.safeTransfer(recipient, amount);
     }
 
     function setPoolsNewController(address _newController) external override adminOnly returns(bool){
