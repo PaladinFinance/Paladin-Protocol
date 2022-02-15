@@ -386,6 +386,23 @@ describe('PalPool : 4 - Admin functions tests', () => {
         });
 
 
+        it(' should fail if not enough cash in the Pool', async () => {
+
+            const user1_palToken_balance = await pool.balanceOf(user1.address)
+
+            await pool.connect(user1).withdraw(user1_palToken_balance)
+
+            const accruedFeesAmount = await pool.accruedFees()
+            const reserveAmount = await pool.totalReserve()
+
+            await pool.connect(admin).removeReserve(reserveAmount)
+
+            await expect(
+                pool.connect(admin).withdrawFees(accruedFeesAmount, admin.address)
+            ).to.be.reverted
+        });
+
+
         it(' should only be callable by admin & controller', async () => {
 
             await expect(
