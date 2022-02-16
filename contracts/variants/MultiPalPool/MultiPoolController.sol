@@ -633,6 +633,18 @@ contract MultiPoolController is IMultiPoolController, MultiControllerStorage {
         rewardTokenAddress = newRewardTokenAddress;
     }
 
+    // Allows to withdraw reward tokens from the Controller if rewards are removed or changed
+    function withdrawRewardToken(uint256 amount, address recipient) external override adminOnly {
+        require(recipient != address(0), Errors.ZERO_ADDRESS);
+        require(amount > 0, Errors.INVALID_PARAMETERS);
+
+        IERC20 token = IERC20(rewardToken());
+
+        require(amount <= token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+
+        token.safeTransfer(recipient, amount);
+    }
+
 
     function setPoolsNewController(address _newController) external adminOnly override returns(bool){
         address[] memory _pools = pools;

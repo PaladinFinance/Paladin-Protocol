@@ -66,6 +66,7 @@ interface IMultiPoolController {
     //Admin functions
     function becomeImplementation(ControllerProxy proxy) external;
     function updateRewardToken(address newRewardTokenAddress) external;
+    function withdrawRewardToken(uint256 amount, address recipient) external;
     function updateTokenSupplySpeed(address multiPool, address palToken, uint newSupplySpeed) external;
     function updatePoolBorrowRatio(address multiPool, uint newBorrowRatio) external;
     function setPoolsNewController(address newController) external returns(bool);
