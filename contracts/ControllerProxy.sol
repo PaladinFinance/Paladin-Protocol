@@ -41,7 +41,7 @@ contract ControllerProxy is ControllerStorage {
      * Only callable by the Pending Implementation contract
      */
     function acceptImplementation() public returns(bool) {
-        require(msg.sender == pendingImplementation || pendingImplementation == address(0), Errors.CALLER_NOT_IMPLEMENTATION);
+        require(msg.sender == pendingImplementation, Errors.CALLER_NOT_IMPLEMENTATION);
 
         address oldImplementation = currentImplementation;
         address oldPendingImplementation = pendingImplementation;

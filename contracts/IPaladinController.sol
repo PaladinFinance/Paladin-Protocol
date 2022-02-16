@@ -64,6 +64,7 @@ interface IPaladinController {
     //Admin functions
     function becomeImplementation(ControllerProxy proxy) external;
     function updateRewardToken(address newRewardTokenAddress) external;
+    function withdrawRewardToken(uint256 amount, address recipient) external;
     function updatePoolRewards(address palPool, uint newSupplyspeed, uint newBorrowRatio, bool autoBorrowReward) external;
     function setPoolsNewController(address newController) external returns(bool);
     function withdrawFromPool(address pool, uint amount, address recipient) external returns(bool);
