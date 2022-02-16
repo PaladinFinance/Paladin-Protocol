@@ -104,13 +104,23 @@ contract MultiPalPoolPSP is IMultiPalPool, MultiPalPoolStorage, Admin, Reentranc
     }
 
     /**
-    * @notice Get the underlying balance for this Pool for a given underlying
-    * @dev Get the underlying balance of this Pool for a given underlying
+    * @notice Get the PSP balance for this Pool for a given underlying
+    * @dev Get the PSP balance of this Pool for a given underlying
+    * @return uint : balance of this pool
+    */
+    function pspBalance(address _underlying) public view override returns(uint){
+        //Return the balance of this contract in PSP, for the given sPSP underlying
+        return ISPSP(_underlying).PSPBalance(address(this));
+    }
+
+    /**
+    * @notice Get the sPSP balance for this Pool for a given underlying
+    * @dev Get the sPSP balance for this Pool for a given sPSP Pool
     * @return uint : balance of this pool
     */
     function underlyingBalance(address _underlying) public view override returns(uint){
         //Return the balance of this contract, for the given sPSP underlying
-        return ISPSP(_underlying).PSPBalance(address(this));
+        return IERC20(_underlying).balanceOf(address(this));
     }
 
     /**
@@ -528,7 +538,7 @@ contract MultiPalPoolPSP is IMultiPalPool, MultiPalPoolStorage, Admin, Reentranc
 
 
     /**
-    * @notice Return the corresponding balance of the pool underlying tokens depending on the user's palToken balances
+    * @notice Return the corresponding balance of the pool underlying tokens depending on the user's palToken balances (in PSP)
     * @param _account User address
     * @return uint256 : corresponding balance in the PSP token (in wei)
     */
@@ -536,18 +546,18 @@ contract MultiPalPoolPSP is IMultiPalPool, MultiPalPoolStorage, Admin, Reentranc
         uint _total;
 
         for(uint i = 0; i < underlyings.length; i++){
-            _total = _total.add(_underlyingBalanceOf(underlyings[i], _account));
+            _total = _total.add(_pspBalanceOf(underlyings[i], _account));
         }
 
         return _total;
     }
 
 
-    function underlyingBalanceOf(address _underlying, address _account) external view override returns(uint){
-        return _underlyingBalanceOf(_underlying, _account);
+    function pspBalanceOf(address _underlying, address _account) external view override returns(uint){
+        return _pspBalanceOf(_underlying, _account);
     }
 
-    function _underlyingBalanceOf(address _underlying, address _account) internal view returns(uint){
+    function _pspBalanceOf(address _underlying, address _account) internal view returns(uint){
         uint _balance = palTokens[_underlying].balanceOf(_account);
         if(_balance == 0){
             return 0;
@@ -557,6 +567,18 @@ contract MultiPalPoolPSP is IMultiPalPool, MultiPalPoolStorage, Admin, Reentranc
         uint _sPSPBalance =  _num.div(mantissaScale);
 
         return ISPSP(address(_underlying)).PSPForSPSP(_sPSPBalance);
+    }
+
+    function underlyingBalanceOf(address _underlying, address _account) external view override returns(uint){
+        uint _balance = palTokens[_underlying].balanceOf(_account);
+        if(_balance == 0){
+            return 0;
+        }
+        uint _exchRate = _exchangeRate(address(palTokens[_underlying]));
+        uint _num = _balance.mul(_exchRate);
+        uint _sPSPBalance =  _num.div(mantissaScale);
+
+        return _sPSPBalance;
     }
 
 

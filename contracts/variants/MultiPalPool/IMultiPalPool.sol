@@ -80,9 +80,11 @@ interface IMultiPalPool {
 
     function underlyingBalance() external view returns(uint);
     function underlyingBalance(address _underlying) external view returns(uint);
+    function pspBalance(address _underlying) external view returns(uint);
     function balanceOf(address _palToken, address _account) external view returns(uint);
     function underlyingBalanceOf(address _account) external view returns(uint);
     function underlyingBalanceOf(address _underlying, address _account) external view returns(uint);
+    function pspBalanceOf(address _underlying, address _account) external view returns(uint);
 
     function isLoanOwner(address _loanAddress, address _user) external view returns(bool);
     function idOfLoan(address _loanAddress) external view returns(uint256);
