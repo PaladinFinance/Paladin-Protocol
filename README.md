@@ -75,7 +75,7 @@ To deploy some contracts only, see the scripts in [scripts/deploy](https://githu
 ## Security & Audit
 
 
-On-going
+[Audit](https://github.com/PaladinFinance/Paladin-Protocol/blob/main/audit/Paladin%20Security%20Analysis.pdf) by Pessimistic
 
 
 ## Ressources
