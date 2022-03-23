@@ -216,6 +216,74 @@ const MULTIPLIERS = {
 }
 
 
+
+// ------------- MultiPool Part ----------------------
+
+const MULTI_CONTROLLER = ""
+
+const MULTI_LOAN_TOKEN = ""
+
+const MULTI_PSP_UNDERLYING = [
+    "0x55A68016910A7Bcb0ed63775437e04d2bB70D570", // sPSP1
+    "0xea02DF45f56A690071022c45c95c46E7F61d3eAb", // sPSP3
+    "0x6b1D394Ca67fDB9C90BBd26FE692DdA4F4f53ECD", // sPSP4
+    "0x37b1E4590638A266591a9C11d6f945fe7A1adAA7", // sPSP7
+    "0x03C1EafF32c4bd67ee750AB75Ce85BA7e5Aa65fB", // sPSP8
+    "0xC3359DbdD579A3538Ea49669002e8E8eeA191433", // sPSP9
+    "0x36d69afE2194F9A1756ba1956CE2e0287A40F671", // sPSP10
+]
+
+const MULTI_PSP_PALTOKENS_PARAMS = [
+    {
+        NAME: 'Paladin sPSP1',
+        SYMBOL: 'palsPSP1',
+    },
+    {
+        NAME: 'Paladin sPSP3',
+        SYMBOL: 'palsPSP3',
+    },
+    {
+        NAME: 'Paladin sPSP4',
+        SYMBOL: 'palsPSP4',
+    },
+    {
+        NAME: 'Paladin sPSP7',
+        SYMBOL: 'palsPSP7',
+    },
+    {
+        NAME: 'Paladin sPSP8',
+        SYMBOL: 'palsPSP8',
+    },
+    {
+        NAME: 'Paladin sPSP9',
+        SYMBOL: 'palsPSP9',
+    },
+    {
+        NAME: 'Paladin sPSP10',
+        SYMBOL: 'palsPSP10',
+    },
+]
+
+const MULTI_PSP_PALTOKENS = [
+    "", // palsPSP1
+    "", // palsPSP3
+    "", // palsPSP3
+    "", // palsPSP7
+    "", // palsPSP8
+    "", // palsPSP9
+    "", // palsPSP10
+]
+
+const MULTI_POOL_PSP_PARAMS = {
+    UNDERLYINGS: MULTI_PSP_UNDERLYING,
+    PALTOKENS: MULTI_PSP_PALTOKENS,
+    DELEGATOR: 'SNAPSHOT_DELEGATOR',
+    MUTIPLIER: 'NONE'
+}
+
+// ----------------------------------------------------
+
+
 module.exports = {
     TOKENS,
     DELEGATOR_NAMES,

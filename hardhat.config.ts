@@ -56,18 +56,45 @@ const config: HardhatUserConfig = {
           }
         }
       },
+      "contracts/variants/MultiPalPool/MultiPalPoolPSP.sol" : {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          }
+        }
+      },
+      "contracts/variants/MultiPalPool/MultiPoolController.sol" : {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          }
+        }
+      },
+      "contracts/PalToken.sol" : {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          }
+        }
+      },
     },
   },
   contractSizer: {
     alphaSort: true,
-    runOnCompile: false,
+    runOnCompile: true,
     disambiguatePaths: false,
   },
   networks: {
     hardhat: {
       forking: {
         url: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
-        blockNumber: 12908431
+        blockNumber: 13671700
       }
     },
     kovan: {
@@ -91,6 +118,9 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MAINNET_MNEMONIC,
       },*/
     },
+  },
+  mocha: {
+    timeout: 0
   },
   etherscan: {
     // Your API key for Etherscan

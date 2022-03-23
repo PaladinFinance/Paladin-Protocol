@@ -49,7 +49,6 @@ library Errors {
     string public constant FAIL_LOAN_TOKEN_BURN = '33';
     string public constant FEES_ACCRUED_INSUFFICIENT = '34';
 
-
     //Controller errors
     string public constant LIST_SIZES_NOT_EQUAL = '36';
     string public constant POOL_LIST_ALREADY_SET = '37';
@@ -61,4 +60,11 @@ library Errors {
     string public constant INSUFFICIENT_DEPOSITED = '43';
     string public constant NOT_CLAIMABLE = '44';
     string public constant LOCKED = '45';
+    
+    // MultiPool Errors
+    string public constant INEQUAL_ARRAYS = '46';
+    string public constant UNDERLYING_NOT_LISTED = '47';
+    string public constant PALTOKEN_NOT_LISTED = '48';
+    string public constant PALTOKEN_ALREADY_LISTED = '49';
+    string public constant EMPTY_LIST = '50';
 }
