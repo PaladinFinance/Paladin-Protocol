@@ -7,6 +7,7 @@
                                                      
 
 pragma solidity ^0.7.6;
+pragma abicoder v2;
 //SPDX-License-Identifier: MIT
 
 import "./utils/SafeMath.sol";
@@ -16,6 +17,7 @@ import "./ControllerProxy.sol";
 import "./PalPool.sol";
 import "./IPalPool.sol";
 import "./IPalToken.sol";
+import "./interfaces/IhPAL.sol";
 import "./utils/IERC20.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/Errors.sol";
@@ -386,11 +388,14 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
         // If an update is needed : block ellapsed & non-null speed (rewards to distribute)
         if(ellapsedBlocks > 0 && supplySpeed > 0){
+            // We now use a multiplier, so reduce the basic rewards, to later apply a multiplier on it
+            uint baseSupplySpeed = supplySpeed.mul(1e18).div(maxTotalBonusRatio);
+
             // Get the Total Amount deposited in the Controller of PalToken associated to the Pool
             uint totalDeposited = totalSupplierDeposits[palPool];
 
             // Calculate the amount of rewards token accrued since last update
-            uint accruedAmount = ellapsedBlocks.mul(supplySpeed);
+            uint accruedAmount = ellapsedBlocks.mul(baseSupplySpeed);
 
             // And the new ratio for reward distribution to user
             // Based on the amount of rewards accrued, and the change in the TotalSupply
@@ -404,6 +409,142 @@ contract PaladinController is IPaladinController, ControllerStorage {
             // If blocks ellapsed, but no rewards to distribute (speed == 0),
             // just write the last update block number
             state.blockNumber = safe32(currentBlock);
+        }
+
+    }
+
+    function getUserBonusRatio(
+        address user,
+        SupplierRewardUpdate calldata lastUpdate
+    ) internal view returns(uint256){
+        // BonusRatio system wasn't initialized
+        if(newRewardsStartBlockNumber.blockNumber == 0) return baseRatio;
+
+        uint256 currentTime = block.timestamp;
+        uint256 timeDiff = currentTime.sub(lastUpdate.timestamp);
+
+        // fetch last update Lock
+        IhPAL.UserLock memory lastUpdateUserLock = hPAL().getUserPastLock(user, lastUpdate.blockNumber);
+
+        // fetch current Lock
+        IhPAL.UserLock memory currentUserLock = hPAL().getUserLock(user);
+
+
+        // if previous Lock is same as current Lock
+        // get bonusRatio for previous and current
+        // get the tempBonusRatio for that period => return it directly
+        if(lastUpdateUserLock.fromBlock == currentUserLock.fromBlock){
+            // Both Locks (previous & current) are empty
+            if(currentUserLock.duration == 0) return baseRatio;
+
+            // Since both Locks should be the same (updated from the same block)
+            uint256 currentLockEndTimestamp = uint256(currentUserLock.startTimestamp).add(currentUserLock.duration);
+            // If the Lock we fetch are too old, expired, empty, or there is an issue within the Lock system
+            // (we just check the current one since we checked that the previous one was the same)
+            if(currentLockEndTimestamp < lastUpdate.timestamp
+                || currentLockEndTimestamp < currentTime
+            ) return baseRatio;
+
+            // We can use the currentLockEndTimestamp for both since we checked previously that the Locks were the same
+            uint256 previousBonusRatio = bonusRatioPerLockMonth.mul(
+                (currentLockEndTimestamp.sub(lastUpdate.timestamp)).div(MONTH).add(1)
+            );
+
+            uint256 currentBonusRatio = bonusRatioPerLockMonth.mul(
+                (currentLockEndTimestamp.sub(currentTime)).div(MONTH).add(1)
+            );
+
+            uint256 periodBonusRatio = currentBonusRatio.add(previousBonusRatio).add(bonusRatioPerLockMonth).div(2);
+
+            return periodBonusRatio;
+        }
+        else{
+            // if Locks are different
+
+            uint256 previousLockEndTimestamp = uint256(lastUpdateUserLock.startTimestamp).add(lastUpdateUserLock.duration);
+            // If the Locks we fetch are too old, expired, empty, or there is an issue within the Lock system 
+            if(currentUserLock.startTimestamp > currentTime 
+                || previousLockEndTimestamp < lastUpdate.timestamp
+                || currentUserLock.startTimestamp < lastUpdate.timestamp
+            ){
+                return baseRatio;
+            }
+
+            // prepare sum of ratios
+            uint256 sumBonusRatios;
+
+            // if previous Lock not null
+            // get mult for last update to end lock/lock update
+            // (need to check diff between the 2 locks + remaining duration of previous Lock)
+            // if no empty lock in between, get ratio for pervious update & lock update, get a tempRatio for that
+            // if Lock then empty lock, do tempRatio for previous update to lock end, and add another tampRatio at 1 for remaining period
+            // if empty Lock, do tempRatio at 1 from lastUpdate to current Lock start
+            uint256 tempBonusRatio;
+            if(lastUpdateUserLock.duration == 0){
+                tempBonusRatio = (uint256(lastUpdateUserLock.startTimestamp).sub(lastUpdate.timestamp)).mul(baseRatio);
+            }
+            else if(previousLockEndTimestamp < lastUpdateUserLock.startTimestamp) {
+                uint256 previousLockTimeRemaining = previousLockEndTimestamp.sub(lastUpdate.timestamp);
+                uint256 previousUpdateTimeDiff = uint256(currentUserLock.startTimestamp).sub(lastUpdate.timestamp);
+
+                // In case the Previous Lock remaining duration we consider is bigger than
+                // the time missing for the BonusRatio update
+                if(previousUpdateTimeDiff < previousLockTimeRemaining) return baseRatio;
+
+                uint256 startPreviousBonusRatio = bonusRatioPerLockMonth.mul(
+                    (uint256(lastUpdateUserLock.startTimestamp).add(lastUpdateUserLock.duration).sub(lastUpdate.timestamp)).div(MONTH).add(1)
+                );
+
+                uint256 endPreviousBonusRatio = bonusRatioPerLockMonth.mul(
+                    (uint256(lastUpdateUserLock.startTimestamp).add(lastUpdateUserLock.duration).sub(lastUpdateUserLock.startTimestamp)).div(MONTH).add(1)
+                );
+
+                tempBonusRatio = (endPreviousBonusRatio.add(startPreviousBonusRatio).add(bonusRatioPerLockMonth).div(2)).mul(previousLockTimeRemaining);
+
+                tempBonusRatio = tempBonusRatio.add(
+                    (previousUpdateTimeDiff.sub(previousLockTimeRemaining)).mul(baseRatio)
+                );
+            }
+            else {
+                uint256 previousLockTimeDiff = uint256(currentUserLock.startTimestamp).sub(lastUpdate.timestamp);
+
+                uint256 startPreviousBonusRatio = bonusRatioPerLockMonth.mul(
+                    (uint256(lastUpdateUserLock.startTimestamp).add(lastUpdateUserLock.duration).sub(lastUpdate.timestamp)).div(MONTH).add(1)
+                );
+
+                uint256 endPreviousBonusRatio = bonusRatioPerLockMonth.mul(
+                    (previousLockEndTimestamp.sub(currentUserLock.startTimestamp)).div(MONTH).add(1)
+                );
+                tempBonusRatio = (endPreviousBonusRatio.add(startPreviousBonusRatio).add(bonusRatioPerLockMonth).div(2)).mul(previousLockTimeDiff);
+            }
+
+            sumBonusRatios = sumBonusRatios.add(tempBonusRatio);
+
+
+            // For current Lock
+            // if empty Lock, do tempRatio of 1 from Lock update to current timestamp
+            // if normal Lock, do tempRatio from Lock start to current timestamp
+            uint256 currentLockTimeDiff = currentTime.sub(currentUserLock.startTimestamp);
+            tempBonusRatio = 0;
+            if(currentUserLock.duration == 0){
+                tempBonusRatio = currentLockTimeDiff.mul(baseRatio);
+            }
+            else {
+                uint256 startCurrentBonusRatio = bonusRatioPerLockMonth.mul(currentUserLock.duration);
+
+                uint256 endCurrentBonusRatio = bonusRatioPerLockMonth.mul(
+                    (uint256(currentUserLock.startTimestamp).add(currentUserLock.duration).sub(currentTime)).div(MONTH).add(1)
+                );
+                tempBonusRatio = (endCurrentBonusRatio.add(startCurrentBonusRatio).add(bonusRatioPerLockMonth).div(2)).mul(currentLockTimeDiff);
+            }
+
+            sumBonusRatios = sumBonusRatios.add(tempBonusRatio);
+
+
+            // Take all tempRatio (that were mult by amount of seconds they cover), and divide by time diff since last update
+            // Gives a period tempRatio, to return
+            return sumBonusRatios.div(timeDiff);
+
         }
 
     }
@@ -425,6 +566,24 @@ contract PaladinController is IPaladinController, ControllerStorage {
         // Update the Index in the mapping, the local value is used after
         supplierRewardIndex[palPool][user] = currentSupplyIndex;
 
+        SupplierRewardUpdate memory userLastUpdate = supplierLastUpdate[palPool][user];
+
+        if(userLastUpdate.blockNumber == 0 && newRewardsStartBlockNumber.blockNumber != 0){
+            if(userSupplyIndex == 0 && currentSupplyIndex >= initialRewardsIndex){
+                // New user depositing, we use current block as last update
+                userLastUpdate = SupplierRewardUpdate(
+                    safe32(block.number),
+                    safe48(block.timestamp)
+                );
+            }
+            else{
+                // If the user has currently deposited
+                userLastUpdate = newRewardsStartBlockNumber;
+            }
+        }
+        supplierLastUpdate[palPool][user].blockNumber = safe32(block.number);
+        supplierLastUpdate[palPool][user].timestamp = safe48(block.timestamp);
+
         if(userSupplyIndex == 0 && currentSupplyIndex >= initialRewardsIndex){
             // Set the initial Index for the user
             userSupplyIndex = initialRewardsIndex;
@@ -438,10 +597,26 @@ contract PaladinController is IPaladinController, ControllerStorage {
             // we can get how much rewards where accrued
             uint userBalance = supplierDeposits[palPool][user];
 
-            uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+            IhPAL _hPal = hPAL();
 
-            // Add the new amount of rewards to the user total claimable balance
-            accruedRewards[user] = accruedRewards[user].add(userAccruedRewards);
+            if(_hPal.getUserLockCount(user) > 0){
+                uint userCurrentBonusRatio = 0;
+
+                // If user never had a Lock, we keep the basic logic for rewards
+                uint userAccruedRewards = userBalance.mul(
+                    indexDiff.mul(userCurrentBonusRatio).div(1e18)
+                ).div(1e36);
+
+                // Add the new amount of rewards to the user total claimable balance
+                accruedRewards[user] = accruedRewards[user].add(userAccruedRewards);
+            }
+            else {
+                // If user never had a Lock, we keep the basic logic for rewards
+                uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+
+                // Add the new amount of rewards to the user total claimable balance
+                accruedRewards[user] = accruedRewards[user].add(userAccruedRewards);
+            }
         }
 
     }
@@ -642,10 +817,15 @@ contract PaladinController is IPaladinController, ControllerStorage {
     }
 
 
+    /** @notice hPAL contract */
+    function hPAL() public view returns(IhPAL) {
+        return IhPAL(rewardToken()); //put hPAL here
+    }
+
 
     /** @notice Address of the reward Token (PAL token) */
     function rewardToken() public view returns(address) {
-        return rewardTokenAddress;
+        return rewardTokenAddress; //put hPAL here
     }
         
     
@@ -717,6 +897,14 @@ contract PaladinController is IPaladinController, ControllerStorage {
         emit PoolRewardsUpdated(palPool, newSupplySpeed, newBorrowRatio, autoBorrowReward);
     }
 
+    function startBonusRatio() external adminOnly {
+        require(newRewardsStartBlockNumber.blockNumber == 0, "Already started");
+        newRewardsStartBlockNumber = SupplierRewardUpdate(
+            safe32(block.number),
+            safe48(block.timestamp)
+        );
+    }
+
 
 
     //Math utils
@@ -724,6 +912,11 @@ contract PaladinController is IPaladinController, ControllerStorage {
     function safe224(uint n) internal pure returns (uint224) {
         require(n < 2**224, "Number is over 224 bits");
         return uint224(n);
+    }
+
+    function safe48(uint n) internal pure returns (uint48) {
+        require(n < 2**48, "Number is over 48 bits");
+        return uint48(n);
     }
 
     function safe32(uint n) internal pure returns (uint32) {

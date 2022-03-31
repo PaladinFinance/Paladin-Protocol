@@ -79,6 +79,34 @@ contract ControllerStorage is Admin {
     bool internal locked;
 
     /*
+        Paladin Controller update V2
+    */
+
+    /** @notice Seconds in a Month */
+    uint256 public constant MONTH = 2629800;
+
+    /** @notice Minimum duration of a Lock  */
+    uint256 public constant MIN_LOCK_DURATION = 7889400; // 3 months
+    /** @notice Maximum duration of a Lock  */
+    uint256 public constant MAX_LOCK_DURATION = 63115200; // 2 years
+
+    uint256 public baseRatio = 1e18;
+    
+    uint256 public bonusRatioPerLockMonth = 0.0625 * 1e18;
+
+    uint256 public maxTotalBonusRatio = 2.5 * 1e18;
+
+    struct SupplierRewardUpdate {
+        uint32 blockNumber;
+        uint48 timestamp;
+    }
+
+    SupplierRewardUpdate public newRewardsStartBlockNumber;
+
+    /** PalPool => User => Index */
+    mapping(address => mapping(address => SupplierRewardUpdate)) public supplierLastUpdate;
+
+    /*
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!! ALWAYS PUT NEW STORAGE AT THE BOTTOM !!!!!!!!!!!!!!!!!!
