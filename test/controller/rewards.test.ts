@@ -8,11 +8,17 @@ import { PalPool } from "../../typechain/PalPool";
 import { PalLoanToken } from "../../typechain/PalLoanToken";
 import { InterestCalculator } from "../../typechain/InterestCalculator";
 import { BasicDelegator } from "../../typechain/BasicDelegator";
+import { IERC20 } from "../../typechain/IERC20";
+import { IERC20__factory } from "../../typechain/factories/IERC20__factory";
+import { IhPAL } from "../../typechain/IhPAL";
+import { IhPAL__factory } from "../../typechain/factories/IhPAL__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
+import { getERC20 } from "../utils/getERC20";
 
 chai.use(solidity);
 const { expect } = chai;
+const { provider } = ethers;
 
 const mantissa = ethers.utils.parseEther('1')
 const doubleMantissa = ethers.utils.parseEther('1000000000000000000')
@@ -25,6 +31,11 @@ let tokenFactory: ContractFactory
 let delegatorFactory: ContractFactory
 let interestFactory: ContractFactory
 let palLoanTokenFactory: ContractFactory
+
+const hPAL_address = "0x624D822934e87D3534E435b83ff5C19769Efd9f6"
+
+const PAL_address = "0xAB846Fb6C81370327e784Ae7CbB6d6a6af6Ff4BF"
+const PAL_holder = "0x0792dcb7080466e4bbc678bdb873fe7d969832b8"
 
 
 describe('Paladin Controller - Rewards System tests', () => {
@@ -43,7 +54,8 @@ describe('Paladin Controller - Rewards System tests', () => {
     let delegator: BasicDelegator
     let interest: InterestCalculator
     let underlying: Comp
-    let rewardToken: Comp
+
+    let rewardToken: IERC20
 
     let fakeLoan: SignerWithAddress
 
@@ -62,16 +74,6 @@ describe('Paladin Controller - Rewards System tests', () => {
     }
 
     before( async () => {
-        controllerFactory = await ethers.getContractFactory("PaladinController");
-        erc20Factory = await ethers.getContractFactory("Comp");
-        tokenFactory = await ethers.getContractFactory("PalToken");
-        palLoanTokenFactory = await ethers.getContractFactory("PalLoanToken");
-        poolFactory = await ethers.getContractFactory("PalPool");
-        delegatorFactory = await ethers.getContractFactory("BasicDelegator");
-        interestFactory = await ethers.getContractFactory("InterestCalculator");
-    })
-
-    beforeEach( async () => {
         [
             admin,
             user1,
@@ -79,6 +81,31 @@ describe('Paladin Controller - Rewards System tests', () => {
             user3,
             fakeLoan
         ] = await ethers.getSigners();
+
+        controllerFactory = await ethers.getContractFactory("PaladinController");
+        erc20Factory = await ethers.getContractFactory("Comp");
+        tokenFactory = await ethers.getContractFactory("PalToken");
+        palLoanTokenFactory = await ethers.getContractFactory("PalLoanToken");
+        poolFactory = await ethers.getContractFactory("PalPool");
+        delegatorFactory = await ethers.getContractFactory("BasicDelegator");
+        interestFactory = await ethers.getContractFactory("InterestCalculator");
+
+        const rewards_amount = ethers.utils.parseEther('1000000')
+
+        const PAL = IERC20__factory.connect(PAL_address, provider);
+
+        const hPAL = IhPAL__factory.connect(hPAL_address, provider);
+        rewardToken = IERC20__factory.connect(hPAL_address, provider);
+
+        await getERC20(admin, PAL_holder, PAL, admin.address, rewards_amount)
+
+        await PAL.connect(admin).approve(hPAL.address, rewards_amount)
+
+        await hPAL.connect(admin).stake(rewards_amount)
+
+    })
+
+    beforeEach( async () => {
 
         controller = (await controllerFactory.deploy()) as PaladinController;
 
