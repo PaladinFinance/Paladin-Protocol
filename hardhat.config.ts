@@ -23,7 +23,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 999999,
+            runs: 200,
           },
         }
       }
@@ -38,7 +38,25 @@ const config: HardhatUserConfig = {
           }
         }
       },
+      "contracts/PalToken.sol" : {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 25000,
+          }
+        }
+      },
       "contracts/variants/PalPoolStkAave.sol" : {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 99999,
+          }
+        }
+      },
+      "contracts/variants/PalPoolhPal.sol" : {
         version: "0.7.6",
         settings: {
           optimizer: {
@@ -105,7 +123,7 @@ const config: HardhatUserConfig = {
     target: "ethers-v5"
   },
   gasReporter: {
-    enabled: false
+    enabled: true
   }
 };
 
