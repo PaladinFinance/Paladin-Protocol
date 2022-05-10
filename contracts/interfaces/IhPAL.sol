@@ -22,7 +22,17 @@ interface IhPAL {
 
     function getUserPastLock(address user, uint256 blockNumber) external view returns(UserLock memory);
 
+    function getCurrentVotes(address user) external view returns(uint256);
+
+    function getPastVotes(address user) external view returns(uint256);
+
     function estimateClaimableRewards(address user) external view returns(uint256);
+
+    function userRewardIndex(address user) external view returns (uint256);
+
+    function rewardsLastUpdate(address user) external view returns (uint256);
+
+    function pal() external view returns(address);
 
 
     function stake(uint256 amount) external returns(uint256);
