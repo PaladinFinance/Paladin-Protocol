@@ -16,7 +16,7 @@ import "../../utils/Admin.sol";
 
 /** @title Multiplier Calculator for Index Coop Governance  */
 /// @author Paladin
-contract GovernorMultiplier is IMultiplierCalculator, Admin {
+contract IndexMultiplier is IMultiplierCalculator, Admin {
     using SafeMath for uint256;
 
     address[] public pools;
