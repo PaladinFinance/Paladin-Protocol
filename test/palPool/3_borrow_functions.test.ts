@@ -814,7 +814,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await mineBlocks(170)
 
-            pool.connect(user2).killBorrow(loan_address)
+            await pool.connect(user2).killBorrow(loan_address)
 
             const loan_data = await pool.getBorrowData(loan_address)
 
