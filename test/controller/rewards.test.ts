@@ -1289,4 +1289,111 @@ describe('Paladin Controller - Rewards System tests', () => {
 
     });
 
+    describe('withdrawToken', async () => {
+
+        const lost_amount = ethers.utils.parseEther('500')
+
+        const supplySpeed = ethers.utils.parseEther("0.25")
+
+        const reward_amount = ethers.utils.parseEther('100')
+
+        const withdraw_amount = ethers.utils.parseEther('30')
+
+        const deposit_amount = ethers.utils.parseEther('500')
+        const stake_amount = ethers.utils.parseEther('100')
+
+        const other_token_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F" //DAI
+        const other_token_holder = "0xE78388b4CE79068e89Bf8aA7f218eF6b9AB0e9d0"
+
+        let other_token: IERC20
+
+        beforeEach( async () => {
+            other_token = IERC20__factory.connect(other_token_address, provider);
+
+            await getERC20(admin, other_token_holder, other_token, admin.address, lost_amount)
+
+            await underlying.connect(admin).transfer(user1.address, deposit_amount)
+            await underlying.connect(user1).approve(pool1.address, deposit_amount)
+
+            await pool1.connect(user1).deposit(deposit_amount)
+            
+            await controller.connect(admin).updatePoolRewards(pool1.address, supplySpeed, 0, true);
+
+            await controller.connect(admin).updateRewardToken(rewardToken.address)
+
+            await other_token.connect(admin).transfer(controller.address, lost_amount)
+
+            await token1.connect(user1).approve(controller.address, stake_amount)
+
+            await controller.connect(user1).deposit(token1.address, stake_amount)
+
+        });
+
+        it(' should allow to withdraw tokens', async () => {
+
+            const old_admin_balance = await other_token.balanceOf(admin.address)
+            const old_controller_balance = await other_token.balanceOf(controller.address)
+
+            await controller.connect(admin).withdrawToken(other_token.address, withdraw_amount, admin.address)
+
+            const new_admin_balance = await other_token.balanceOf(admin.address)
+            const new_controller_balance = await other_token.balanceOf(controller.address)
+
+            expect(new_admin_balance).to.be.eq(old_admin_balance.add(withdraw_amount))
+            expect(new_controller_balance).to.be.eq(old_controller_balance.sub(withdraw_amount))
+
+        });
+
+        it(' should not allow to withdraw the reward token', async () => {
+
+            await expect(
+                controller.connect(admin).withdrawToken(rewardToken.address, withdraw_amount, admin.address)
+            ).to.be.revertedWith('28')
+
+        });
+
+        it(' should not allow to withdraw palTokens', async () => {
+
+            await expect(
+                controller.connect(admin).withdrawToken(token1.address, withdraw_amount, admin.address)
+            ).to.be.revertedWith('28')
+
+        });
+
+        it(' should fail if given incorrect parameters', async () => {
+
+            await expect(
+                controller.connect(admin).withdrawToken(other_token.address, withdraw_amount, ethers.constants.AddressZero)
+            ).to.be.revertedWith('22')
+
+            await expect(
+                controller.connect(admin).withdrawToken(ethers.constants.AddressZero, withdraw_amount, admin.address)
+            ).to.be.revertedWith('22')
+
+            await expect(
+                controller.connect(admin).withdrawToken(other_token.address, 0, admin.address)
+            ).to.be.revertedWith('28')
+
+        });
+
+        it(' should not allow to withdraw more than the current Controller balance', async () => {
+
+            const incorrect_reward_withdraw_amount = ethers.utils.parseEther('1200')
+
+            await expect(
+                controller.connect(admin).withdrawToken(other_token.address, incorrect_reward_withdraw_amount, admin.address)
+            ).to.be.revertedWith('4')
+
+        });
+
+        it(' should only be allowed for admin', async () => {
+
+            await expect(
+                controller.connect(user1).withdrawToken(other_token.address, withdraw_amount, admin.address)
+            ).to.be.revertedWith('1')
+
+        });
+
+    });
+
 });

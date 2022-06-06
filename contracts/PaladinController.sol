@@ -673,6 +673,23 @@ contract PaladinController is IPaladinController, ControllerStorage {
         token.safeTransfer(recipient, amount);
     }
 
+    function withdrawToken(address token, uint256 amount, address recipient) external adminOnly {
+        require(recipient != address(0), Errors.ZERO_ADDRESS);
+        require(token != address(0), Errors.ZERO_ADDRESS);
+        require(amount > 0, Errors.INVALID_PARAMETERS);
+
+        //Can't withdraw the reward token (use the correct method
+        require(token != rewardToken(), Errors.INVALID_PARAMETERS);
+        //Can't withdraw listed palTokens (palTokens staked by users)
+        require(palTokenToPalPool[token] == address(0), Errors.INVALID_PARAMETERS);
+
+        IERC20 _token = IERC20(token);
+
+        require(amount <= _token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+
+        _token.safeTransfer(recipient, amount);
+    }
+
 
     function setPoolsNewController(address newController) external override adminOnly returns(bool){
         address[] memory _pools = palPools;
