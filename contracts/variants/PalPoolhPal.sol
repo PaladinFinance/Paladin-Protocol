@@ -14,21 +14,23 @@ import "../PalPool.sol";
 import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
 import "../utils/IERC20.sol";
-import "../tokens/AAVE/IStakedAave.sol";
+import "../interfaces/IhPAL.sol";
 import {Errors} from  "../utils/Errors.sol";
 
 
 
-/** @title PalPoolStkAave Pool contract  */
+/** @title PalPoolhPal contract  */
 /// @author Paladin
-contract PalPoolStkAave is PalPool {
+contract PalPoolhPal is PalPool {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
-    /** @dev stkAAVE token address */
-    address private immutable stkAaveAddress;
-    /** @dev AAVE token address */
-    address private immutable aaveAddress;
+    uint256 private constant MAX_UINT256 = type(uint256).max;
+
+    /** @dev hPAL token address */
+    address private immutable hPalAddress;
+    /** @dev PAL token address */
+    address private immutable palAddress;
     /** @dev Block number of the last reward claim */
     uint public claimBlockNumber = 0;
 
@@ -40,7 +42,7 @@ contract PalPoolStkAave is PalPool {
         address _interestModule,
         address _delegator,
         address _palLoanToken,
-        address _aaveAddress
+        address _palAddress
     ) PalPool(
             _palToken, 
             _controller,
@@ -50,33 +52,37 @@ contract PalPoolStkAave is PalPool {
             _palLoanToken
         )
     {
-        stkAaveAddress = _underlying;
-        aaveAddress = _aaveAddress;
+        hPalAddress = _underlying;
+        palAddress = _palAddress;
+
+        // Max Approve for hPAL
+        IERC20(_palAddress).safeIncreaseAllowance(_underlying, MAX_UINT256);
     }
 
 
     /**
-    * @dev Claim AAVE tokens from the AAVE Safety Module and stake them back in the Module
+    * @notice Claim PAL tokens from hPAL and stake them back in hPAL
+    * @dev Claim PAL tokens from hPAL and stake them back in hPAL
     * @return bool : Success
     */
-    function claimFromAave() internal returns(bool) {
+    function claimPal() public returns(bool) {
+        if(block.number == claimBlockNumber) return true;
+
         //Load contracts
-        IERC20 _aave = IERC20(aaveAddress);
-        IStakedAave _stkAave = IStakedAave(stkAaveAddress);
+        IERC20 _pal = IERC20(palAddress);
+        IhPAL _hpal = IhPAL(hPalAddress);
 
-        //Get pending rewards amount
-        uint _pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
+        //Claim all available rewards from hPAL
+        _hpal.claim(MAX_UINT256);
 
-        //If there is reward to claim
-        if(_pendingRewards > 0 && claimBlockNumber != block.number){
+        //Check the current balance in PAL of this contract
+        uint256 _currentPalBalance = _pal.balanceOf(address(this));
 
-            //claim the AAVE tokens
-            _stkAave.claimRewards(address(this), _pendingRewards);
+        //If the contract holds PAL, stake them into hPAL
+        if(_currentPalBalance > 0){
 
-            //Stake the AAVE tokens to get stkAAVE tokens
-            uint _toStakeAmount = _aave.balanceOf(address(this));
-            _aave.safeIncreaseAllowance(stkAaveAddress, _toStakeAmount);
-            _stkAave.stake(address(this), _toStakeAmount);
+            //Stake them
+            _hpal.stake(_currentPalBalance);
 
             //update the block number
             claimBlockNumber = block.number;
@@ -94,7 +100,7 @@ contract PalPoolStkAave is PalPool {
     * @return bool : amount of minted palTokens
     */
     function deposit(uint _amount) public override(PalPool) returns(uint){
-        require(claimFromAave());
+        require(claimPal());
         return super.deposit(_amount);
     }
 
@@ -105,7 +111,7 @@ contract PalPoolStkAave is PalPool {
     * @return uint : amount of underlying returned
     */
     function withdraw(uint _amount) public override(PalPool) returns(uint){
-        require(claimFromAave());
+        require(claimPal());
         return super.withdraw(_amount);
     }
 
@@ -117,7 +123,7 @@ contract PalPoolStkAave is PalPool {
     * @return uint : amount of paid fees
     */
     function borrow(address _delegatee, uint _amount, uint _feeAmount) public override(PalPool) returns(uint){
-        require(claimFromAave());
+        require(claimPal());
         return super.borrow(_delegatee, _amount, _feeAmount);
     }
 
@@ -128,7 +134,7 @@ contract PalPoolStkAave is PalPool {
     * @return bool : Amount of fees paid
     */
     function expandBorrow(address _loan, uint _feeAmount) public override(PalPool) returns(uint){
-        require(claimFromAave());
+        require(claimPal());
         return super.expandBorrow(_loan, _feeAmount);
     }
 
@@ -139,7 +145,7 @@ contract PalPoolStkAave is PalPool {
     * @param _loan Address of the Loan
     */
     function closeBorrow(address _loan) public override(PalPool) {
-        require(claimFromAave());
+        require(claimPal());
         super.closeBorrow(_loan);
     }
 
@@ -149,13 +155,13 @@ contract PalPoolStkAave is PalPool {
     * @param _loan Address of the Loan
     */
     function killBorrow(address _loan) public override(PalPool) {
-        require(claimFromAave());
+        require(claimPal());
         super.killBorrow(_loan);
     }
 
 
     function changeBorrowDelegatee(address _loan, address _newDelegatee) public override(PalPool) {
-        require(claimFromAave());
+        require(claimPal());
         super.changeBorrowDelegatee(_loan, _newDelegatee);
     }
 }

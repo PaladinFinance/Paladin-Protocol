@@ -20,7 +20,7 @@ const param_file_path = params_path();
 const { POOLS_PARAMS, TOKENS, DELEGATORS, CONTROLLER, INTEREST_MODULE_V2, PAL_LOAN_TOKEN } = require(param_file_path);
 
 
-const KEY = 'INDEX'
+const KEY = 'HPAL'
 
 
 async function main() {
@@ -32,6 +32,7 @@ async function main() {
 
   //variant pools :
   const stkAavePalPool = await ethers.getContractFactory("PalPoolStkAave");
+  const PalPoolhPal = await ethers.getContractFactory("PalPoolhPal");
 
 
 
@@ -53,6 +54,17 @@ async function main() {
       DELEGATORS[params.DELEGATOR],
       PAL_LOAN_TOKEN,
       TOKENS.AAVE
+    );
+  }
+  else if (params.SYMBOL === 'palhPAL') {
+    palPool = await PalPoolhPal.deploy(
+      palToken.address,
+      CONTROLLER,
+      params.UNDERLYING,
+      INTEREST_MODULE_V2,
+      DELEGATORS[params.DELEGATOR],
+      PAL_LOAN_TOKEN,
+      TOKENS.PAL
     );
   }
   else {
@@ -92,6 +104,20 @@ async function main() {
         DELEGATORS[params.DELEGATOR],
         PAL_LOAN_TOKEN,
         TOKENS.AAVE
+      ],
+    });
+  }
+  else if (params.SYMBOL === 'palhPAL') {
+    await hre.run("verify:verify", {
+      address: palPool.address,
+      constructorArguments: [
+        palToken.address,
+        CONTROLLER,
+        params.UNDERLYING,
+        INTEREST_MODULE_V2,
+        DELEGATORS[params.DELEGATOR],
+        PAL_LOAN_TOKEN,
+        TOKENS.PAL
       ],
     });
   }

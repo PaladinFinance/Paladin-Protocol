@@ -3,7 +3,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 
-const delegator_name = 'BasicDelegator'
+const delegator_name = 'PalDelegatorClaimer'
 
 
 async function main() {
@@ -20,7 +20,7 @@ async function main() {
   console.log('New ' + delegator_name + ' : ')
   console.log(delegator.address)
 
-  await delegator.deployTransaction.wait(5);
+  await delegator.deployTransaction.wait(30);
 
   await hre.run("verify:verify", {
     address: delegator.address,

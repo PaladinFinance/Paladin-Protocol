@@ -8,14 +8,17 @@ const TOKENS = {
     STKAAVE: "0xf2fbf9A6710AfDa1c4AaB2E922DE9D69E0C97fd2",
     UNI: "0x075A36BA8846C6B6F53644fDd3bf17E5151789DC",
     IDLE: "0xAB6Bdb5CCF38ECDa7A92d04E86f7c53Eb72833dF",
-    INDEX: "0x11Bbf860cC91205aF880F23e625D4eBCeD8d3d05" //version deployed by Paladin
+    INDEX: "0x11Bbf860cC91205aF880F23e625D4eBCeD8d3d05", //version deployed by Paladin
+    PAL: "0xAdc832dAe99F5375c5F1B68986235089D2071ca3",
+    HPAL: "0xB2eFA28c8f93A094c87C6B10BE66094BFEf8ede2",
 }
 
 const DELEGATOR_NAMES = {
     BASIC_DELEGATOR: 'BasicDelegator',
     AAVE_DELEGATOR: 'AaveDelegator',
     AAVE_DELEGATOR_CLAIMER: 'AaveDelegatorClaimer',
-    SNAPSHOT_DELEGATOR: 'SnapshotDelegator'
+    SNAPSHOT_DELEGATOR: 'SnapshotDelegator',
+    PAL_DELEGATOR_CLAIMER: 'PalDelegatorClaimer'
 }
 
 const MULTIPLIER_NAMES = {
@@ -103,6 +106,13 @@ const POOLS_PARAMS = {
         NAME: 'Paladin INDEX',
         SYMBOL: 'palINDEX',
         MUTIPLIER: 'INDEX'
+    },
+    HPAL: {
+        UNDERLYING: TOKENS.HPAL,
+        DELEGATOR: 'PAL_DELEGATOR_CLAIMER',
+        NAME: 'Paladin hPAL',
+        SYMBOL: 'palhPAL',
+        MUTIPLIER: ''
     }
 }
 
@@ -142,6 +152,11 @@ const ORACLE_ASSET_LIST = {
         SOURCE: ethers.constants.AddressZero,
         SOURCE_USD: ethers.constants.AddressZero
     },
+    HPAL: {
+        ASSET: "",
+        SOURCE: ethers.constants.AddressZero,
+        SOURCE_USD: ethers.constants.AddressZero
+    },
 }
 
 
@@ -170,8 +185,12 @@ const POOLS = {
         TOKEN: "0xD948412eaD3E12150E6357e2d8c3058933c3f47b"
     },
     INDEX: {
-        POOL: "0x8808ea9ad2b7E49D4FdB707166dEA20Dfd262a0e",
-        TOKEN: "0x6625121F7AA0aEae65bDab28239043231Ae6Fa94"
+        POOL: "0xd4FA2Af5E13B648AA290A82d462055e27e8EF081",
+        TOKEN: "0xa15b27260A20F8c4f2c704f27887C9df6553D26d"
+    },
+    HPAL: {
+        POOL: "0x158d7dA233cE3C82cf1c4Cd71005eE5351884384",
+        TOKEN: "0x3C3de77577Dd9CB14156cd9f99c988129fD2b472"
     }
 }
 
@@ -198,7 +217,8 @@ const DELEGATORS = {
     BASIC_DELEGATOR: "0xe1e623dE48d9753e285884f2e93da50ac264aE81",
     AAVE_DELEGATOR: "",
     AAVE_DELEGATOR_CLAIMER: "",
-    SNAPSHOT_DELEGATOR: ""
+    SNAPSHOT_DELEGATOR: "",
+    PAL_DELEGATOR_CLAIMER: "0x9b3917d9943a78Fa915a1dEa29e1852bc44742E4"
 }
 
 const MULTIPLIERS = {
