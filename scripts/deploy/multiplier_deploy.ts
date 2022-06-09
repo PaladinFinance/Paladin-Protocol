@@ -21,7 +21,7 @@ const param_file_path = params_path();
 
 const { MULTIPLIERS, MULTIPLIER_NAMES } = require(param_file_path);
 
-const multiplierName = MULTIPLIERS.INDEX;
+const multiplierName = MULTIPLIERS.HPAL;
 
 async function main() {
 
@@ -42,6 +42,18 @@ async function main() {
         multiplier = await Multiplier.deploy(
             multiplierName.CONTRACT.GOVERNANCE_ADDRESS,
             multiplierName.CONTRACT.STRATEGY_ADDRESS,
+            multiplierName.POOLS
+        )
+    }
+    else if (multiplierName.CONTRACT.NAME == MULTIPLIER_NAMES.INDEX) {
+        multiplier = await Multiplier.deploy(
+            multiplierName.CONTRACT.CURRENT_QUORUM,
+            multiplierName.POOLS
+        )
+    }
+    else if (multiplierName.CONTRACT.NAME == MULTIPLIER_NAMES.HPAL) {
+        multiplier = await Multiplier.deploy(
+            multiplierName.CONTRACT.HPAL_ADDRESS,
             multiplierName.POOLS
         )
     }
@@ -70,6 +82,24 @@ async function main() {
             constructorArguments: [
                 multiplierName.CONTRACT.GOVERNANCE_ADDRESS,
                 multiplierName.CONTRACT.STRATEGY_ADDRESS,
+                multiplierName.POOLS
+            ],
+        });
+    }
+    else if (multiplierName.CONTRACT.NAME == MULTIPLIER_NAMES.INDEX) {
+        await hre.run("verify:verify", {
+            address: multiplier.address,
+            constructorArguments: [
+                multiplierName.CONTRACT.CURRENT_QUORUM,
+                multiplierName.POOLS
+            ],
+        });
+    }
+    else if (multiplierName.CONTRACT.NAME == MULTIPLIER_NAMES.HPAL) {
+        await hre.run("verify:verify", {
+            address: multiplier.address,
+            constructorArguments: [
+                multiplierName.CONTRACT.HPAL_ADDRESS,
                 multiplierName.POOLS
             ],
         });

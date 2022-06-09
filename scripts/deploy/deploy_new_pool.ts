@@ -79,7 +79,7 @@ async function main() {
   }
   await palPool.deployed();
 
-
+  console.log('Initiating PalToken ...')
   await palToken.initiate(palPool.address)
 
 
