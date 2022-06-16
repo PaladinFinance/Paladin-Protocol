@@ -6,8 +6,7 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
-pragma abicoder v2;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "./IPalLoanToken.sol";

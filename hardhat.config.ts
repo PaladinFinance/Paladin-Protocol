@@ -19,7 +19,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.7.6",
+        version: "0.8.10",
         settings: {
           optimizer: {
             enabled: true,
@@ -30,7 +30,7 @@ const config: HardhatUserConfig = {
     ],
     overrides: {
       "contracts/PalPool.sol" : {
-        version: "0.7.6",
+        version: "0.8.10",
         settings: {
           optimizer: {
             enabled: true,
@@ -39,7 +39,7 @@ const config: HardhatUserConfig = {
         }
       },
       "contracts/PalToken.sol" : {
-        version: "0.7.6",
+        version: "0.8.10",
         settings: {
           optimizer: {
             enabled: true,
@@ -48,7 +48,7 @@ const config: HardhatUserConfig = {
         }
       },
       "contracts/variants/PalPoolStkAave.sol" : {
-        version: "0.7.6",
+        version: "0.8.10",
         settings: {
           optimizer: {
             enabled: true,
@@ -57,7 +57,7 @@ const config: HardhatUserConfig = {
         }
       },
       "contracts/variants/PalPoolhPal.sol" : {
-        version: "0.7.6",
+        version: "0.8.10",
         settings: {
           optimizer: {
             enabled: true,
@@ -65,7 +65,16 @@ const config: HardhatUserConfig = {
           }
         }
       },
-      "contracts/PriceOracle.sol" : {
+      "contracts/tests/DelegateRegistry.sol" : {
+        version: "0.7.2",
+        settings: {
+          optimizer: {
+            enabled: false,
+            runs: 200,
+          }
+        }
+      },
+      "contracts/tests/Comp.sol" : {
         version: "0.7.6",
         settings: {
           optimizer: {
@@ -93,13 +102,6 @@ const config: HardhatUserConfig = {
       accounts: process.env.KOVAN_PRIVATE_KEY ? [process.env.KOVAN_PRIVATE_KEY] : TEST_ACCOUNT,
       /*accounts: {
         mnemonic: process.env.KOVAN_MNEMONIC,
-      },*/
-    },
-    rinkeby: {
-      url: process.env.RINKEBY_URI || '',
-      accounts: process.env.RINKEBY_PRIVATE_KEY ? [process.env.RINKEBY_PRIVATE_KEY] : TEST_ACCOUNT,
-      /*accounts: {
-        mnemonic: process.env.RINKEBY_MNEMONIC,
       },*/
     },
     mainnet: {
