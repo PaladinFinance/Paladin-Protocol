@@ -24,14 +24,18 @@ contract Admin {
         _;
     }
 
-    error CannotBeOwner();
+    error CannotBeAdmin();
     error CallerNotpendingAdmin();
     error AdminZeroAddress();
 
+    constructor() {
+        admin = msg.sender;
+    }
+
     
-    function transferOwnership(address newAdmin) external adminOnly {
+    function transferAdmin(address newAdmin) external adminOnly {
         if(newAdmin == address(0)) revert AdminZeroAddress();
-        if(newAdmin == admin) revert CannotBeOwner();
+        if(newAdmin == admin) revert CannotBeAdmin();
         address oldPendingAdmin = pendingAdmin;
 
         pendingAdmin = newAdmin;

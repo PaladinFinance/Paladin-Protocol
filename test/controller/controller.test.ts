@@ -354,7 +354,8 @@ describe('Paladin Controller contract tests', () => {
 
         it(' should change the admin', async () => {
             await controller.connect(admin).addNewPool(fakeToken.address, fakePool.address)
-            await controller.connect(admin).setNewAdmin(user1.address)
+            await controller.connect(admin).transferAdmin(user1.address)
+            await controller.connect(user1).acceptAdmin()
     
             await expect(
                 controller.connect(admin).addNewPool(fakeToken.address, fakePool.address)
@@ -393,7 +394,7 @@ describe('Paladin Controller contract tests', () => {
     
         it(' should block non-admin to change the admin', async ()=> {
             await expect(
-                controller.connect(user1).setNewAdmin(user1.address)
+                controller.connect(user1).transferAdmin(user1.address)
             ).to.be.revertedWith('1')
         });
     
