@@ -12,11 +12,10 @@ pragma solidity 0.8.10;
 import "./AaveDelegator.sol";
 import "../tokens/AAVE/IStakedAave.sol";
 import "../utils/SafeERC20.sol";
-import "../utils/SafeMath.sol";
+
 /** @title Aave Governance token Delegator that claims rewards for the stkAave token */
 /// @author Paladin
 contract AaveDelegatorClaimer is AaveDelegator {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     constructor(){

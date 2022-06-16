@@ -12,13 +12,13 @@ pragma solidity 0.8.10;
 import "./IMultiplierCalculator.sol";
 import "./utils/IGovernor.sol";
 import "./utils/IPalPoolSimplified.sol";
-import "../../utils/SafeMath.sol";
 import "../../utils/Admin.sol";
 
 /** @title Multiplier Calculator for Governor type systems  */
 /// @author Paladin
 contract GovernorMultiplier is IMultiplierCalculator, Admin {
-    using SafeMath for uint;
+
+    uint256 private UNIT = 1e18;
 
     IGovernor public governor;
 
@@ -45,13 +45,13 @@ contract GovernorMultiplier is IMultiplierCalculator, Admin {
         uint totalBorrowed = getTotalBorrowedMultiPools();
         uint proposalThreshold = governor.proposalThreshold();
 
-        if(totalBorrowed > proposalThreshold.mul(activationThreshold).div(1e18)){
+        if(totalBorrowed > (proposalThreshold * activationThreshold) / UNIT){
             uint quorumAmount = governor.quorumVotes();
 
-            uint leftPart = (totalBorrowed.mul(1e18).div(proposalThreshold.mul(activationThreshold).div(1e18))).sub(1e18);
-            uint rightPart = quorumAmount.mul(1e18).div(totalBorrowed);
+            uint leftPart = ((totalBorrowed * UNIT) / ((proposalThreshold * activationThreshold) / UNIT)) - UNIT;
+            uint rightPart = (quorumAmount * UNIT) / totalBorrowed;
 
-            return uint(1e18).add(leftPart.mul(rightPart).div(1e18));
+            return (uint(1e18) + (leftPart * rightPart) / UNIT);
         }
         //default case
         return 1e18;
@@ -62,7 +62,7 @@ contract GovernorMultiplier is IMultiplierCalculator, Admin {
         uint total = 0;
         address[] memory _pools = pools;
         for(uint i = 0; i < _pools.length; i++){
-            total = total.add(IPalPoolSimplified(_pools[i]).totalBorrowed());
+            total += IPalPoolSimplified(_pools[i]).totalBorrowed();
         }
         return total;
     }
@@ -79,7 +79,7 @@ contract GovernorMultiplier is IMultiplierCalculator, Admin {
         address[] memory _pools = pools;
         for(uint i; i < _pools.length; i++){
             if(_pools[i] == _pool){
-                uint lastIndex = _pools.length.sub(1);
+                uint lastIndex = _pools.length - 1;
                 if(i != lastIndex){
                     pools[i] = pools[lastIndex];
                 }

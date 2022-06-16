@@ -11,7 +11,6 @@ pragma solidity 0.8.10;
 
 import "../utils/IERC20.sol";
 import "../utils/SafeERC20.sol";
-import "../utils/SafeMath.sol";
 import {Errors} from  "../utils/Errors.sol";
 import "./utils/IDelegateRegistry.sol";
 
@@ -19,7 +18,6 @@ import "./utils/IDelegateRegistry.sol";
 /** @title Snapshot token Delegator  */
 /// @author Paladin
 contract SnapshotDelegator{
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     IDelegateRegistry public constant registry = IDelegateRegistry(0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446);
@@ -90,7 +88,7 @@ contract SnapshotDelegator{
     * @return bool : Expand success
     */
     function expand(uint _newFeesAmount) external motherPoolOnly returns(bool){
-        feesAmount = feesAmount.add(_newFeesAmount);
+        feesAmount += _newFeesAmount;
         return true;
     }
 
@@ -104,9 +102,9 @@ contract SnapshotDelegator{
         
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
-        uint _returnAmount = feesAmount.sub(_usedAmount);
+        uint _returnAmount = feesAmount - _usedAmount;
         uint _balance = _underlying.balanceOf(address(this));
-        uint _keepAmount = _balance.sub(_returnAmount);
+        uint _keepAmount = _balance - _returnAmount;
         if(_returnAmount > 0){
             _underlying.safeTransfer(_currentBorrower, _returnAmount);
         }
@@ -129,9 +127,9 @@ contract SnapshotDelegator{
         
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
-        uint _killerAmount = feesAmount.mul(_killerRatio).div(uint(1e18));
+        uint _killerAmount = (feesAmount * _killerRatio) / uint(1e18);
         uint _balance = _underlying.balanceOf(address(this));
-        uint _poolAmount = _balance.sub(_killerAmount);
+        uint _poolAmount = _balance - _killerAmount;
         _underlying.safeTransfer(_killer, _killerAmount);
         _underlying.safeTransfer(motherPool, _poolAmount);
 

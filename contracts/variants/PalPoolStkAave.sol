@@ -10,7 +10,6 @@ pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "../PalPool.sol";
-import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
 import "../utils/IERC20.sol";
 import "../tokens/AAVE/IStakedAave.sol";
@@ -21,7 +20,6 @@ import {Errors} from  "../utils/Errors.sol";
 /** @title PalPoolStkAave Pool contract  */
 /// @author Paladin
 contract PalPoolStkAave is PalPool {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     /** @dev stkAAVE token address */

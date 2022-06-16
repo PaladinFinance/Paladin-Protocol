@@ -10,7 +10,6 @@ pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import {Errors} from  "./utils/Errors.sol";
-import "./utils/SafeMath.sol";
 import "./IPalLoanToken.sol";
 
 
@@ -18,7 +17,6 @@ import "./IPalLoanToken.sol";
 /** @title BurnedPalLoanToken contract  */
 /// @author Paladin
 contract BurnedPalLoanToken{
-    using SafeMath for uint;
 
     //Storage
 
@@ -115,7 +113,7 @@ contract BurnedPalLoanToken{
         require(to != address(0), "ERC721: mint to the zero address");
 
         //Update Supply
-        totalSupply = totalSupply.add(1);
+        totalSupply += 1;
 
         //Add the new token to storage
         balances[to].push(tokenId);

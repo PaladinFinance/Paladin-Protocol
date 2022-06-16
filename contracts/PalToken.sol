@@ -9,7 +9,6 @@
 pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "./utils/SafeMath.sol";
 import "./utils/IERC20.sol";
 import "./utils/Admin.sol";
 import {Errors} from  "./utils/Errors.sol";
@@ -17,7 +16,6 @@ import {Errors} from  "./utils/Errors.sol";
 /** @title palToken ERC20 contract  */
 /// @author Paladin
 contract PalToken is IERC20, Admin {
-    using SafeMath for uint;
 
     //ERC20 Variables & Mappings :
 
@@ -90,7 +88,7 @@ contract PalToken is IERC20, Admin {
     function transferFrom(address src, address dest, uint amount) external override returns(bool){
         require(transferAllowances[src][msg.sender] >= amount, Errors.ALLOWANCE_TOO_LOW);
 
-        transferAllowances[src][msg.sender] = transferAllowances[src][msg.sender].sub(amount);
+        transferAllowances[src][msg.sender] -= amount;
 
         _transfer(src, dest, amount);
 
@@ -105,8 +103,8 @@ contract PalToken is IERC20, Admin {
         require(src != address(0) && dest != address(0), Errors.ZERO_ADDRESS);
 
         //Update balances
-        balances[src] = balances[src].sub(amount);
-        balances[dest] = balances[dest].add(amount);
+        balances[src] -= amount;
+        balances[dest] += amount;
 
         //emit the Transfer Event
         emit Transfer(src,dest,amount);
@@ -118,13 +116,13 @@ contract PalToken is IERC20, Admin {
     }
 
     function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
-        return _approve(msg.sender, spender, transferAllowances[msg.sender][spender].add(addedValue));
+        return _approve(msg.sender, spender, transferAllowances[msg.sender][spender] + addedValue);
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 currentAllowance = transferAllowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "decreased allowance below zero");
-        return _approve(msg.sender, spender, currentAllowance.sub(subtractedValue));
+        return _approve(msg.sender, spender, currentAllowance - subtractedValue);
     }
 
 
@@ -153,8 +151,8 @@ contract PalToken is IERC20, Admin {
     function mint(address _user, uint _toMint) external onlyPool returns(bool){
         require(_user != address(0), Errors.ZERO_ADDRESS);
 
-        _totalSupply = _totalSupply.add(_toMint);
-        balances[_user] = balances[_user].add(_toMint);
+        _totalSupply += _toMint;
+        balances[_user] += _toMint;
 
         emit Transfer(address(0),_user,_toMint);
 
@@ -166,8 +164,8 @@ contract PalToken is IERC20, Admin {
         require(_user != address(0), Errors.ZERO_ADDRESS);
         require(balances[_user] >= _toBurn, Errors.INSUFFICIENT_BALANCE);
 
-        _totalSupply = _totalSupply.sub(_toBurn);
-        balances[_user] = balances[_user].sub(_toBurn);
+        _totalSupply -= _toBurn;
+        balances[_user] -= _toBurn;
 
         emit Transfer(_user,address(0),_toBurn);
 

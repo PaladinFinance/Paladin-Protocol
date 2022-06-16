@@ -9,13 +9,11 @@
 pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/Clones.sol";
 import "./IPalPool.sol";
 import "./PalPoolStorage.sol";
 import "./IPalLoan.sol";
-//import "./PalLoan.sol";
 import "./IPalToken.sol";
 import "./IPaladinController.sol";
 import "./IPalLoanToken.sol";
@@ -30,7 +28,6 @@ import {Errors} from  "./utils/Errors.sol";
 /** @title PalPool contract  */
 /// @author Paladin
 contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
 
@@ -90,8 +87,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
 
         //Find the amount to mint depending on the amount to transfer
-        uint _num = _amount.mul(mantissaScale);
-        uint _toMint = _num.div(_exchRate);
+        uint _toMint = (_amount * mantissaScale) / _exchRate;
 
         //Transfer the underlying to this contract
         //The amount of underlying needs to be approved before
@@ -123,8 +119,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         uint _exchRate = _exchangeRate();
 
         //Find the amount to return depending on the amount of palToken to burn
-        uint _num = _amount.mul(_exchRate);
-        uint _toReturn = _num.div(mantissaScale);
+        uint _toReturn = (_amount * _exchRate) / mantissaScale;
 
         //Check if the pool has enough underlying to return
         require(_toReturn <= underlyingBalance(), Errors.INSUFFICIENT_CASH);
@@ -162,8 +157,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         address _borrower = msg.sender;
 
         //Update Total Borrowed & number active Loans
-        numberActiveLoans = numberActiveLoans.add(1);
-        totalBorrowed = totalBorrowed.add(_amount);
+        numberActiveLoans += 1;
+        totalBorrowed += _amount;
 
         IPalLoan _newLoan = IPalLoan(Clones.clone(delegator));
 
@@ -247,7 +242,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
-        _borrow.feesAmount = _borrow.feesAmount.add(_feeAmount);
+        _borrow.feesAmount += _feeAmount;
 
         //Transfer the new fees to the Loan
         //If success, call the expand function of the Loan
@@ -294,17 +289,17 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
 
         //Calculates the amount of fees used
-        uint _feesUsed = (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount);
-        uint _penaltyFees = 0;
+        uint _feesUsed = ((_borrow.amount * borrowIndex) / _borrow.borrowIndex) - _borrow.amount;
+        uint _penaltyFees;
         uint _totalFees = _feesUsed;
 
         //If the Borrow is closed before the minimum length, calculates the penalty fees to pay
         // -> Number of block remaining to complete the minimum length * current Borrow Rate
-        if(block.number < (_borrow.startBlock.add(minBorrowLength))){
+        if(block.number < (_borrow.startBlock + minBorrowLength)){
             uint _currentBorrowRate = interestModule.getBorrowRate(address(this), underlyingBalance(), totalBorrowed, totalReserve);
-            uint _missingBlocks = (_borrow.startBlock.add(minBorrowLength)).sub(block.number);
-            _penaltyFees = _missingBlocks.mul(_borrow.amount.mul(_currentBorrowRate)).div(mantissaScale);
-            _totalFees = _totalFees.add(_penaltyFees);
+            uint _missingBlocks = (_borrow.startBlock + minBorrowLength) - block.number;
+            _penaltyFees = _missingBlocks * ((_borrow.amount * _currentBorrowRate) / mantissaScale);
+            _totalFees += _penaltyFees;
         }
     
         //Security so the Borrow can be closed if there are no more fees
@@ -322,14 +317,14 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Add to the Reserve the reserveFactor of Penalty Fees (if there is Penalty Fees)
         //And add the fees counted as potential Killer Fees to the Accrued Fees, since no killing was necessary
 
-        numberActiveLoans = numberActiveLoans.sub(1);
+        numberActiveLoans -= 1;
 
-        totalBorrowed = numberActiveLoans == 0 ? 0 : totalBorrowed.sub((_borrow.amount).add(_feesUsed)); //If not current active Loan, we can just reset the totalBorrowed to 0
+        totalBorrowed = numberActiveLoans == 0 ? 0 : totalBorrowed - (_borrow.amount + _feesUsed); //If not current active Loan, we can just reset the totalBorrowed to 0
 
-        uint _realPenaltyFees = _totalFees.sub(_feesUsed);
-        uint _killerFees = _feesUsed.mul(killerRatio).div(mantissaScale);
-        totalReserve = totalReserve.add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
-        accruedFees = accruedFees.add(_killerFees).add(reserveFactor.mul(_realPenaltyFees).div(mantissaScale));
+        uint _realPenaltyFees = _totalFees - _feesUsed;
+        uint _killerFees = (_feesUsed * killerRatio) / mantissaScale;
+        totalReserve += (reserveFactor * _realPenaltyFees) / mantissaScale;
+        accruedFees += _killerFees + ((reserveFactor * _realPenaltyFees) / mantissaScale);
         
         //Close and destroy the loan
         _palLoan.closeLoan(_totalFees, _loanOwner);
@@ -371,8 +366,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
 
         //Calculate the amount of fee used, and check if the Loan is killable
-        uint _feesUsed = (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount);
-        uint _loanHealthFactor = _feesUsed.mul(uint(1e18)).div(_borrow.feesAmount);
+        uint _feesUsed = ((_borrow.amount * borrowIndex) / _borrow.borrowIndex) - _borrow.amount;
+        uint _loanHealthFactor = (_feesUsed * uint(1e18)) / _borrow.feesAmount;
         require(_loanHealthFactor >= killFactor, Errors.NOT_KILLABLE);
 
         //Load the Loan
@@ -386,15 +381,15 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         //Remove the borrowed tokens + fees from the TotalBorrowed
         //Remove the amount paid as killer fees from the Reserve, and any over accrued interest in the Reserve & AccruedFees
-        uint _overAccruedInterest = _loanHealthFactor <= mantissaScale ? 0 : _feesUsed.sub(_borrow.feesAmount);
-        uint _killerFees = (_borrow.feesAmount).mul(killerRatio).div(mantissaScale);
+        uint _overAccruedInterest = _loanHealthFactor <= mantissaScale ? 0 : _feesUsed - _borrow.feesAmount;
+        uint _killerFees = (_borrow.feesAmount * killerRatio) / mantissaScale;
 
-        numberActiveLoans = numberActiveLoans.sub(1);
+        numberActiveLoans -= 1;
 
-        totalBorrowed = numberActiveLoans == 0 ? 0 : totalBorrowed.sub((_borrow.amount).add(_feesUsed)); //If not current active Loan, we can just reset the totalBorrowed to 0
+        totalBorrowed = numberActiveLoans == 0 ? 0 : totalBorrowed - (_borrow.amount + _feesUsed); //If not current active Loan, we can just reset the totalBorrowed to 0
 
-        totalReserve = totalReserve.sub(_killerFees).sub(_overAccruedInterest.mul(reserveFactor).div(mantissaScale));
-        accruedFees = accruedFees.sub(_overAccruedInterest.mul(reserveFactor.sub(killerRatio)).div(mantissaScale));
+        totalReserve = totalReserve - _killerFees - ((_overAccruedInterest * reserveFactor) / mantissaScale);
+        accruedFees -= (_overAccruedInterest * (reserveFactor - killerRatio)) / mantissaScale;
 
         //Kill the Loan
         _palLoan.killLoan(killer, killerRatio);
@@ -479,8 +474,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
             return 0;
         }
         uint _exchRate = _exchangeRate();
-        uint _num = _balance.mul(_exchRate);
-        return _num.div(mantissaScale);
+        return (_balance * _exchRate) / mantissaScale;
     }
 
 
@@ -557,7 +551,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
             _borrow.underlying,
             _borrow.feesAmount,
             //Calculate amount of fees used
-            _borrow.closed ? _borrow.feesUsed : (_borrow.amount.mul(borrowIndex).div(_borrow.borrowIndex)).sub(_borrow.amount),
+            _borrow.closed ? _borrow.feesUsed : ((_borrow.amount * borrowIndex) / _borrow.borrowIndex) - _borrow.amount,
             _borrow.startBlock,
             _borrow.closeBlock,
             _borrow.closed,
@@ -598,8 +592,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         else{
             // Exchange Rate = (Cash + Borrows - Reserve) / Supply
             uint _cash = underlyingBalance();
-            uint _availableCash = _cash.add(totalBorrowed).sub(totalReserve);
-            return _availableCash.mul(1e18).div(_totalSupply);
+            uint _availableCash = _cash + totalBorrowed - totalReserve;
+            return (_availableCash * mantissaScale) / _totalSupply;
         }
     }
 
@@ -630,8 +624,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     function minBorrowFees(uint _amount) public view override returns (uint){
         require(_amount <= underlyingBalance(), Errors.INSUFFICIENT_CASH);
         //Future Borrow Rate with the amount to borrow counted as already borrowed
-        uint _borrowRate = interestModule.getBorrowRate(address(this), underlyingBalance().sub(_amount), totalBorrowed.add(_amount), totalReserve);
-        uint _minFees = minBorrowLength.mul(_amount.mul(_borrowRate)).div(mantissaScale);
+        uint _borrowRate = interestModule.getBorrowRate(address(this), underlyingBalance() - _amount, totalBorrowed + _amount, totalReserve);
+        uint _minFees = (minBorrowLength * (_amount * _borrowRate)) / mantissaScale;
         return _minFees > 0 ? _minFees : 1;
     }
 
@@ -642,8 +636,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         }
 
         //Calculate the amount of fee used, and check if the Loan is killable
-        uint _feesUsed = (__borrow.amount.mul(borrowIndex).div(__borrow.borrowIndex)).sub(__borrow.amount);
-        uint _loanHealthFactor = _feesUsed.mul(uint(1e18)).div(__borrow.feesAmount);
+        uint _feesUsed = ((__borrow.amount * borrowIndex) / __borrow.borrowIndex) - __borrow.amount;
+        uint _loanHealthFactor = (_feesUsed * mantissaScale) / __borrow.feesAmount;
         return _loanHealthFactor >= killFactor;
     }
 
@@ -670,7 +664,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         uint _borrowRate = interestModule.getBorrowRate(address(this), _cash, _borrows, _reserves);
 
         //Delta of blocks since the last update
-        uint _ellapsedBlocks = _currentBlock.sub(accrualBlockNumber);
+        uint _ellapsedBlocks = _currentBlock - accrualBlockNumber;
 
         /*
         Interest Factor = Borrow Rate * Ellapsed Blocks
@@ -680,12 +674,12 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         Accrued Fees = Accrued Fees + Accumulated Interests * (Reserve Factor - Killer Ratio) -> (available fees should not count potential fees to send to killers)
         Borrow Index = old Borrow Index + old Borrow Index * Interest Factor 
         */
-        uint _interestFactor = _borrowRate.mul(_ellapsedBlocks);
-        uint _accumulatedInterest = _interestFactor.mul(_borrows).div(mantissaScale);
-        uint _newBorrows = _borrows.add(_accumulatedInterest);
-        uint _newReserve = _reserves.add(reserveFactor.mul(_accumulatedInterest).div(mantissaScale));
-        uint _newAccruedFees = _accruedFees.add((reserveFactor.sub(killerRatio)).mul(_accumulatedInterest).div(mantissaScale));
-        uint _newBorrowIndex = _oldBorrowIndex.add(_interestFactor.mul(_oldBorrowIndex).div(1e18));
+        uint _interestFactor = _borrowRate * _ellapsedBlocks;
+        uint _accumulatedInterest = (_interestFactor * _borrows) / mantissaScale;
+        uint _newBorrows = _borrows + _accumulatedInterest;
+        uint _newReserve = _reserves + ((reserveFactor * _accumulatedInterest) / mantissaScale);
+        uint _newAccruedFees = _accruedFees + (((reserveFactor - killerRatio) * _accumulatedInterest) / mantissaScale);
+        uint _newBorrowIndex = _oldBorrowIndex + ((_interestFactor * _oldBorrowIndex) / mantissaScale);
 
         //Update storage
         totalBorrowed = _newBorrows;
@@ -764,7 +758,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     function addReserve(uint _amount) external override adminOnly {
         require(_updateInterest());
 
-        totalReserve = totalReserve.add(_amount);
+        totalReserve += _amount;
 
         //Transfer from the admin to the Pool
         underlying.safeTransferFrom(admin, address(this), _amount);
@@ -782,7 +776,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         require(_updateInterest());
         require(_amount <= underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
 
-        totalReserve = totalReserve.sub(_amount);
+        totalReserve -= _amount;
 
         //Transfer underlying to the admin
         underlying.safeTransfer(admin, _amount);
@@ -803,8 +797,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
         //Substract from accruedFees (to track how much fees the Controller can withdraw since last time)
         //And also from the REserve, since the fees are part of the Reserve
-        accruedFees = accruedFees.sub(_amount);
-        totalReserve = totalReserve.sub(_amount);
+        accruedFees -= _amount;
+        totalReserve -= _amount;
 
         //Transfer fees to the recipient
         underlying.safeTransfer(_recipient, _amount);

@@ -9,7 +9,6 @@
 pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "./utils/SafeMath.sol";
 import "./utils/Admin.sol";
 
 // PalPool Minimal Interface
@@ -45,7 +44,6 @@ interface IChainlinkAggregator {
 /** @title Price Oracle for PalTokens  */
 /// @author Paladin
 contract PriceOracle is Admin {
-    using SafeMath for uint;
 
     /** @notice Decimals of the palToken */
     uint256 public constant PALTOKEN_DECIMALS = 18;
@@ -156,7 +154,7 @@ contract PriceOracle is Admin {
 
         uint256 exchangeRate = palPool.exchangeRateStored();
 
-        return amount.mul(exchangeRate).div(MANTISSA_SCALE);
+        return (amount * exchangeRate) / MANTISSA_SCALE;
     }
 
     /**
@@ -169,7 +167,7 @@ contract PriceOracle is Admin {
 
         uint256 exchangeRate = palPool.exchangeRateStored();
 
-        return amount.mul(MANTISSA_SCALE).div(exchangeRate);
+        return (amount * MANTISSA_SCALE) / exchangeRate;
     }
 
     /**
@@ -192,7 +190,7 @@ contract PriceOracle is Admin {
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         // Else, try to use an USD price source
         else if(address(assetsUSDSources[asset]) != address(0)) {
@@ -207,11 +205,11 @@ contract PriceOracle is Admin {
             require(usdPrice > 0 && baseUsdPrice > 0 , "PriceOracle: incorrect price");
 
             // Calculate the ETH price based on the USD price and base price
-            uint256 price = uint256(usdPrice).mul(10**baseSourceDecimals).div(uint256(baseUsdPrice));
+            uint256 price = (uint256(usdPrice) * (10**baseSourceDecimals)) / uint256(baseUsdPrice);
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         else{
             revert("PriceOracle: no source for asset");
@@ -237,7 +235,7 @@ contract PriceOracle is Admin {
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         else if(address(assetsSources[asset]) != address(0)) {
             // Get the decimals from the price source
@@ -251,11 +249,11 @@ contract PriceOracle is Admin {
             require(ethPrice > 0 && baseUsdPrice > 0 , "PriceOracle: incorrect price");
 
             // Calculate the USD price based on the ETH price and base price
-            uint256 price = uint256(ethPrice).mul(uint256(baseUsdPrice)).div(10**baseSourceDecimals);
+            uint256 price = (uint256(ethPrice) * uint256(baseUsdPrice)) / (10**baseSourceDecimals);
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         else{
             revert("PriceOracle: no source for asset");

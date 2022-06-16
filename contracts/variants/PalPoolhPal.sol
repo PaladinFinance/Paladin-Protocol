@@ -10,7 +10,6 @@ pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "../PalPool.sol";
-import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
 import "../utils/IERC20.sol";
 import "../interfaces/IhPAL.sol";
@@ -21,7 +20,6 @@ import {Errors} from  "../utils/Errors.sol";
 /** @title PalPoolhPal contract  */
 /// @author Paladin
 contract PalPoolhPal is PalPool {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     uint256 private constant MAX_UINT256 = type(uint256).max;

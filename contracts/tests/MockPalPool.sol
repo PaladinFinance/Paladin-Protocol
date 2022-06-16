@@ -1,14 +1,12 @@
 pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "../utils/SafeMath.sol";
 import "../utils/IERC20.sol";
 import "../utils/Admin.sol";
 import "../IPaladinController.sol";
 import {Errors} from  "../utils/Errors.sol";
 
 contract MockPalPool is Admin {
-    using SafeMath for uint;
 
     IERC20 public underlying;
     uint public totalReserve;
@@ -41,8 +39,8 @@ contract MockPalPool is Admin {
 
     function withdrawFees(uint _amount, address _recipient) external controllerOnly {
         require(_amount<= accruedFees && _amount <= totalReserve, Errors.FEES_ACCRUED_INSUFFICIENT);
-        accruedFees = accruedFees.sub(_amount);
-        totalReserve = totalReserve.sub(_amount);
+        accruedFees -= _amount;
+        totalReserve -= _amount;
 
         underlying.transfer(_recipient, _amount);
     }

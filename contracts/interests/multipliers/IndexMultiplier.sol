@@ -11,13 +11,11 @@ pragma solidity 0.8.10;
 
 import "./IMultiplierCalculator.sol";
 import "./utils/IPalPoolSimplified.sol";
-import "../../utils/SafeMath.sol";
 import "../../utils/Admin.sol";
 
 /** @title Multiplier Calculator for Index Coop Governance  */
 /// @author Paladin
 contract IndexMultiplier is IMultiplierCalculator, Admin {
-    using SafeMath for uint256;
 
     address[] public pools;
 
@@ -36,7 +34,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
 
         currentQuorum = _currentQuorum;
 
-        activationThreshold = _currentQuorum.mul(activationFactor).div(10000);
+        activationThreshold = (_currentQuorum * activationFactor) / 10000;
         
         for(uint256 i = 0; i < _pools.length; i++){
             pools.push(_pools[i]);
@@ -48,7 +46,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
 
         if(totalBorrowed > activationThreshold){
 
-            return baseMultiplier.mul(totalBorrowed).div(currentQuorum);
+            return (baseMultiplier * totalBorrowed) / currentQuorum;
         }
         //default case
         return 1e18;
@@ -60,7 +58,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
         address[] memory _pools = pools;
         uint256 length = _pools.length;
         for(uint256 i; i < length; i++){
-            total = total.add(IPalPoolSimplified(_pools[i]).totalBorrowed());
+            total += IPalPoolSimplified(_pools[i]).totalBorrowed();
         }
         return total;
     }
@@ -78,7 +76,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
         uint256 length = _pools.length;
         for(uint256 i; i < length; i++){
             if(_pools[i] == _pool){
-                uint256 lastIndex = length.sub(1);
+                uint256 lastIndex = length - 1;
                 if(i != lastIndex){
                     pools[i] = pools[lastIndex];
                 }
@@ -97,7 +95,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
         currentQuorum = newQuorum;
 
         //Update activationThreshold
-        activationThreshold = newQuorum.mul(activationFactor).div(10000);
+        activationThreshold = (newQuorum * activationFactor) / 10000;
     }
 
     function updateActivationFactor(uint256 newFactor) external adminOnly {
@@ -106,7 +104,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
         activationFactor = newFactor;
 
         //Update activationThreshold
-        activationThreshold = currentQuorum.mul(newFactor).div(10000);
+        activationThreshold = (currentQuorum * newFactor) / 10000;
     }
 
 }

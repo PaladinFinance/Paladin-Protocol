@@ -9,7 +9,6 @@
 pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "../utils/SafeMath.sol";
 import "../IPaladinController.sol";
 import "../ControllerStorage.sol";
 import "../PalPool.sol";
@@ -19,7 +18,6 @@ import "../utils/IERC20.sol";
 /** @title DoomsdayController contract -> blocks any transaction from the PalPools  */
 /// @author Paladin
 contract DoomsdayController is IPaladinController, ControllerStorage {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     constructor(){
@@ -108,7 +106,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
         address[] memory _pools = palPools;
         
-        uint lastIndex = (_pools.length).sub(1);
+        uint lastIndex = _pools.length - 1;
         for(uint i = 0; i < _pools.length; i++){
             if(_pools[i] == _palPool){
                 //get the address of the PalToken for the Event
@@ -307,7 +305,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         uint supplySpeed = supplySpeeds[palPool];
 
         // Calculate the number of blocks since last update
-        uint ellapsedBlocks = currentBlock.sub(uint(state.blockNumber));
+        uint ellapsedBlocks = currentBlock - uint(state.blockNumber);
 
         // If an update is needed : block ellapsed & non-null speed (rewards to distribute)
         if(ellapsedBlocks > 0 && supplySpeed > 0){
@@ -315,14 +313,14 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
             uint totalDeposited = totalSupplierDeposits[palPool];
 
             // Calculate the amount of rewards token accrued since last update
-            uint accruedAmount = ellapsedBlocks.mul(supplySpeed);
+            uint accruedAmount = ellapsedBlocks * supplySpeed;
 
             // And the new ratio for reward distribution to user
             // Based on the amount of rewards accrued, and the change in the TotalSupply
-            uint ratio = totalDeposited > 0 ? accruedAmount.mul(1e36).div(totalDeposited) : 0;
+            uint ratio = totalDeposited > 0 ? (accruedAmount * 1e36) / totalDeposited : 0;
 
             // Write new Supply Rewards values in the storage
-            state.index = safe224(uint(state.index).add(ratio));
+            state.index = safe224(uint(state.index) + ratio);
             state.blockNumber = safe32(currentBlock);
         }
         else if(ellapsedBlocks > 0){
@@ -356,17 +354,17 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         }
 
         // Get the difference of index with the last one for user
-        uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+        uint indexDiff = currentSupplyIndex - userSupplyIndex;
 
         if(indexDiff > 0){
             // And using the user PalToken balance deposited in the Controller,
             // we can get how much rewards where accrued
             uint userBalance = supplierDeposits[palPool][user];
 
-            uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+            uint userAccruedRewards = (userBalance * indexDiff) / 1e36;
 
             // Add the new amount of rewards to the user total claimable balance
-            accruedRewards[user] = accruedRewards[user].add(userAccruedRewards);
+            accruedRewards[user] += userAccruedRewards;
         }
 
     }
@@ -392,10 +390,10 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
             (borrower,,,,,,,feesUsedAmount,,,,) = pool.getBorrowData(loanAddress);
 
-            uint userAccruedRewards = feesUsedAmount.mul(feesUsedAmount).div(1e18);
+            uint userAccruedRewards = (feesUsedAmount * feesUsedAmount) / 1e18;
 
             // Add the new amount of rewards to the user total claimable balance
-            accruedRewards[borrower] = accruedRewards[borrower].add(userAccruedRewards);
+            accruedRewards[borrower] += userAccruedRewards;
         }
 
     }
@@ -416,7 +414,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         // Calculate the amount of rewards based on the Pool ratio & the amount of usedFees in the Loan
         uint poolBorrowRatio = loansBorrowRatios[loanAddress] > 0 ? loansBorrowRatios[loanAddress] : borrowRatios[palPool];
 
-        return feesUsedAmount.mul(poolBorrowRatio).div(1e18);
+        return (feesUsedAmount * poolBorrowRatio) / 1e18;
     }
 
     /**
@@ -465,17 +463,17 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
             }
 
             // Get the difference of index with the last one for user
-            uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+            uint indexDiff = currentSupplyIndex - userSupplyIndex;
 
             if(indexDiff > 0){
                 // And using the user PalToken balance deposited in the Controller,
                 // we can get how much rewards where accrued
                 uint userBalance = supplierDeposits[_pools[i]][user];
 
-                uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+                uint userAccruedRewards = (userBalance * indexDiff) / 1e36;
 
                 // Add the new amount of rewards to the user total claimable balance
-                _total = _total.add(userAccruedRewards);
+                _total += userAccruedRewards;
             }
         }
 
@@ -509,7 +507,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         address[] memory _pools = palPools;
         uint totalSpeed = 0;
         for(uint i = 0; i < _pools.length; i++){
-            totalSpeed = totalSpeed.add(supplySpeeds[_pools[i]]);
+            totalSpeed += supplySpeeds[_pools[i]];
         }
         return totalSpeed;
     }

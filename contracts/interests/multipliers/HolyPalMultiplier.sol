@@ -12,13 +12,11 @@ pragma solidity 0.8.10;
 import "./IMultiplierCalculator.sol";
 import "./utils/IPalPoolSimplified.sol";
 import "./utils/IhPalVotes.sol";
-import "../../utils/SafeMath.sol";
 import "../../utils/Admin.sol";
 
 /** @title Multiplier Calculator for Paladin hPAL  */
 /// @author Paladin
 contract HolyPalMultiplier is IMultiplierCalculator, Admin {
-    using SafeMath for uint256;
 
     address[] public pools;
 
@@ -48,11 +46,11 @@ contract HolyPalMultiplier is IMultiplierCalculator, Admin {
         uint256 totalBorrowed = getTotalBorrowedMultiPools();
 
         uint256 currentQuorum = getCurrentQuorum();
-        uint256 activationThreshold = currentQuorum.mul(activationFactor).div(10000);
+        uint256 activationThreshold = (currentQuorum * activationFactor) / 10000;
 
         if(totalBorrowed > activationThreshold){
 
-            return baseMultiplier.mul(totalBorrowed).div(currentQuorum);
+            return (baseMultiplier * totalBorrowed) / currentQuorum;
         }
         //default case
         return 1e18;
@@ -64,7 +62,7 @@ contract HolyPalMultiplier is IMultiplierCalculator, Admin {
         address[] memory _pools = pools;
         uint256 length = _pools.length;
         for(uint256 i; i < length; i++){
-            total = total.add(IPalPoolSimplified(_pools[i]).totalBorrowed());
+            total += IPalPoolSimplified(_pools[i]).totalBorrowed();
         }
         return total;
     }
@@ -72,7 +70,7 @@ contract HolyPalMultiplier is IMultiplierCalculator, Admin {
 
     function getCurrentQuorum() public view returns(uint256){
         uint256 _totalSupply = hPal.totalSupply();
-        return _totalSupply.mul(quorumFactor).div(10000);
+        return (_totalSupply * quorumFactor) / 10000;
     }
 
 
@@ -87,7 +85,7 @@ contract HolyPalMultiplier is IMultiplierCalculator, Admin {
         uint256 length = _pools.length;
         for(uint256 i; i < length; i++){
             if(_pools[i] == _pool){
-                uint256 lastIndex = length.sub(1);
+                uint256 lastIndex = length - 1;
                 if(i != lastIndex){
                     pools[i] = pools[lastIndex];
                 }

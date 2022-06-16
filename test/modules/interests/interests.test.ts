@@ -129,11 +129,11 @@ describe('Interest Calculator contract tests', () => {
 
         await expect(
             interest.utilizationRate(largestUint, largestUint, 0)
-        ).to.be.revertedWith("SafeMath: addition overflow")
+        ).to.be.reverted
 
         await expect(
             interest.getBorrowRate(fakeAddress,0, largestUint, 0)
-        ).to.be.revertedWith("SafeMath: multiplication overflow")
+        ).to.be.reverted
     })
 
 });
