@@ -10,7 +10,7 @@ contract Admin {
     event NewAdmin(address oldAdmin, address newAdmin);
 
     /** @dev Admin address for this contract */
-    address payable internal admin;
+    address internal admin;
     
     modifier adminOnly() {
         //allows only the admin of this contract to call the function
@@ -23,7 +23,7 @@ contract Admin {
     * @dev Changes the address for the admin parameter
     * @param _newAdmin address of the new Controller Admin
     */
-    function setNewAdmin(address payable _newAdmin) external adminOnly {
+    function setNewAdmin(address _newAdmin) external adminOnly {
         address _oldAdmin = admin;
         admin = _newAdmin;
 
