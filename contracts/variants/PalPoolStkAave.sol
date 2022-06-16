@@ -56,7 +56,7 @@ contract PalPoolStkAave is PalPool {
     * @dev Claim AAVE tokens from the AAVE Safety Module and stake them back in the Module
     * @return bool : Success
     */
-    function claimFromAave() internal returns(bool) {
+    function claimFromAave() public returns(bool) {
         //Load contracts
         IERC20 _aave = IERC20(aaveAddress);
         IStakedAave _stkAave = IStakedAave(stkAaveAddress);
