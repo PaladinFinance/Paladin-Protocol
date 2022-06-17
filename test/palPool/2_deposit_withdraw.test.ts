@@ -269,7 +269,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
             await expect(
                 pool.connect(user2).withdraw(paltoken_amount)
-            ).to.be.revertedWith('10')
+            ).to.be.revertedWith('InsufficientBalance()')
             
         });
 
@@ -285,7 +285,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
             await expect(
                 pool.connect(user1).withdraw(paltoken_amount)
-            ).to.be.revertedWith('9')
+            ).to.be.revertedWith('InsufficientCash()')
             
         });
 

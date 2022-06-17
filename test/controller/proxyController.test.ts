@@ -83,7 +83,7 @@ describe('Controller Proxy contract tests', () => {
 
             await expect(
                 proxy.connect(user).proposeImplementation(fakeImplementation.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
 
@@ -124,11 +124,11 @@ describe('Controller Proxy contract tests', () => {
 
             await expect(
                 proxy.connect(fakeImplementation).acceptImplementation()
-            ).to.be.revertedWith('35')
+            ).to.be.revertedWith('CallerNotImplementation()')
 
             await expect(
                 other_controller.connect(admin).becomeImplementation(proxy.address)
-            ).to.be.revertedWith('35')
+            ).to.be.revertedWith('CallerNotImplementation()')
 
         });
     
@@ -138,7 +138,7 @@ describe('Controller Proxy contract tests', () => {
 
             await expect(
                 controller.connect(user).becomeImplementation(proxy.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
     
@@ -146,7 +146,7 @@ describe('Controller Proxy contract tests', () => {
 
             await expect(
                 proxy.connect(user).acceptImplementation()
-            ).to.be.revertedWith('35')
+            ).to.be.revertedWith('CallerNotImplementation()')
 
         });
 
@@ -189,7 +189,7 @@ describe('Controller Proxy contract tests', () => {
 
             await expect(
                 proxyWithImpl.connect(admin).setInitialPools([fakeToken.address], [fakePool.address])
-            ).to.be.revertedWith('37')
+            ).to.be.revertedWith('PoolListAlreadySet()')
 
         });
     

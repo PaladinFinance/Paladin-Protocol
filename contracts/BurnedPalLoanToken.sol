@@ -39,7 +39,7 @@ contract BurnedPalLoanToken{
     //Modifiers
     modifier authorized() {
         //allows only the palLoanToken contract to call methds
-        require(msg.sender == minter, Errors.CALLER_NOT_MINTER);
+        if(msg.sender != minter) revert Errors.CallerNotMinter();
         _;
     }
 

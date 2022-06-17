@@ -69,7 +69,7 @@ describe('Admin contract tests', () => {
 
             await expect(
                 module.connect(newAdmin).transferAdmin(newAdmin.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin')
 
         });
 

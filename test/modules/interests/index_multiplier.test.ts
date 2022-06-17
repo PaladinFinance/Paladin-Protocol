@@ -297,23 +297,23 @@ describe('IndexMultiplier contract tests', () => {
 
             await expect(
                 multiplier.connect(nonAdmin).addPool(pool2.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).removePool(pool1.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateBaseMultiplier(ethers.utils.parseEther('15'))
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateQuorum(ethers.utils.parseEther('350000'))
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateActivationFactor(2500)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 

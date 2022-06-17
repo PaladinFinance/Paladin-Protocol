@@ -20,10 +20,11 @@ contract Admin {
     
     modifier adminOnly() {
         //allows only the admin of this contract to call the function
-        require(msg.sender == admin, '1');
+        if(msg.sender!= admin) revert CallerNotAdmin();
         _;
     }
 
+    error CallerNotAdmin();
     error CannotBeAdmin();
     error CallerNotpendingAdmin();
     error AdminZeroAddress();

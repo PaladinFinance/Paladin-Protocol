@@ -13,6 +13,7 @@ import "./IMultiplierCalculator.sol";
 import "./utils/IGovernor.sol";
 import "./utils/IPalPoolSimplified.sol";
 import "../../utils/Admin.sol";
+import {Errors} from  "../../utils/Errors.sol";
 
 /** @title Multiplier Calculator for Governor type systems  */
 /// @author Paladin
@@ -93,8 +94,8 @@ contract GovernorMultiplier is IMultiplierCalculator, Admin {
     }
 
     function updateActivationThreshold(uint newThreshold) external adminOnly {
-        require(newThreshold >= 0.5e18);
-        require(newThreshold < 1e18);
+        if(newThreshold < 0.5e18) revert Errors.InvalidParameters();
+        if(newThreshold >= 1e18) revert Errors.InvalidParameters();
         activationThreshold = newThreshold;
     }
 

@@ -12,6 +12,7 @@ pragma solidity 0.8.10;
 import "./IMultiplierCalculator.sol";
 import "./utils/IPalPoolSimplified.sol";
 import "../../utils/Admin.sol";
+import {Errors} from  "../../utils/Errors.sol";
 
 /** @title Multiplier Calculator for Index Coop Governance  */
 /// @author Paladin
@@ -86,12 +87,12 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
     }
 
     function updateBaseMultiplier(uint256 newBaseMultiplier) external adminOnly {
-        require(newBaseMultiplier != 0);
+        if(newBaseMultiplier == 0) revert Errors.InvalidParameters();
         baseMultiplier = newBaseMultiplier;
     }
 
     function updateQuorum(uint256 newQuorum) external adminOnly {
-        require(newQuorum != 0);
+        if(newQuorum == 0) revert Errors.InvalidParameters();
         currentQuorum = newQuorum;
 
         //Update activationThreshold
@@ -99,8 +100,8 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
     }
 
     function updateActivationFactor(uint256 newFactor) external adminOnly {
-        require(newFactor <= 10000);
-        require(newFactor != 0);
+        if(newFactor > 10000) revert Errors.InvalidParameters();
+        if(newFactor == 0) revert Errors.InvalidParameters();
         activationFactor = newFactor;
 
         //Update activationThreshold

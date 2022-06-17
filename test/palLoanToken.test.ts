@@ -143,7 +143,7 @@ describe('PalLoanToken contract tests', () => {
 
             await expect(
                 token.connect(pool1).mint(user1.address, pool1.address, ethers.constants.AddressZero)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
 
             await expect(
                 token.connect(pool1).mint(ethers.constants.AddressZero, pool1.address, loan1.address)
@@ -156,7 +156,7 @@ describe('PalLoanToken contract tests', () => {
 
             await expect(
                 token.connect(user1).mint(user1.address, pool1.address, loan1.address)
-            ).to.be.revertedWith('30')
+            ).to.be.revertedWith('CallerNotAllowedPool()')
 
         });
 
@@ -395,7 +395,7 @@ describe('PalLoanToken contract tests', () => {
 
             await expect(
                 token.connect(user1).burn(0)
-            ).to.be.revertedWith('30')
+            ).to.be.revertedWith('CallerNotAllowedPool()')
 
         });
 

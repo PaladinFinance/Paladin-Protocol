@@ -60,7 +60,7 @@ interface IERC721 is IERC165 {
 
     /**
      * @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
-     * are aware of the ERC721 protocol to prevent tokens from being forever locked.
+     * are aware of the ERC721 protocol to prevent tokens from being forever Locked().
      *
      * Requirements:
      *

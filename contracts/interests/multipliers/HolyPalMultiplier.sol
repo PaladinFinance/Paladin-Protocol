@@ -13,6 +13,7 @@ import "./IMultiplierCalculator.sol";
 import "./utils/IPalPoolSimplified.sol";
 import "./utils/IhPalVotes.sol";
 import "../../utils/Admin.sol";
+import {Errors} from  "../../utils/Errors.sol";
 
 /** @title Multiplier Calculator for Paladin hPAL  */
 /// @author Paladin
@@ -95,19 +96,19 @@ contract HolyPalMultiplier is IMultiplierCalculator, Admin {
     }
 
     function updateBaseMultiplier(uint256 newBaseMultiplier) external adminOnly {
-        require(newBaseMultiplier != 0);
+        if(newBaseMultiplier == 0) revert Errors.InvalidParameters();
         baseMultiplier = newBaseMultiplier;
     }
 
     function updateActivationFactor(uint256 newFactor) external adminOnly {
-        require(newFactor <= 10000);
-        require(newFactor != 0);
+        if(newFactor > 10000) revert Errors.InvalidParameters();
+        if(newFactor == 0) revert Errors.InvalidParameters();
         activationFactor = newFactor;
     }
 
     function updateQuorumFactor(uint256 newFactor) external adminOnly {
-        require(newFactor <= 10000);
-        require(newFactor != 0);
+        if(newFactor > 10000) revert Errors.InvalidParameters();
+        if(newFactor == 0) revert Errors.InvalidParameters();
         quorumFactor = newFactor;
     }
 

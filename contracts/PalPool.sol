@@ -33,7 +33,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
 
     modifier controllerOnly() {
         //allows only the Controller and the admin to call the function
-        require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
+        if(msg.sender != admin && msg.sender != address(controller)) revert Errors.CallerNotController();
         _;
     }
 
@@ -80,7 +80,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     * @return bool : amount of minted palTokens
     */
     function deposit(uint _amount) public virtual override nonReentrant returns(uint){
-        require(_updateInterest());
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
 
         //Retrieve the current exchange rate palToken:underlying
         uint _exchRate = _exchangeRate();
@@ -94,13 +94,13 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         underlying.safeTransferFrom(msg.sender, address(this), _amount);
 
         //Mint the palToken
-        require(palToken.mint(msg.sender, _toMint), Errors.FAIL_MINT);
+        if(!palToken.mint(msg.sender, _toMint)) revert Errors.FailMint();
 
         //Emit the Deposit event
         emit Deposit(msg.sender, _amount, address(this));
 
         //Use the controller to check if the minting was successfull
-        require(controller.depositVerify(address(this), msg.sender, _toMint), Errors.FAIL_DEPOSIT);
+        if(!controller.depositVerify(address(this), msg.sender, _toMint)) revert Errors.FailDeposit();
 
         return _toMint;
     }
@@ -112,8 +112,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     * @return uint : amount of underlying returned
     */
     function withdraw(uint _amount) public virtual override nonReentrant returns(uint){
-        require(_updateInterest());
-        require(balanceOf(msg.sender) >= _amount, Errors.INSUFFICIENT_BALANCE);
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
+        if(balanceOf(msg.sender) < _amount) revert Errors.InsufficientBalance();
 
         //Retrieve the current exchange rate palToken:underlying
         uint _exchRate = _exchangeRate();
@@ -122,16 +122,16 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         uint _toReturn = (_amount * _exchRate) / mantissaScale;
 
         //Check if the pool has enough underlying to return
-        require(_toReturn <= underlyingBalance(), Errors.INSUFFICIENT_CASH);
+        if(_toReturn > underlyingBalance()) revert Errors.InsufficientCash();
 
         //Burn the corresponding palToken amount
-        require(palToken.burn(msg.sender, _amount), Errors.FAIL_BURN);
+        if(!palToken.burn(msg.sender, _amount)) revert Errors.FailBurn();
 
         //Make the underlying transfer
         underlying.safeTransfer(msg.sender, _toReturn);
 
         //Use the controller to check if the burning was successfull
-        require(controller.withdrawVerify(address(this), msg.sender, _toReturn), Errors.FAIL_WITHDRAW);
+        if(!controller.withdrawVerify(address(this), msg.sender, _toReturn)) revert Errors.FailWithdraw();
 
         //Emit the Withdraw event
         emit Withdraw(msg.sender, _amount, address(this));
@@ -148,11 +148,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     */
     function borrow(address _delegatee, uint _amount, uint _feeAmount) public virtual override nonReentrant returns(uint){
         //Need the pool to have enough liquidity, and the interests to be up to date
-        require(_amount <= underlyingBalance(), Errors.INSUFFICIENT_CASH);
-        require(_delegatee != address(0), Errors.ZERO_ADDRESS);
-        require(_amount > 0, Errors.ZERO_BORROW);
-        require(_feeAmount >= minBorrowFees(_amount), Errors.BORROW_INSUFFICIENT_FEES);
-        require(_updateInterest());
+        if(_amount > underlyingBalance()) revert Errors.InsufficientCash();
+        if(_delegatee == address(0)) revert Errors.ZeroAddress();
+        if(_amount == 0) revert Errors.ZeroBorrow();
+        if(_feeAmount < minBorrowFees(_amount)) revert Errors.BorrowInsufficientFees();
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
 
         address _borrower = msg.sender;
 
@@ -169,14 +169,14 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         underlying.safeTransferFrom(_borrower, address(_newLoan), _feeAmount);
 
         //Start the Loan (and delegate voting power)
-        require(_newLoan.initiate(
+        if(!_newLoan.initiate(
             address(this),
             _borrower,
             address(underlying),
             _delegatee,
             _amount,
             _feeAmount
-        ), Errors.FAIL_LOAN_INITIATE);
+        )) revert Errors.FailLoanInitiate();
 
         //Add the new Loan to mappings
         loans.push(address(_newLoan));
@@ -201,10 +201,9 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         );
 
         //Check the borrow succeeded
-        require(
-            controller.borrowVerify(address(this), _borrower, _delegatee, _amount, _feeAmount, address(_newLoan)), 
-            Errors.FAIL_BORROW
-        );
+        if(
+            !controller.borrowVerify(address(this), _borrower, _delegatee, _amount, _feeAmount, address(_newLoan))
+        ) revert Errors.FailBorrow();
 
         //Emit the NewLoan Event
         emit NewLoan(
@@ -232,10 +231,10 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
-        require(!_borrow.closed, Errors.LOAN_CLOSED);
-        require(isLoanOwner(_loan, msg.sender), Errors.NOT_LOAN_OWNER);
-        require(_feeAmount > 0);
-        require(_updateInterest());
+        if(_borrow.closed) revert Errors.LoanClosed();
+        if(!isLoanOwner(_loan, msg.sender)) revert Errors.NotLoanOwner();
+        if(_feeAmount == 0) revert Errors.BorrowInsufficientFees();
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
         
         //Load the Loan Pool contract & get Loan owner
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
@@ -248,12 +247,11 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //If success, call the expand function of the Loan
         underlying.safeTransferFrom(_loanOwner, _borrow.loan, _feeAmount);
 
-        require(_palLoan.expand(_feeAmount), Errors.FAIL_LOAN_EXPAND);
+        if(!_palLoan.expand(_feeAmount)) revert Errors.FailLoanExpand();
 
-        require(
-            controller.expandBorrowVerify(address(this), _loan, _feeAmount), 
-            Errors.FAIL_LOAN_EXPAND
-        );
+        if(
+            !controller.expandBorrowVerify(address(this), _loan, _feeAmount)
+        ) revert Errors.FailLoanExpand();
 
         emit ExpandLoan(
             _loanOwner,
@@ -278,9 +276,9 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
-        require(!_borrow.closed, Errors.LOAN_CLOSED);
-        require(isLoanOwner(_loan, msg.sender), Errors.NOT_LOAN_OWNER);
-        require(_updateInterest());
+        if(_borrow.closed) revert Errors.LoanClosed();
+        if(!isLoanOwner(_loan, msg.sender)) revert Errors.NotLoanOwner();
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
 
         //Get Loan owner from the ERC721 contract
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
@@ -330,9 +328,9 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         _palLoan.closeLoan(_totalFees, _loanOwner);
 
         //Burn the palLoanToken for this Loan
-        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
+        if(!palLoanToken.burn(_borrow.tokenId)) revert Errors.FailLoanTokenBurn();
 
-        require(controller.closeBorrowVerify(address(this), _loanOwner, _borrow.loan), Errors.FAIL_CLOSE_BORROW);
+        if(!controller.closeBorrowVerify(address(this), _loanOwner, _borrow.loan)) revert Errors.FailCloseBorrow();
 
         //Emit the CloseLoan Event
         emit CloseLoan(
@@ -358,9 +356,9 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Fetch the corresponding Borrow
         //And check that the killer is not the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
-        require(!_borrow.closed, Errors.LOAN_CLOSED);
-        require(!isLoanOwner(_loan, killer), Errors.LOAN_OWNER);
-        require(_updateInterest());
+        if(_borrow.closed) revert Errors.LoanClosed();
+        if(isLoanOwner(_loan, killer)) revert Errors.LoanOwner();
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
 
         //Get the owner of the Loan through the ERC721 contract
         address _loanOwner = palLoanToken.ownerOf(_borrow.tokenId);
@@ -368,7 +366,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Calculate the amount of fee used, and check if the Loan is killable
         uint _feesUsed = ((_borrow.amount * borrowIndex) / _borrow.borrowIndex) - _borrow.amount;
         uint _loanHealthFactor = (_feesUsed * uint(1e18)) / _borrow.feesAmount;
-        require(_loanHealthFactor >= killFactor, Errors.NOT_KILLABLE);
+        if(_loanHealthFactor < killFactor) revert Errors.NotKillable();
 
         //Load the Loan
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
@@ -395,9 +393,9 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         _palLoan.killLoan(killer, killerRatio);
 
         //Burn the palLoanToken for this Loan
-        require(palLoanToken.burn(_borrow.tokenId), Errors.FAIL_LOAN_TOKEN_BURN);
+        if(!palLoanToken.burn(_borrow.tokenId)) revert Errors.FailLoanTokenBurn();
 
-        require(controller.killBorrowVerify(address(this), killer, _borrow.loan), Errors.FAIL_KILL_BORROW);
+        if(!controller.killBorrowVerify(address(this), killer, _borrow.loan)) revert Errors.FailKillBorrow();
 
         //Emit the CloseLoan Event
         emit CloseLoan(
@@ -425,10 +423,10 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         //Fetch the corresponding Borrow
         //And check that the caller is the Borrower, and the Loan is still active
         Borrow storage _borrow = loanToBorrow[_loan];
-        require(!_borrow.closed, Errors.LOAN_CLOSED);
-        require(_newDelegatee != address(0), Errors.ZERO_ADDRESS);
-        require(isLoanOwner(_loan, msg.sender), Errors.NOT_LOAN_OWNER);
-        require(_updateInterest());
+        if(_borrow.closed) revert Errors.LoanClosed();
+        if(_newDelegatee == address(0)) revert Errors.ZeroAddress();
+        if(!isLoanOwner(_loan, msg.sender)) revert Errors.NotLoanOwner();
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
 
         //Load the Loan Pool contract
         IPalLoan _palLoan = IPalLoan(_borrow.loan);
@@ -437,7 +435,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         _borrow.delegatee = _newDelegatee;
 
         //Call the delegation logic in the palLoan to change the votong power recipient
-        require(_palLoan.changeDelegatee(_newDelegatee), Errors.FAIL_LOAN_DELEGATEE_CHANGE);
+        if(!_palLoan.changeDelegatee(_newDelegatee)) revert Errors.FailLoanDelegateeChange();
 
         //Emit the Event
         emit ChangeLoanDelegatee(
@@ -622,7 +620,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     * @return uint : minimum amount (in wei)
     */
     function minBorrowFees(uint _amount) public view override returns (uint){
-        require(_amount <= underlyingBalance(), Errors.INSUFFICIENT_CASH);
+        if(_amount > underlyingBalance()) revert Errors.InsufficientCash();
         //Future Borrow Rate with the amount to borrow counted as already borrowed
         uint _borrowRate = interestModule.getBorrowRate(address(this), underlyingBalance() - _amount, totalBorrowed + _amount, totalReserve);
         uint _minFees = (minBorrowLength * (_amount * _borrowRate)) / mantissaScale;
@@ -730,7 +728,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     * @param _length new Minimum Borrow Length
     */
     function updateMinBorrowLength(uint _length) external override adminOnly {
-        require(_length > 0, Errors.INVALID_PARAMETERS);
+        if(_length == 0) revert Errors.InvalidParameters();
         minBorrowLength = _length;
     }
 
@@ -742,9 +740,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     * @param _killerRatio new Ratio of Fees to pay the killer
     */
     function updatePoolFactors(uint _reserveFactor, uint _killerRatio) external override adminOnly {
-        require(_reserveFactor > 0 && _killerRatio > 0 && _reserveFactor >= _killerRatio, 
-            Errors.INVALID_PARAMETERS
-        );
+        if(_reserveFactor == 0 || _killerRatio == 0 || _reserveFactor < _killerRatio) revert Errors.InvalidParameters();
         reserveFactor = _reserveFactor;
         killerRatio = _killerRatio;
     }
@@ -756,7 +752,7 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     * @param _amount Amount of underlying to transfer
     */
     function addReserve(uint _amount) external override adminOnly {
-        require(_updateInterest());
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
 
         totalReserve += _amount;
 
@@ -773,8 +769,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     */
     function removeReserve(uint _amount) external override adminOnly {
         //Check if there is enough in the reserve
-        require(_updateInterest());
-        require(_amount <= underlyingBalance() && _amount <= totalReserve, Errors.RESERVE_FUNDS_INSUFFICIENT);
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
+        if(_amount > underlyingBalance() || _amount > totalReserve) revert Errors.ReserveFundsInsufficient();
 
         totalReserve -= _amount;
 
@@ -792,8 +788,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
     */
     function withdrawFees(uint _amount, address _recipient) external override controllerOnly {
         //Check if there is enough in the reserve
-        require(_updateInterest());
-        require(_amount<= accruedFees && _amount <= totalReserve, Errors.FEES_ACCRUED_INSUFFICIENT);
+        if(!_updateInterest()) revert Errors.FailUpdateInterest();
+        if(_amount > accruedFees || _amount > totalReserve) revert Errors.FeesAccruedInsufficient();
 
         //Substract from accruedFees (to track how much fees the Controller can withdraw since last time)
         //And also from the REserve, since the fees are part of the Reserve
@@ -812,8 +808,8 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
      * @param amount Amount to transfer
      */
     function recoverERC20(address token, uint256 amount) external adminOnly virtual returns(bool) {
-        require(token != address(underlying), "token not allowed");
-        require(amount != 0 && amount <= IERC20(token).balanceOf(address(this)), "invalid amount");
+        if(token == address(underlying) || token == address(0)) revert Errors.InvalidToken();
+        if(amount == 0 || amount > IERC20(token).balanceOf(address(this))) revert Errors.InvalidAmount();
         IERC20(token).safeTransfer(admin, amount);
 
         return true;

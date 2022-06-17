@@ -14,6 +14,7 @@ import "../ControllerStorage.sol";
 import "../PalPool.sol";
 import "../IPalPool.sol";
 import "../utils/IERC20.sol";
+import {Errors} from  "../utils/Errors.sol";
 
 /** @title DoomsdayController contract -> blocks any transaction from the PalPools  */
 /// @author Paladin
@@ -61,8 +62,8 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Success
     */ 
     function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override adminOnly returns(bool){
-        require(!initialized, Errors.POOL_LIST_ALREADY_SET);
-        require(_palTokens.length == _palPools.length, Errors.LIST_SIZES_NOT_EQUAL);
+        if(initialized) revert Errors.PoolListAlreadySet();
+        if(_palTokens.length != _palPools.length) revert Errors.ListSizesNotEqual();
         palPools = _palPools;
         palTokens = _palTokens;
         initialized = true;
@@ -102,7 +103,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     */ 
     function removePool(address _palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(isPalPool(_palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(_palPool)) revert Errors.PoolNotListed();
 
         address[] memory _pools = palPools;
         
@@ -165,7 +166,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
 
         palPool;
         dest;
@@ -184,7 +185,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         palPool;
         dest;
@@ -205,7 +206,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         palPool;
         borrower;
@@ -225,7 +226,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function expandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
 
         palPool;
         loanAddress;
@@ -243,7 +244,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function closeBorrowVerify(address palPool, address borrower, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         borrower;
 
@@ -263,7 +264,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function killBorrowVerify(address palPool, address killer, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         killer;
 
@@ -524,7 +525,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     function becomeImplementation(ControllerProxy proxy) external override adminOnly {
         // Only to call after the contract was set as Pending Implementation in the Proxy contract
         // To accept the delegatecalls, and update the Implementation address in the Proxy
-        require(proxy.acceptImplementation(), Errors.FAIL_BECOME_IMPLEMENTATION);
+        if(!proxy.acceptImplementation()) revert Errors.FailBecomeImplementation();
     }
 
     function updateRewardToken(address newRewardTokenAddress) external override adminOnly {
@@ -533,12 +534,12 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
     // Allows to withdraw reward tokens from the Controller if rewards are removed or changed
     function withdrawRewardToken(uint256 amount, address recipient) external override adminOnly {
-        require(recipient != address(0), Errors.ZERO_ADDRESS);
-        require(amount > 0, Errors.INVALID_PARAMETERS);
+        if(recipient == address(0)) revert Errors.ZeroAddress();
+        if(amount == 0) revert Errors.InvalidParameters();
 
         IERC20 token = IERC20(rewardToken());
 
-        require(amount <= token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+        if(amount > token.balanceOf(address(this))) revert Errors.BalanceTooLow();
 
         token.safeTransfer(recipient, amount);
     }
@@ -561,7 +562,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
     // set a pool rewards values (admin)
     function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward) external override adminOnly {
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
 
         if(newSupplySpeed != supplySpeeds[palPool]){
             //Make sure it's updated before setting the new speed

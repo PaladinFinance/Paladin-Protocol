@@ -271,7 +271,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user1).updateRewardToken(rewardToken.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
     
@@ -279,7 +279,7 @@ describe('Paladin Controller - Rewards System tests', () => {
             
             await expect(
                 controller.connect(user1).updatePoolRewards(pool1.address, supplySpeed, borrowRatio, true)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
     
@@ -405,7 +405,7 @@ describe('Paladin Controller - Rewards System tests', () => {
             await token1.connect(user1).approve(controller.address, user_palToken_amount)
             await expect(
                 controller.connect(user1).deposit(token1.address, user_palToken_amount)
-            ).to.be.revertedWith('10')
+            ).to.be.revertedWith('InsufficientBalance()')
 
         });
     
@@ -426,7 +426,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user2).withdraw(token1.address, user_palToken_amount)
-            ).to.be.revertedWith('43')
+            ).to.be.revertedWith('InsufficientDeposited()')
 
         });
     
@@ -769,7 +769,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user1).deposit(token2.address, user1_palToken_amount)
-            ).to.be.revertedWith('39')
+            ).to.be.revertedWith('PoolNotListed()')
 
         });
 
@@ -785,7 +785,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user1).withdraw(token2.address, user1_palToken_amount)
-            ).to.be.revertedWith('39')
+            ).to.be.revertedWith('PoolNotListed()')
 
         });
 
@@ -927,7 +927,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user2).claim(user2.address)
-            ).to.be.revertedWith('41')
+            ).to.be.revertedWith('RewardsCashTooLow()')
 
         });
     
@@ -966,7 +966,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user2).claimLoanRewards(pool1.address, loan_address)
-            ).to.be.revertedWith('44')
+            ).to.be.revertedWith('NotClaimable()')
 
         });
 
@@ -1038,7 +1038,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user2).claimLoanRewards(pool1.address, loan_address)
-            ).to.be.revertedWith('44')
+            ).to.be.revertedWith('NotClaimable()')
 
         });
 
@@ -1094,7 +1094,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user2).claimLoanRewards(pool1.address, loan_address)
-            ).to.be.revertedWith('44')
+            ).to.be.revertedWith('NotClaimable()')
 
         });
 
@@ -1108,7 +1108,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user1).claimLoanRewards(pool1.address, loan_address)
-            ).to.be.revertedWith('15')
+            ).to.be.revertedWith('NotLoanOwner()')
 
         });
 
@@ -1189,7 +1189,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user2).claimLoanRewards(pool2.address, loan_address)
-            ).to.be.revertedWith('44')
+            ).to.be.revertedWith('NotClaimable()')
 
         });
 
@@ -1261,11 +1261,11 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(admin).withdrawRewardToken(reward_withdraw_amount, ethers.constants.AddressZero)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
 
             await expect(
                 controller.connect(admin).withdrawRewardToken(0, admin.address)
-            ).to.be.revertedWith('28')
+            ).to.be.revertedWith('InvalidParameters()')
 
         });
 
@@ -1275,7 +1275,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(admin).withdrawRewardToken(incorrect_reward_withdraw_amount, admin.address)
-            ).to.be.revertedWith('4')
+            ).to.be.revertedWith('BalanceTooLow()')
 
         });
 
@@ -1283,7 +1283,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user1).withdrawRewardToken(reward_withdraw_amount, admin.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
 
@@ -1348,7 +1348,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(admin).withdrawToken(rewardToken.address, withdraw_amount, admin.address)
-            ).to.be.revertedWith('28')
+            ).to.be.revertedWith('InvalidToken()')
 
         });
 
@@ -1356,7 +1356,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(admin).withdrawToken(token1.address, withdraw_amount, admin.address)
-            ).to.be.revertedWith('28')
+            ).to.be.revertedWith('InvalidToken()')
 
         });
 
@@ -1364,15 +1364,15 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(admin).withdrawToken(other_token.address, withdraw_amount, ethers.constants.AddressZero)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
 
             await expect(
                 controller.connect(admin).withdrawToken(ethers.constants.AddressZero, withdraw_amount, admin.address)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
 
             await expect(
                 controller.connect(admin).withdrawToken(other_token.address, 0, admin.address)
-            ).to.be.revertedWith('28')
+            ).to.be.revertedWith('InvalidParameters()')
 
         });
 
@@ -1382,7 +1382,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(admin).withdrawToken(other_token.address, incorrect_reward_withdraw_amount, admin.address)
-            ).to.be.revertedWith('4')
+            ).to.be.revertedWith('BalanceTooLow()')
 
         });
 
@@ -1390,7 +1390,7 @@ describe('Paladin Controller - Rewards System tests', () => {
 
             await expect(
                 controller.connect(user1).withdrawToken(other_token.address, withdraw_amount, admin.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
 

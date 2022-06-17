@@ -15,6 +15,7 @@ import "./utils/AAVE/IProposalValidator.sol";
 import "./utils/AAVE/IAaveGovernanceV2.sol";
 import "./utils/AAVE/IGovernanceStrategy.sol";
 import "../../utils/Admin.sol";
+import {Errors} from  "../../utils/Errors.sol";
 
 /** @title Multiplier Calculator for Aave Governance  */
 /// @author Paladin
@@ -113,8 +114,8 @@ contract AaveMultiplier is IMultiplierCalculator, Admin {
 
 
     function updateActivationThreshold(uint newThreshold) external adminOnly {
-        require(newThreshold >= 0.5e18);
-        require(newThreshold < 1e18);
+        if(newThreshold < 0.5e18) revert Errors.InvalidParameters();
+        if(newThreshold >= 1e18) revert Errors.InvalidParameters();
         activationThreshold = newThreshold;
     }
 

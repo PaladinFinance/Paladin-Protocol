@@ -46,8 +46,7 @@ contract PalToken is IERC20, Admin {
 
     /** @dev Modifier so only the PalPool linked to this contract can Mint/Burn tokens */
     modifier onlyPool() {
-        require(msg.sender == palPool);
-
+        if(msg.sender != palPool) revert Errors.CallerNotAllowedPool();
         _;
     }
 
@@ -66,7 +65,7 @@ contract PalToken is IERC20, Admin {
 
 
     function initiate(address _palPool) external adminOnly returns (bool){
-        require(!initialized);
+        if(initialized) revert Errors.AlreadyInitialized();
 
         initialized = true;
         palPool = _palPool;
@@ -86,7 +85,7 @@ contract PalToken is IERC20, Admin {
 
 
     function transferFrom(address src, address dest, uint amount) external override returns(bool){
-        require(transferAllowances[src][msg.sender] >= amount, Errors.ALLOWANCE_TOO_LOW);
+        if(transferAllowances[src][msg.sender] < amount) revert Errors.AllowanceTooLow();
 
         unchecked {
             // Safe, value was checked before
@@ -101,9 +100,9 @@ contract PalToken is IERC20, Admin {
 
     function _transfer(address src, address dest, uint amount) internal returns(bool){
         //Check if the transfer is possible
-        require(balances[src] >= amount, Errors.BALANCE_TOO_LOW);
-        require(dest != src, Errors.SELF_TRANSFER);
-        require(src != address(0) && dest != address(0), Errors.ZERO_ADDRESS);
+        if(balances[src] < amount) revert Errors.BalanceTooLow();
+        if(dest == src) revert Errors.SelfTransfer();
+        if(src == address(0) || dest == address(0)) revert Errors.ZeroAddress();
 
         //Update balances
         unchecked {
@@ -128,13 +127,13 @@ contract PalToken is IERC20, Admin {
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 currentAllowance = transferAllowances[msg.sender][spender];
-        require(currentAllowance >= subtractedValue, "decreased allowance below zero");
+        if(currentAllowance < subtractedValue) revert Errors.AllowanceUnderflow();
         return _approve(msg.sender, spender, currentAllowance - subtractedValue);
     }
 
 
     function _approve(address owner, address spender, uint amount) internal returns(bool){
-        require(spender != address(0), Errors.ZERO_ADDRESS);
+        if(spender == address(0)) revert Errors.ZeroAddress();
 
         //Update allowance and emit the Approval event
         transferAllowances[owner][spender] = amount;
@@ -156,7 +155,7 @@ contract PalToken is IERC20, Admin {
 
 
     function mint(address _user, uint _toMint) external onlyPool returns(bool){
-        require(_user != address(0), Errors.ZERO_ADDRESS);
+        if(_user == address(0)) revert Errors.ZeroAddress();
 
         _totalSupply += _toMint;
         unchecked {
@@ -171,8 +170,8 @@ contract PalToken is IERC20, Admin {
 
 
     function burn(address _user, uint _toBurn) external onlyPool returns(bool){
-        require(_user != address(0), Errors.ZERO_ADDRESS);
-        require(balances[_user] >= _toBurn, Errors.INSUFFICIENT_BALANCE);
+        if(_user == address(0)) revert Errors.ZeroAddress();
+        if(balances[_user] < _toBurn) revert Errors.InsufficientBalance();
 
         _totalSupply -= _toBurn;
         unchecked {

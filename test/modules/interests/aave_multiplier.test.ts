@@ -317,27 +317,27 @@ describe('AaveMultiplier contract tests', () => {
 
             await expect(
                 multiplier.connect(nonAdmin).addPool(pool2.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).removePool(pool1.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateGovernance(governance.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateGovernanceStrategy()
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateExecutor(executor.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateActivationThreshold(ethers.utils.parseEther('0.65'))
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 

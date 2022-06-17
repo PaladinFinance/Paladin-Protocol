@@ -15,7 +15,7 @@ contract MockPalPool is Admin {
     bool public lastControllerCallResult;
 
     modifier controllerOnly() {
-        require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
+        if(msg.sender != admin && msg.sender != address(controller)) revert Errors.CallerNotController();
         _;
     }
 
@@ -38,7 +38,7 @@ contract MockPalPool is Admin {
     }
 
     function withdrawFees(uint _amount, address _recipient) external controllerOnly {
-        require(_amount<= accruedFees && _amount <= totalReserve, Errors.FEES_ACCRUED_INSUFFICIENT);
+        if(_amount > accruedFees || _amount > totalReserve) revert Errors.FeesAccruedInsufficient();
         accruedFees -= _amount;
         totalReserve -= _amount;
 

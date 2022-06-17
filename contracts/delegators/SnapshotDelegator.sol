@@ -44,7 +44,7 @@ contract SnapshotDelegator{
     }
 
     modifier motherPoolOnly() {
-        require(msg.sender == motherPool);
+        if(msg.sender != motherPool) revert Errors.CallerNotMotherPool();
         _;
     }
 
@@ -64,7 +64,7 @@ contract SnapshotDelegator{
         uint _amount,
         uint _feesAmount
     ) external returns(bool){
-        require(motherPool == address(0));
+        if(motherPool != address(0)) revert Errors.AlreadyInitialized();
 
         motherPool = payable(_motherPool);
         borrower = _borrower;

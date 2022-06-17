@@ -12,6 +12,7 @@ pragma solidity 0.8.10;
 import "./InterestInterface.sol";
 import "./multipliers/IMultiplierCalculator.sol";
 import "../utils/Admin.sol";
+import {Errors} from  "../utils/Errors.sol";
 
 /** @title Interest Module V2 for Paladin PalPools  */
 /// @author Paladin
@@ -46,8 +47,8 @@ contract InterestCalculatorV2 is InterestInterface, Admin {
         address[] memory palPools,
         address[] memory multiplierCalculators
     ) external adminOnly {
-        require(!initiated, "Already initiated");
-        require(palPools.length == multiplierCalculators.length);
+        if(initiated) revert Errors.AlreadyInitialized();
+        if(palPools.length != multiplierCalculators.length) revert Errors.ListSizesNotEqual();
 
         multiplierPerBlock = multiplierPerYear / blocksPerYear;
         baseRatePerBlock = baseRatePerYear / blocksPerYear;
@@ -147,12 +148,12 @@ contract InterestCalculatorV2 is InterestInterface, Admin {
 
 
     function activateMultiplier(address palPool) external adminOnly {
-        require(!useMultiplier[palPool], "Already activated");
+        if(useMultiplier[palPool]) revert Errors.MultiplierAlreadyActivated();
         useMultiplier[palPool] = true;
     }
 
     function stopMultiplier(address palPool) external adminOnly {
-        require(useMultiplier[palPool], "Not activated");
+        if(!useMultiplier[palPool]) revert Errors.MultiplierNotActivated();
         useMultiplier[palPool] = false;
     }
 

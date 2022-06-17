@@ -105,7 +105,7 @@ describe('InterestCalculator V2 contract tests', () => {
                     [pool.address],
                     [governorMultiplier.address]
                 )
-            ).to.be.revertedWith('Already initiated')
+            ).to.be.revertedWith('AlreadyInitialized()')
 
         });
 
@@ -120,7 +120,7 @@ describe('InterestCalculator V2 contract tests', () => {
                     [pool.address],
                     [governorMultiplier.address]
                 )
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
 
@@ -413,23 +413,23 @@ describe('InterestCalculator V2 contract tests', () => {
 
             await expect(
                 interest.connect(nonAdmin).activateMultiplier(pool.address)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).stopMultiplier(pool.address)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).updateBaseValues(1,1,1)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).updateBlocksPerYear(4)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).updatePoolMultiplierCalculator(pool.address, governorMultiplier.address)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
             
         });
 

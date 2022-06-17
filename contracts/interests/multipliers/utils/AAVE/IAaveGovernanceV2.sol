@@ -207,14 +207,14 @@ interface IAaveGovernanceV2 {
 
     /**
      * @dev Set new GovernanceStrategy
-     * Note: owner should be a timelocked executor, so needs to make a proposal
+     * Note: owner should be a timeLocked() executor, so needs to make a proposal
      * @param governanceStrategy new Address of the GovernanceStrategy contract
      **/
     function setGovernanceStrategy(address governanceStrategy) external;
 
     /**
      * @dev Set new Voting Delay (delay before a newly created proposal can be voted on)
-     * Note: owner should be a timelocked executor, so needs to make a proposal
+     * Note: owner should be a timeLocked() executor, so needs to make a proposal
      * @param votingDelay new voting delay in seconds
      **/
     function setVotingDelay(uint256 votingDelay) external;

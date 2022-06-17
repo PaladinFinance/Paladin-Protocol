@@ -11,6 +11,7 @@ pragma solidity 0.8.10;
 
 import "../interfaces/IhPAL.sol";
 import "../utils/SafeERC20.sol";
+import {Errors} from  "../utils/Errors.sol";
 
 /** @title hPAL token Delegator that claims rewards for the PAL token */
 /// @author Paladin
@@ -39,7 +40,7 @@ contract PalDelegatorClaimer{
     }
 
     modifier motherPoolOnly() {
-        require(msg.sender == motherPool);
+        if(msg.sender != motherPool) revert Errors.CallerNotMotherPool();
         _;
     }
 
@@ -59,7 +60,7 @@ contract PalDelegatorClaimer{
         uint _amount,
         uint _feesAmount
     ) public returns(bool){
-        require(motherPool == address(0));
+        if(motherPool != address(0)) revert Errors.AlreadyInitialized();
 
         motherPool = payable(_motherPool);
         borrower = _borrower;

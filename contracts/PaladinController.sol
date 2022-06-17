@@ -26,7 +26,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     // Prevent reentry in deposit & withdraw
     modifier lock() {
-        require(!locked, Errors.LOCKED);
+        if(locked) revert Errors.Locked();
         locked = true;
         _;
         locked = false;
@@ -76,8 +76,8 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Success
     */ 
     function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override adminOnly returns(bool){
-        require(!initialized, Errors.POOL_LIST_ALREADY_SET);
-        require(_palTokens.length == _palPools.length, Errors.LIST_SIZES_NOT_EQUAL);
+        if(initialized) revert Errors.PoolListAlreadySet();
+        if(_palTokens.length != _palPools.length) revert Errors.ListSizesNotEqual();
         palPools = _palPools;
         palTokens = _palTokens;
         initialized = true;
@@ -109,7 +109,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */ 
     function addNewPool(address _palToken, address _palPool) external override adminOnly returns(bool){
         //Add a new address to the palToken & palPool list
-        require(!isPalPool(_palPool), Errors.POOL_ALREADY_LISTED);
+        if(isPalPool(_palPool)) revert Errors.PoolAlreadyListed();
 
         palTokens.push(_palToken);
         palPools.push(_palPool);
@@ -140,7 +140,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */ 
     function removePool(address palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
 
         address[] memory _pools = palPools;
         
@@ -207,7 +207,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         palPool;
         dest;
@@ -225,7 +225,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
 
         palPool;
         dest;
@@ -245,7 +245,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         borrower;
         delegatee;
@@ -268,7 +268,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function expandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         newFeesAmount;
 
@@ -290,7 +290,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function closeBorrowVerify(address palPool, address borrower, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         borrower;
 
@@ -312,7 +312,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function killBorrowVerify(address palPool, address killer, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         killer;
 
@@ -331,11 +331,11 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     function deposit(address palToken, uint amount) external lock override returns(bool){
         address palPool = palTokenToPalPool[palToken];
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
         address user = msg.sender;
         IERC20 token = IERC20(palToken);
 
-        require(amount <= token.balanceOf(user), Errors.INSUFFICIENT_BALANCE);
+        if(amount > token.balanceOf(user)) revert Errors.InsufficientBalance();
 
         updateSupplyIndex(palPool);
         accrueSupplyRewards(palPool, user);
@@ -353,10 +353,10 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     function withdraw(address palToken, uint amount) external lock override returns(bool){
         address palPool = palTokenToPalPool[palToken];
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
         address user = msg.sender;
 
-        require(amount <= supplierDeposits[palPool][user], Errors.INSUFFICIENT_DEPOSITED);
+        if(amount > supplierDeposits[palPool][user]) revert Errors.InsufficientDeposited();
 
         updateSupplyIndex(palPool);
         accrueSupplyRewards(palPool, user);
@@ -525,17 +525,17 @@ contract PaladinController is IPaladinController, ControllerStorage {
         (address borrower,,,,,,,,,,bool closed,) = pool.getBorrowData(loanAddress);
 
         // Check if the PalLoan has some claimable rewards, and if it was not claimed already
-        require(msg.sender == borrower, Errors.NOT_LOAN_OWNER);
+        if(msg.sender != borrower) revert Errors.NotLoanOwner();
         uint claimableAmount = _calculateLoanRewards(palPool, loanAddress);
 
-        require(closed && claimableAmount != 0, Errors.NOT_CLAIMABLE);
+        if(!closed || claimableAmount == 0) revert Errors.NotClaimable();
 
         // Set this Loan rewards as claimed/distributed
         isLoanRewardClaimed[loanAddress] = true;
         
         // Transfer the rewards to the borrower
         IERC20 token = IERC20(rewardToken());
-        require(claimableAmount <= token.balanceOf(address(this)), Errors.REWARDS_CASH_TOO_LOW);
+        if(claimableAmount > token.balanceOf(address(this))) revert Errors.RewardsCashTooLow();
 
         token.safeTransfer(borrower, claimableAmount);
 
@@ -629,7 +629,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
         // If there is a claimable amount
         if(toClaim > 0){
             IERC20 token = IERC20(rewardToken());
-            require(toClaim <= token.balanceOf(address(this)), Errors.REWARDS_CASH_TOO_LOW);
+            if(toClaim > token.balanceOf(address(this))) revert Errors.RewardsCashTooLow();
 
             // All rewards were accrued and sent to the user, reset the counter
             accruedRewards[user] = 0;
@@ -672,7 +672,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     function becomeImplementation(ControllerProxy proxy) external override adminOnly {
         // Only to call after the contract was set as Pending Implementation in the Proxy contract
         // To accept the delegatecalls, and update the Implementation address in the Proxy
-        require(proxy.acceptImplementation(), Errors.FAIL_BECOME_IMPLEMENTATION);
+        if(!proxy.acceptImplementation()) revert Errors.FailBecomeImplementation();
     }
 
     function updateRewardToken(address newRewardTokenAddress) external override adminOnly {
@@ -681,29 +681,29 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     // Allows to withdraw reward tokens from the Controller if rewards are removed or changed
     function withdrawRewardToken(uint256 amount, address recipient) external override adminOnly {
-        require(recipient != address(0), Errors.ZERO_ADDRESS);
-        require(amount > 0, Errors.INVALID_PARAMETERS);
+        if(recipient == address(0)) revert Errors.ZeroAddress();
+        if(amount == 0) revert Errors.InvalidParameters();
 
         IERC20 token = IERC20(rewardToken());
 
-        require(amount <= token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+        if(amount > token.balanceOf(address(this))) revert Errors.BalanceTooLow();
 
         token.safeTransfer(recipient, amount);
     }
 
     function withdrawToken(address token, uint256 amount, address recipient) external adminOnly {
-        require(recipient != address(0), Errors.ZERO_ADDRESS);
-        require(token != address(0), Errors.ZERO_ADDRESS);
-        require(amount > 0, Errors.INVALID_PARAMETERS);
+        if(recipient == address(0)) revert Errors.ZeroAddress();
+        if(token == address(0)) revert Errors.ZeroAddress();
+        if(amount == 0) revert Errors.InvalidParameters();
 
         //Can't withdraw the reward token (use the correct method
-        require(token != rewardToken(), Errors.INVALID_PARAMETERS);
+        if(token == rewardToken()) revert Errors.InvalidToken();
         //Can't withdraw listed palTokens (palTokens staked by users)
-        require(palTokenToPalPool[token] == address(0), Errors.INVALID_PARAMETERS);
+        if(palTokenToPalPool[token] != address(0)) revert Errors.InvalidToken();
 
         IERC20 _token = IERC20(token);
 
-        require(amount <= _token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+        if(amount > _token.balanceOf(address(this))) revert Errors.BalanceTooLow();
 
         _token.safeTransfer(recipient, amount);
     }
@@ -731,7 +731,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     // set a pool rewards values (admin)
     function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward) external override adminOnly {
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
 
         if(newSupplySpeed != supplySpeeds[palPool]){
             //Make sure it's updated before setting the new speed

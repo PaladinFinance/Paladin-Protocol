@@ -74,13 +74,13 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     //Modifiers
     modifier controllerOnly() {
         //allows only the Controller and the admin to call the function
-        require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
+        if(msg.sender != admin && msg.sender != address(controller)) revert Errors.CallerNotController();
         _;
     }
 
     modifier poolsOnly() {
         //allows only a PalPool listed in the Controller
-        require(controller.isPalPool(msg.sender), Errors.CALLER_NOT_ALLOWED_POOL);
+        if(!controller.isPalPool(msg.sender)) revert Errors.CallerNotAllowedPool();
         _;
     }
 
@@ -505,7 +505,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     * @return uint256 : new token Id
     */
     function mint(address to, address palPool, address palLoan) external override poolsOnly returns(uint256){
-        require(palLoan != address(0), Errors.ZERO_ADDRESS);
+        if(palLoan == address(0)) revert Errors.ZeroAddress();
 
         //Call the internal mint method, and get the new token Id
         uint256 newId = _mint(to);
