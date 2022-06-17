@@ -29,42 +29,6 @@ const config: HardhatUserConfig = {
       }
     ],
     overrides: {
-      "contracts/PalPool.sol" : {
-        version: "0.8.10",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 25000,
-          }
-        }
-      },
-      "contracts/PalToken.sol" : {
-        version: "0.8.10",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 25000,
-          }
-        }
-      },
-      "contracts/variants/PalPoolStkAave.sol" : {
-        version: "0.8.10",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 99999,
-          }
-        }
-      },
-      "contracts/variants/PalPoolhPal.sol" : {
-        version: "0.8.10",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 25000,
-          }
-        }
-      },
       "contracts/tests/DelegateRegistry.sol" : {
         version: "0.7.2",
         settings: {
