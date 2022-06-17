@@ -11,9 +11,13 @@ import { BasicDelegator } from "../../typechain/BasicDelegator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
+import { IERC20 } from "../../typechain/IERC20";
+import { IERC20__factory } from "../../typechain/factories/IERC20__factory";
+import { getERC20 } from "../utils/getERC20";
 
 chai.use(solidity);
 const { expect } = chai;
+const { provider } = ethers;
 
 let poolFactory: ContractFactory
 let tokenFactory: ContractFactory
@@ -26,6 +30,7 @@ let palLoanTokenFactory: ContractFactory
 describe('PalPool : 4 - Admin functions tests', () => {
     let admin: SignerWithAddress
     let user1: SignerWithAddress
+    let user2: SignerWithAddress
     let wrong_address: SignerWithAddress
 
     let pool: PalPool
@@ -52,7 +57,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
 
     beforeEach( async () => {
-        [admin, user1, wrong_address] = await ethers.getSigners();
+        [admin, user1, user2, wrong_address] = await ethers.getSigners();
 
         token = (await tokenFactory.connect(admin).deploy(name, symbol)) as PalToken;
         await token.deployed();
@@ -409,6 +414,69 @@ describe('PalPool : 4 - Admin functions tests', () => {
                 pool.connect(user1).withdrawFees(ethers.utils.parseEther('2'), admin.address)
             ).to.be.revertedWith('29')
             
+        });
+
+    });
+
+    describe('recoverERC20', async () => {
+
+        const otherERC20_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"; // DAI
+        const otherERC20_holder = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503";
+        const erc20 = IERC20__factory.connect(otherERC20_address, provider);
+
+        const lost_amount = ethers.utils.parseEther('1000');
+
+
+        it(' should retrieve the lost tokens and send it to the admin', async () => {
+
+            await getERC20(admin, otherERC20_holder, erc20, user2.address, lost_amount);
+
+            await erc20.connect(user2).transfer(pool.address, lost_amount);
+
+            const oldBalance = await erc20.balanceOf(admin.address);
+
+            await pool.connect(admin).recoverERC20(erc20.address, lost_amount)
+
+            const newBalance = await erc20.balanceOf(admin.address);
+
+            expect(newBalance.sub(oldBalance)).to.be.eq(lost_amount)
+
+        });
+
+        it(' should not allow to recover the underyling token', async () => {
+
+            await underlying.connect(admin).transfer(pool.address, lost_amount);
+
+            await expect(
+                pool.connect(admin).recoverERC20(underlying.address, lost_amount)
+            ).to.be.revertedWith('token not allowed')
+
+        });
+
+        it(' should fail if given incorrect amounts', async () => {
+
+            await underlying.connect(admin).transfer(pool.address, lost_amount);
+
+            await expect(
+                pool.connect(admin).recoverERC20(erc20.address, 0)
+            ).to.be.revertedWith('invalid amount')
+
+            await expect(
+                pool.connect(admin).recoverERC20(erc20.address, lost_amount.mul(2))
+            ).to.be.revertedWith('invalid amount')
+
+        });
+
+        it(' should block non-admin caller', async () => {
+
+            await getERC20(admin, otherERC20_holder, erc20, user2.address, lost_amount);
+
+            await erc20.connect(user2).transfer(pool.address, lost_amount);
+
+            await expect(
+                pool.connect(user2).recoverERC20(erc20.address, ethers.utils.parseEther('10'))
+            ).to.be.revertedWith('1')
+
         });
 
     });

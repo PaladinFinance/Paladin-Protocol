@@ -806,4 +806,17 @@ contract PalPool is IPalPool, PalPoolStorage, Admin, ReentrancyGuard {
         emit WithdrawFees(_amount);
     }
 
+    /**
+     * @dev Recover either a lost ERC20 token sent to the contract (expect the underlying)
+     * @param token ERC20 token to withdraw
+     * @param amount Amount to transfer
+     */
+    function recoverERC20(address token, uint256 amount) external adminOnly virtual returns(bool) {
+        require(token != address(underlying), "token not allowed");
+        require(amount != 0 && amount <= IERC20(token).balanceOf(address(this)), "invalid amount");
+        IERC20(token).safeTransfer(admin, amount);
+
+        return true;
+    }
+
 }
