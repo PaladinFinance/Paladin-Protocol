@@ -56,7 +56,6 @@ contract BurnedPalLoanToken{
         name = _name;
         symbol = _symbol;
         minter = msg.sender;
-        totalSupply = 0;
     }
 
 

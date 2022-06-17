@@ -82,7 +82,8 @@ contract PaladinController is IPaladinController, ControllerStorage {
         palTokens = _palTokens;
         initialized = true;
 
-        for(uint i = 0; i < _palPools.length; i++){
+        uint256 length = _palPools.length;
+        for(uint i; i < length;){
             //Update the Reward State for the new Pool
             PoolRewardsState storage supplyState = supplyRewardState[_palPools[i]];
             if(supplyState.index == 0){
@@ -92,6 +93,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
             //Link PalToken with PalPool
             palTokenToPalPool[_palTokens[i]] = _palPools[i];
+            unchecked {
+                ++i;
+            }
         }
 
         return true;
@@ -140,8 +144,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
         address[] memory _pools = palPools;
         
-        uint lastIndex = _pools.length - 1;
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        uint256 lastIndex = length - 1;
+        for(uint i; i < length;){
             if(_pools[i] == palPool){
                 //get the address of the PalToken for the Event
                 address _palToken = palTokens[i];
@@ -159,6 +164,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
                 emit RemovePalPool(palPool, _palToken);
              
                 return true;
+            }
+            unchecked {
+                ++i;
             }
         }
         return false;
@@ -413,7 +421,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */
     function accrueSupplyRewards(address palPool, address user) internal {
         // Get the Pool current SupplyRewards state
-        PoolRewardsState storage state = supplyRewardState[palPool];
+        PoolRewardsState memory state = supplyRewardState[palPool];
 
         // Get the current reward index for the Pool
         // And the user last reward index
@@ -554,7 +562,8 @@ contract PaladinController is IPaladinController, ControllerStorage {
         //Calculate the estimated pending rewards for all Pools for the user
         //(depending on the last Pool's updateSupplyIndex)
         address[] memory _pools = palPools;
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
             // Get the current reward index for the Pool
             // And the user last reward index
             uint currentSupplyIndex = supplyRewardState[_pools[i]].index;
@@ -578,6 +587,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
                 // Add the new amount of rewards to the user total claimable balance
                 _total += userAccruedRewards;
             }
+            unchecked {
+                ++i;
+            }
         }
 
         return _total;
@@ -589,13 +601,17 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */
     function updateUserRewards(address user) public override {
         address[] memory _pools = palPools;
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
             // Need to update the Supply Index
             updateSupplyIndex(_pools[i]);
             // To then accrue the user rewards for that Pool
             //set at 0 & true for amount & positive, since no change in user LP position
             accrueSupplyRewards(_pools[i], user);
             // No need to do it for the Borrower rewards
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -632,9 +648,13 @@ contract PaladinController is IPaladinController, ControllerStorage {
     function totalSupplyRewardSpeed() external view override returns(uint) {
         // Sum up the SupplySpeed for all the listed PalPools
         address[] memory _pools = palPools;
-        uint totalSpeed = 0;
-        for(uint i = 0; i < _pools.length; i++){
+        uint totalSpeed;
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
             totalSpeed  += supplySpeeds[_pools[i]];
+            unchecked {
+                ++i;
+            }
         }
         return totalSpeed;
     }
@@ -691,9 +711,13 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     function setPoolsNewController(address newController) external override adminOnly returns(bool){
         address[] memory _pools = palPools;
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
             IPalPool _palPool = IPalPool(_pools[i]);
             _palPool.setNewController(newController);
+            unchecked {
+                ++i;
+            }
         }
         return true;
     }

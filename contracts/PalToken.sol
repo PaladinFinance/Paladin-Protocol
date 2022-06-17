@@ -88,7 +88,10 @@ contract PalToken is IERC20, Admin {
     function transferFrom(address src, address dest, uint amount) external override returns(bool){
         require(transferAllowances[src][msg.sender] >= amount, Errors.ALLOWANCE_TOO_LOW);
 
-        transferAllowances[src][msg.sender] -= amount;
+        unchecked {
+            // Safe, value was checked before
+            transferAllowances[src][msg.sender] -= amount;
+        }
 
         _transfer(src, dest, amount);
 
@@ -103,8 +106,12 @@ contract PalToken is IERC20, Admin {
         require(src != address(0) && dest != address(0), Errors.ZERO_ADDRESS);
 
         //Update balances
-        balances[src] -= amount;
-        balances[dest] += amount;
+        unchecked {
+            // No underflow, checked before
+            balances[src] -= amount;
+            // No overflow since should always be <= totalSupply
+            balances[dest] += amount;
+        }
 
         //emit the Transfer Event
         emit Transfer(src,dest,amount);
@@ -152,7 +159,10 @@ contract PalToken is IERC20, Admin {
         require(_user != address(0), Errors.ZERO_ADDRESS);
 
         _totalSupply += _toMint;
-        balances[_user] += _toMint;
+        unchecked {
+            // Safe because balance should always be <= totalSupply
+            balances[_user] += _toMint;
+        }
 
         emit Transfer(address(0),_user,_toMint);
 
@@ -165,7 +175,10 @@ contract PalToken is IERC20, Admin {
         require(balances[_user] >= _toBurn, Errors.INSUFFICIENT_BALANCE);
 
         _totalSupply -= _toBurn;
-        balances[_user] -= _toBurn;
+        unchecked {
+            // Safe, value was checked before
+            balances[_user] -= _toBurn;
+        }
 
         emit Transfer(_user,address(0),_toBurn);
 

@@ -197,8 +197,11 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256 tokenCount = balances[owner];
         address[] memory result = new address[](tokenCount);
 
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             result[i] = loans[ownedTokens[owner][i]];
+            unchecked {
+                ++i;
+            }
         }
 
         return result;
@@ -229,17 +232,23 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256 tokenCount = balances[owner];
         address[] memory result = new address[](tokenCount);
 
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             if(pools[ownedTokens[owner][i]] == palPool){
                 result[j] = loans[ownedTokens[owner][i]];
-                j++;
+                ++j;
+            }
+            unchecked {
+                ++i;
             }
         }
 
         //put the result in a new array with correct size to avoid 0x00 addresses in the return array
         address[] memory filteredResult = new address[](j);
-        for(uint256 k = 0; k < j; k++){
-            filteredResult[k] = result[k];   
+        for(uint256 k; k < j;){
+            filteredResult[k] = result[k];
+            unchecked {
+                ++k;
+            } 
         }
 
         return filteredResult;
@@ -259,13 +268,19 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256[] memory result = new uint256[](totalCount);
 
         uint256[] memory ownerTokens = ownedTokens[owner];
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             result[i] = ownerTokens[i];
+            unchecked {
+                ++i;
+            }
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
-        for(uint256 j = tokenCount; j < totalCount; j++){
+        for(uint256 j = tokenCount; j < totalCount;){
             result[j] = burned[j - tokenCount];
+            unchecked {
+                ++j;
+            }
         }
 
         return result;
@@ -286,13 +301,19 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         address[] memory result = new address[](totalCount);
 
         uint256[] memory ownerTokens = ownedTokens[owner];
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             result[i] = loans[ownerTokens[i]];
+            unchecked {
+                ++i;
+            }
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
-        for(uint256 j = tokenCount; j < totalCount; j++){
+        for(uint256 j = tokenCount; j < totalCount;){
             result[j] = loans[burned[j - tokenCount]];
+            unchecked {
+                ++j;
+            }
         }
 
         return result;
@@ -307,32 +328,41 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     */
     function allLoansOfForPool(address owner, address palPool) external view override returns(address[] memory){
         require(index > 0);
-        uint m = 0;
+        uint m;
         uint256 tokenCount = balances[owner];
         uint256 totalCount = tokenCount + burnedToken.balanceOf(owner);
         address[] memory result = new address[](totalCount);
 
         uint256[] memory ownerTokens = ownedTokens[owner];
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             if(pools[ownerTokens[i]] == palPool){
                 result[m] = loans[ownerTokens[i]];
                 m++;
             }
+            unchecked {
+                ++i;
+            }
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
-        for(uint256 j = tokenCount; j < totalCount; j++){
+        for(uint256 j = tokenCount; j < totalCount;){
             uint256 burnedId = burned[j - tokenCount];
             if(pools[burnedId] == palPool){
                 result[m] = loans[burnedId];
                 m++;
             }
+            unchecked {
+                ++j;
+            }
         }
 
         //put the result in a new array with correct size to avoid 0x00 addresses in the return array
         address[] memory filteredResult = new address[](m);
-        for(uint256 k = 0; k < m; k++){
-            filteredResult[k] = result[k];   
+        for(uint256 k; k < m;){
+            filteredResult[k] = result[k];
+            unchecked {
+                ++k;
+            }
         }
 
         return filteredResult;
