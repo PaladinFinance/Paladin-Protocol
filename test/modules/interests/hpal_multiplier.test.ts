@@ -1,10 +1,10 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { HolyPalMultiplier } from "../../../typechain/HolyPalMultiplier";
-import { MockPoolBorrowsOnly } from "../../../typechain/MockPoolBorrowsOnly";
-import { IhPalVotes } from "../../../typechain/IhPalVotes";
-import { IhPalVotes__factory } from "../../../typechain/factories/IhPalVotes__factory";
+import { HolyPalMultiplier } from "../../../typechain/interests/multipliers/HolyPalMultiplier";
+import { MockPoolBorrowsOnly } from "../../../typechain/tests/MockPoolBorrowsOnly";
+import { IhPalVotes } from "../../../typechain/interests/multipliers/utils/IhPalVotes";
+import { IhPalVotes__factory } from "../../../typechain/factories/interests/multipliers/utils/IhPalVotes__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";

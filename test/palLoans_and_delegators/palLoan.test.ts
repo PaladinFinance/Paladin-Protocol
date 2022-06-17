@@ -3,12 +3,12 @@ import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { IPalLoan } from "../../typechain/IPalLoan";
 import { IPalLoan__factory } from "../../typechain/factories/IPalLoan__factory";
-import { Comp } from "../../typechain/Comp";
+import { Comp } from "../../typechain/tests/Comp";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BasicDelegator } from "../../typechain/BasicDelegator";
+import { BasicDelegator } from "../../typechain/delegators/BasicDelegator";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
-import { PalLoanFactory } from "../../typechain/PalLoanFactory";
+import { PalLoanFactory } from "../../typechain/tests/PalLoanFactory";
 
 chai.use(solidity);
 const { expect } = chai;
