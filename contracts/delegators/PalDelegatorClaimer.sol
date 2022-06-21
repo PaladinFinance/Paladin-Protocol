@@ -6,17 +6,16 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "../interfaces/IhPAL.sol";
 import "../utils/SafeERC20.sol";
-import "../utils/SafeMath.sol";
+import {Errors} from  "../utils/Errors.sol";
 
 /** @title hPAL token Delegator that claims rewards for the PAL token */
 /// @author Paladin
 contract PalDelegatorClaimer{
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     //Variables
@@ -41,7 +40,7 @@ contract PalDelegatorClaimer{
     }
 
     modifier motherPoolOnly() {
-        require(msg.sender == motherPool);
+        if(msg.sender != motherPool) revert Errors.CallerNotMotherPool();
         _;
     }
 
@@ -61,7 +60,7 @@ contract PalDelegatorClaimer{
         uint _amount,
         uint _feesAmount
     ) public returns(bool){
-        require(motherPool == address(0));
+        if(motherPool != address(0)) revert Errors.AlreadyInitialized();
 
         motherPool = payable(_motherPool);
         borrower = _borrower;
@@ -84,7 +83,7 @@ contract PalDelegatorClaimer{
     * @return bool : Expand success
     */
     function expand(uint _newFeesAmount) public motherPoolOnly returns(bool){
-        feesAmount = feesAmount.add(_newFeesAmount);
+        feesAmount += _newFeesAmount;
         return true;
     }
 
@@ -104,9 +103,9 @@ contract PalDelegatorClaimer{
         
         //Return the remaining amount to the borrower
         //Then return the borrowed amount and the used fees to the pool
-        uint _returnAmount = feesAmount.sub(_usedAmount);
+        uint _returnAmount = feesAmount - _usedAmount;
         uint _balance = _underlying.balanceOf(address(this));
-        uint _keepAmount = _balance.sub(_returnAmount);
+        uint _keepAmount = _balance - _returnAmount;
         if(_returnAmount > 0){
             _underlying.safeTransfer(_currentBorrower, _returnAmount);
         }
@@ -133,9 +132,9 @@ contract PalDelegatorClaimer{
         
         //Send the killer reward to the killer
         //Then return the borrowed amount and the fees to the pool
-        uint _killerAmount = feesAmount.mul(_killerRatio).div(uint(1e18));
+        uint _killerAmount = (feesAmount * _killerRatio) / uint(1e18);
         uint _balance = _underlying.balanceOf(address(this));
-        uint _poolAmount = _balance.sub(_killerAmount);
+        uint _poolAmount = _balance - _killerAmount;
         _underlying.safeTransfer(_killer, _killerAmount);
         _underlying.safeTransfer(motherPool, _poolAmount);
 

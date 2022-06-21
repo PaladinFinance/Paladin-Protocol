@@ -1,15 +1,12 @@
-pragma solidity ^0.7.6;
-pragma abicoder v2;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "../utils/SafeMath.sol";
 import "../utils/IERC20.sol";
 import "../utils/Admin.sol";
 import "../IPaladinController.sol";
 import {Errors} from  "../utils/Errors.sol";
 
 contract MockPalPool is Admin {
-    using SafeMath for uint;
 
     IERC20 public underlying;
     uint public totalReserve;
@@ -18,7 +15,7 @@ contract MockPalPool is Admin {
     bool public lastControllerCallResult;
 
     modifier controllerOnly() {
-        require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
+        if(msg.sender != admin && msg.sender != address(controller)) revert Errors.CallerNotController();
         _;
     }
 
@@ -41,9 +38,9 @@ contract MockPalPool is Admin {
     }
 
     function withdrawFees(uint _amount, address _recipient) external controllerOnly {
-        require(_amount<= accruedFees && _amount <= totalReserve, Errors.FEES_ACCRUED_INSUFFICIENT);
-        accruedFees = accruedFees.sub(_amount);
-        totalReserve = totalReserve.sub(_amount);
+        if(_amount > accruedFees || _amount > totalReserve) revert Errors.FeesAccruedInsufficient();
+        accruedFees -= _amount;
+        totalReserve -= _amount;
 
         underlying.transfer(_recipient, _amount);
     }

@@ -6,7 +6,7 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "./utils/Errors.sol";
@@ -41,7 +41,7 @@ contract ControllerProxy is ControllerStorage {
      * Only callable by the Pending Implementation contract
      */
     function acceptImplementation() public returns(bool) {
-        require(msg.sender == pendingImplementation, Errors.CALLER_NOT_IMPLEMENTATION);
+        if(msg.sender != pendingImplementation) revert Errors.CallerNotImplementation();
 
         address oldImplementation = currentImplementation;
         address oldPendingImplementation = pendingImplementation;

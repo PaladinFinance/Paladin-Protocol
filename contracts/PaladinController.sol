@@ -6,10 +6,9 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "./utils/SafeMath.sol";
 import "./IPaladinController.sol";
 import "./ControllerStorage.sol";
 import "./ControllerProxy.sol";
@@ -23,12 +22,11 @@ import "./utils/Errors.sol";
 /** @title Paladin Controller contract  */
 /// @author Paladin
 contract PaladinController is IPaladinController, ControllerStorage {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     // Prevent reentry in deposit & withdraw
     modifier lock() {
-        require(!locked, Errors.LOCKED);
+        if(locked) revert Errors.Locked();
         locked = true;
         _;
         locked = false;
@@ -78,13 +76,14 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Success
     */ 
     function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override adminOnly returns(bool){
-        require(!initialized, Errors.POOL_LIST_ALREADY_SET);
-        require(_palTokens.length == _palPools.length, Errors.LIST_SIZES_NOT_EQUAL);
+        if(initialized) revert Errors.PoolListAlreadySet();
+        if(_palTokens.length != _palPools.length) revert Errors.ListSizesNotEqual();
         palPools = _palPools;
         palTokens = _palTokens;
         initialized = true;
 
-        for(uint i = 0; i < _palPools.length; i++){
+        uint256 length = _palPools.length;
+        for(uint i; i < length;){
             //Update the Reward State for the new Pool
             PoolRewardsState storage supplyState = supplyRewardState[_palPools[i]];
             if(supplyState.index == 0){
@@ -94,6 +93,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
             //Link PalToken with PalPool
             palTokenToPalPool[_palTokens[i]] = _palPools[i];
+            unchecked {
+                ++i;
+            }
         }
 
         return true;
@@ -107,7 +109,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */ 
     function addNewPool(address _palToken, address _palPool) external override adminOnly returns(bool){
         //Add a new address to the palToken & palPool list
-        require(!isPalPool(_palPool), Errors.POOL_ALREADY_LISTED);
+        if(isPalPool(_palPool)) revert Errors.PoolAlreadyListed();
 
         palTokens.push(_palToken);
         palPools.push(_palPool);
@@ -138,12 +140,13 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */ 
     function removePool(address palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
 
         address[] memory _pools = palPools;
         
-        uint lastIndex = (_pools.length).sub(1);
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        uint256 lastIndex = length - 1;
+        for(uint i; i < length;){
             if(_pools[i] == palPool){
                 //get the address of the PalToken for the Event
                 address _palToken = palTokens[i];
@@ -161,6 +164,9 @@ contract PaladinController is IPaladinController, ControllerStorage {
                 emit RemovePalPool(palPool, _palToken);
              
                 return true;
+            }
+            unchecked {
+                ++i;
             }
         }
         return false;
@@ -201,7 +207,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         palPool;
         dest;
@@ -219,7 +225,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
 
         palPool;
         dest;
@@ -239,7 +245,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         borrower;
         delegatee;
@@ -262,7 +268,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function expandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         newFeesAmount;
 
@@ -284,7 +290,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function closeBorrowVerify(address palPool, address borrower, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         borrower;
 
@@ -306,7 +312,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function killBorrowVerify(address palPool, address killer, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         killer;
 
@@ -325,17 +331,17 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     function deposit(address palToken, uint amount) external lock override returns(bool){
         address palPool = palTokenToPalPool[palToken];
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
         address user = msg.sender;
         IERC20 token = IERC20(palToken);
 
-        require(amount <= token.balanceOf(user), Errors.INSUFFICIENT_BALANCE);
+        if(amount > token.balanceOf(user)) revert Errors.InsufficientBalance();
 
         updateSupplyIndex(palPool);
         accrueSupplyRewards(palPool, user);
 
-        supplierDeposits[palPool][user] = supplierDeposits[palPool][user].add(amount);
-        totalSupplierDeposits[palPool] = totalSupplierDeposits[palPool].add(amount);
+        supplierDeposits[palPool][user] += amount;
+        totalSupplierDeposits[palPool] += amount;
 
         token.safeTransferFrom(user, address(this), amount);
 
@@ -347,18 +353,18 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     function withdraw(address palToken, uint amount) external lock override returns(bool){
         address palPool = palTokenToPalPool[palToken];
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
         address user = msg.sender;
 
-        require(amount <= supplierDeposits[palPool][user], Errors.INSUFFICIENT_DEPOSITED);
+        if(amount > supplierDeposits[palPool][user]) revert Errors.InsufficientDeposited();
 
         updateSupplyIndex(palPool);
         accrueSupplyRewards(palPool, user);
 
         IERC20 token = IERC20(palToken);
 
-        supplierDeposits[palPool][user] = supplierDeposits[palPool][user].sub(amount);
-        totalSupplierDeposits[palPool] = totalSupplierDeposits[palPool].sub(amount);
+        supplierDeposits[palPool][user] -= amount;
+        totalSupplierDeposits[palPool] -= amount;
 
         token.safeTransfer(user, amount);
 
@@ -382,7 +388,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
         uint supplySpeed = supplySpeeds[palPool];
 
         // Calculate the number of blocks since last update
-        uint ellapsedBlocks = currentBlock.sub(uint(state.blockNumber));
+        uint ellapsedBlocks = currentBlock - uint(state.blockNumber);
 
         // If an update is needed : block ellapsed & non-null speed (rewards to distribute)
         if(ellapsedBlocks > 0 && supplySpeed > 0){
@@ -390,14 +396,14 @@ contract PaladinController is IPaladinController, ControllerStorage {
             uint totalDeposited = totalSupplierDeposits[palPool];
 
             // Calculate the amount of rewards token accrued since last update
-            uint accruedAmount = ellapsedBlocks.mul(supplySpeed);
+            uint accruedAmount = ellapsedBlocks * supplySpeed;
 
             // And the new ratio for reward distribution to user
             // Based on the amount of rewards accrued, and the change in the TotalSupply
-            uint ratio = totalDeposited > 0 ? accruedAmount.mul(1e36).div(totalDeposited) : 0;
+            uint ratio = totalDeposited > 0 ? (accruedAmount * 1e36) / totalDeposited : 0;
 
             // Write new Supply Rewards values in the storage
-            state.index = safe224(uint(state.index).add(ratio));
+            state.index = safe224(uint(state.index) + ratio);
             state.blockNumber = safe32(currentBlock);
         }
         else if(ellapsedBlocks > 0){
@@ -415,7 +421,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */
     function accrueSupplyRewards(address palPool, address user) internal {
         // Get the Pool current SupplyRewards state
-        PoolRewardsState storage state = supplyRewardState[palPool];
+        PoolRewardsState memory state = supplyRewardState[palPool];
 
         // Get the current reward index for the Pool
         // And the user last reward index
@@ -431,17 +437,17 @@ contract PaladinController is IPaladinController, ControllerStorage {
         }
 
         // Get the difference of index with the last one for user
-        uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+        uint indexDiff = currentSupplyIndex - userSupplyIndex;
 
         if(indexDiff > 0){
             // And using the user PalToken balance deposited in the Controller,
             // we can get how much rewards where accrued
             uint userBalance = supplierDeposits[palPool][user];
 
-            uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+            uint userAccruedRewards = (userBalance * indexDiff) / 1e36;
 
             // Add the new amount of rewards to the user total claimable balance
-            accruedRewards[user] = accruedRewards[user].add(userAccruedRewards);
+            accruedRewards[user] += userAccruedRewards;
         }
 
     }
@@ -474,10 +480,10 @@ contract PaladinController is IPaladinController, ControllerStorage {
             // The amount ot be accrued is calculated as feesUsed * borrowRatio
             (address borrower,,,,,,,uint feesUsedAmount,,,,) = pool.getBorrowData(loanAddress);
 
-            uint userAccruedRewards = feesUsedAmount.mul(loanBorrowRatio).div(1e18);
+            uint userAccruedRewards = (feesUsedAmount * loanBorrowRatio) / 1e18;
 
             // Add the new amount of rewards to the user total claimable balance
-            accruedRewards[borrower] = accruedRewards[borrower].add(userAccruedRewards);
+            accruedRewards[borrower] += userAccruedRewards;
 
             // Set this Loan rewards as claimed/distributed
             isLoanRewardClaimed[loanAddress] = true;
@@ -502,7 +508,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
         // Calculate the amount of rewards based on the Pool ratio & the amount of usedFees in the Loan
         uint poolBorrowRatio = loansBorrowRatios[loanAddress] > 0 ? loansBorrowRatios[loanAddress] : borrowRatios[palPool];
 
-        return feesUsedAmount.mul(poolBorrowRatio).div(1e18);
+        return (feesUsedAmount * poolBorrowRatio) / 1e18;
     }
 
     /**
@@ -519,17 +525,17 @@ contract PaladinController is IPaladinController, ControllerStorage {
         (address borrower,,,,,,,,,,bool closed,) = pool.getBorrowData(loanAddress);
 
         // Check if the PalLoan has some claimable rewards, and if it was not claimed already
-        require(msg.sender == borrower, Errors.NOT_LOAN_OWNER);
+        if(msg.sender != borrower) revert Errors.NotLoanOwner();
         uint claimableAmount = _calculateLoanRewards(palPool, loanAddress);
 
-        require(closed && claimableAmount != 0, Errors.NOT_CLAIMABLE);
+        if(!closed || claimableAmount == 0) revert Errors.NotClaimable();
 
         // Set this Loan rewards as claimed/distributed
         isLoanRewardClaimed[loanAddress] = true;
         
         // Transfer the rewards to the borrower
         IERC20 token = IERC20(rewardToken());
-        require(claimableAmount <= token.balanceOf(address(this)), Errors.REWARDS_CASH_TOO_LOW);
+        if(claimableAmount > token.balanceOf(address(this))) revert Errors.RewardsCashTooLow();
 
         token.safeTransfer(borrower, claimableAmount);
 
@@ -556,7 +562,8 @@ contract PaladinController is IPaladinController, ControllerStorage {
         //Calculate the estimated pending rewards for all Pools for the user
         //(depending on the last Pool's updateSupplyIndex)
         address[] memory _pools = palPools;
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
             // Get the current reward index for the Pool
             // And the user last reward index
             uint currentSupplyIndex = supplyRewardState[_pools[i]].index;
@@ -568,17 +575,20 @@ contract PaladinController is IPaladinController, ControllerStorage {
             }
 
             // Get the difference of index with the last one for user
-            uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+            uint indexDiff = currentSupplyIndex - userSupplyIndex;
 
             if(indexDiff > 0){
                 // And using the user PalToken balance deposited in the Controller,
                 // we can get how much rewards where accrued
                 uint userBalance = supplierDeposits[_pools[i]][user];
 
-                uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+                uint userAccruedRewards = (userBalance * indexDiff) / 1e36;
 
                 // Add the new amount of rewards to the user total claimable balance
-                _total = _total.add(userAccruedRewards);
+                _total += userAccruedRewards;
+            }
+            unchecked {
+                ++i;
             }
         }
 
@@ -591,13 +601,17 @@ contract PaladinController is IPaladinController, ControllerStorage {
     */
     function updateUserRewards(address user) public override {
         address[] memory _pools = palPools;
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
             // Need to update the Supply Index
             updateSupplyIndex(_pools[i]);
             // To then accrue the user rewards for that Pool
             //set at 0 & true for amount & positive, since no change in user LP position
             accrueSupplyRewards(_pools[i], user);
             // No need to do it for the Borrower rewards
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -615,7 +629,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
         // If there is a claimable amount
         if(toClaim > 0){
             IERC20 token = IERC20(rewardToken());
-            require(toClaim <= token.balanceOf(address(this)), Errors.REWARDS_CASH_TOO_LOW);
+            if(toClaim > token.balanceOf(address(this))) revert Errors.RewardsCashTooLow();
 
             // All rewards were accrued and sent to the user, reset the counter
             accruedRewards[user] = 0;
@@ -634,9 +648,13 @@ contract PaladinController is IPaladinController, ControllerStorage {
     function totalSupplyRewardSpeed() external view override returns(uint) {
         // Sum up the SupplySpeed for all the listed PalPools
         address[] memory _pools = palPools;
-        uint totalSpeed = 0;
-        for(uint i = 0; i < _pools.length; i++){
-            totalSpeed = totalSpeed.add(supplySpeeds[_pools[i]]);
+        uint totalSpeed;
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
+            totalSpeed  += supplySpeeds[_pools[i]];
+            unchecked {
+                ++i;
+            }
         }
         return totalSpeed;
     }
@@ -654,7 +672,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
     function becomeImplementation(ControllerProxy proxy) external override adminOnly {
         // Only to call after the contract was set as Pending Implementation in the Proxy contract
         // To accept the delegatecalls, and update the Implementation address in the Proxy
-        require(proxy.acceptImplementation(), Errors.FAIL_BECOME_IMPLEMENTATION);
+        if(!proxy.acceptImplementation()) revert Errors.FailBecomeImplementation();
     }
 
     function updateRewardToken(address newRewardTokenAddress) external override adminOnly {
@@ -663,29 +681,29 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     // Allows to withdraw reward tokens from the Controller if rewards are removed or changed
     function withdrawRewardToken(uint256 amount, address recipient) external override adminOnly {
-        require(recipient != address(0), Errors.ZERO_ADDRESS);
-        require(amount > 0, Errors.INVALID_PARAMETERS);
+        if(recipient == address(0)) revert Errors.ZeroAddress();
+        if(amount == 0) revert Errors.InvalidParameters();
 
         IERC20 token = IERC20(rewardToken());
 
-        require(amount <= token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+        if(amount > token.balanceOf(address(this))) revert Errors.BalanceTooLow();
 
         token.safeTransfer(recipient, amount);
     }
 
     function withdrawToken(address token, uint256 amount, address recipient) external adminOnly {
-        require(recipient != address(0), Errors.ZERO_ADDRESS);
-        require(token != address(0), Errors.ZERO_ADDRESS);
-        require(amount > 0, Errors.INVALID_PARAMETERS);
+        if(recipient == address(0)) revert Errors.ZeroAddress();
+        if(token == address(0)) revert Errors.ZeroAddress();
+        if(amount == 0) revert Errors.InvalidParameters();
 
         //Can't withdraw the reward token (use the correct method
-        require(token != rewardToken(), Errors.INVALID_PARAMETERS);
+        if(token == rewardToken()) revert Errors.InvalidToken();
         //Can't withdraw listed palTokens (palTokens staked by users)
-        require(palTokenToPalPool[token] == address(0), Errors.INVALID_PARAMETERS);
+        if(palTokenToPalPool[token] != address(0)) revert Errors.InvalidToken();
 
         IERC20 _token = IERC20(token);
 
-        require(amount <= _token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+        if(amount > _token.balanceOf(address(this))) revert Errors.BalanceTooLow();
 
         _token.safeTransfer(recipient, amount);
     }
@@ -693,9 +711,13 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     function setPoolsNewController(address newController) external override adminOnly returns(bool){
         address[] memory _pools = palPools;
-        for(uint i = 0; i < _pools.length; i++){
+        uint256 length = _pools.length;
+        for(uint i; i < length;){
             IPalPool _palPool = IPalPool(_pools[i]);
             _palPool.setNewController(newController);
+            unchecked {
+                ++i;
+            }
         }
         return true;
     }
@@ -709,7 +731,7 @@ contract PaladinController is IPaladinController, ControllerStorage {
 
     // set a pool rewards values (admin)
     function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward) external override adminOnly {
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
 
         if(newSupplySpeed != supplySpeeds[palPool]){
             //Make sure it's updated before setting the new speed

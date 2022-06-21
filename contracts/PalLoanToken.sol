@@ -6,13 +6,11 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
-pragma abicoder v2;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "./IPalLoanToken.sol";
 import "./utils/ERC165.sol";
-import "./utils/SafeMath.sol";
 import "./utils/Strings.sol";
 import "./utils/Admin.sol";
 import "./IPaladinController.sol";
@@ -22,7 +20,6 @@ import {Errors} from  "./utils/Errors.sol";
 /** @title palLoanToken contract  */
 /// @author Paladin
 contract PalLoanToken is IPalLoanToken, ERC165, Admin {
-    using SafeMath for uint;
     using Strings for uint;
 
     //Storage
@@ -77,13 +74,13 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     //Modifiers
     modifier controllerOnly() {
         //allows only the Controller and the admin to call the function
-        require(msg.sender == admin || msg.sender == address(controller), Errors.CALLER_NOT_CONTROLLER);
+        if(msg.sender != admin && msg.sender != address(controller)) revert Errors.CallerNotController();
         _;
     }
 
     modifier poolsOnly() {
         //allows only a PalPool listed in the Controller
-        require(controller.isPalPool(msg.sender), Errors.CALLER_NOT_ALLOWED_POOL);
+        if(!controller.isPalPool(msg.sender)) revert Errors.CallerNotAllowedPool();
         _;
     }
 
@@ -200,8 +197,11 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256 tokenCount = balances[owner];
         address[] memory result = new address[](tokenCount);
 
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             result[i] = loans[ownedTokens[owner][i]];
+            unchecked {
+                ++i;
+            }
         }
 
         return result;
@@ -232,17 +232,23 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint256 tokenCount = balances[owner];
         address[] memory result = new address[](tokenCount);
 
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             if(pools[ownedTokens[owner][i]] == palPool){
                 result[j] = loans[ownedTokens[owner][i]];
-                j++;
+                ++j;
+            }
+            unchecked {
+                ++i;
             }
         }
 
         //put the result in a new array with correct size to avoid 0x00 addresses in the return array
         address[] memory filteredResult = new address[](j);
-        for(uint256 k = 0; k < j; k++){
-            filteredResult[k] = result[k];   
+        for(uint256 k; k < j;){
+            filteredResult[k] = result[k];
+            unchecked {
+                ++k;
+            } 
         }
 
         return filteredResult;
@@ -258,17 +264,23 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     function allTokensOf(address owner) external view override returns(uint256[] memory){
         require(index > 0);
         uint256 tokenCount = balances[owner];
-        uint256 totalCount = tokenCount.add(burnedToken.balanceOf(owner));
+        uint256 totalCount = tokenCount + burnedToken.balanceOf(owner);
         uint256[] memory result = new uint256[](totalCount);
 
         uint256[] memory ownerTokens = ownedTokens[owner];
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             result[i] = ownerTokens[i];
+            unchecked {
+                ++i;
+            }
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
-        for(uint256 j = tokenCount; j < totalCount; j++){
-            result[j] = burned[j.sub(tokenCount)];
+        for(uint256 j = tokenCount; j < totalCount;){
+            result[j] = burned[j - tokenCount];
+            unchecked {
+                ++j;
+            }
         }
 
         return result;
@@ -285,17 +297,23 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     function allLoansOf(address owner) external view override returns(address[] memory){
         require(index > 0);
         uint256 tokenCount = balances[owner];
-        uint256 totalCount = tokenCount.add(burnedToken.balanceOf(owner));
+        uint256 totalCount = tokenCount + burnedToken.balanceOf(owner);
         address[] memory result = new address[](totalCount);
 
         uint256[] memory ownerTokens = ownedTokens[owner];
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             result[i] = loans[ownerTokens[i]];
+            unchecked {
+                ++i;
+            }
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
-        for(uint256 j = tokenCount; j < totalCount; j++){
-            result[j] = loans[burned[j.sub(tokenCount)]];
+        for(uint256 j = tokenCount; j < totalCount;){
+            result[j] = loans[burned[j - tokenCount]];
+            unchecked {
+                ++j;
+            }
         }
 
         return result;
@@ -310,32 +328,41 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     */
     function allLoansOfForPool(address owner, address palPool) external view override returns(address[] memory){
         require(index > 0);
-        uint m = 0;
+        uint m;
         uint256 tokenCount = balances[owner];
-        uint256 totalCount = tokenCount.add(burnedToken.balanceOf(owner));
+        uint256 totalCount = tokenCount + burnedToken.balanceOf(owner);
         address[] memory result = new address[](totalCount);
 
         uint256[] memory ownerTokens = ownedTokens[owner];
-        for(uint256 i = 0; i < tokenCount; i++){
+        for(uint256 i; i < tokenCount;){
             if(pools[ownerTokens[i]] == palPool){
                 result[m] = loans[ownerTokens[i]];
                 m++;
             }
+            unchecked {
+                ++i;
+            }
         }
 
         uint256[] memory burned = burnedToken.tokensOf(owner);
-        for(uint256 j = tokenCount; j < totalCount; j++){
-            uint256 burnedId = burned[j.sub(tokenCount)];
+        for(uint256 j = tokenCount; j < totalCount;){
+            uint256 burnedId = burned[j - tokenCount];
             if(pools[burnedId] == palPool){
                 result[m] = loans[burnedId];
                 m++;
+            }
+            unchecked {
+                ++j;
             }
         }
 
         //put the result in a new array with correct size to avoid 0x00 addresses in the return array
         address[] memory filteredResult = new address[](m);
-        for(uint256 k = 0; k < m; k++){
-            filteredResult[k] = result[k];   
+        for(uint256 k; k < m;){
+            filteredResult[k] = result[k];
+            unchecked {
+                ++k;
+            }
         }
 
         return filteredResult;
@@ -478,7 +505,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
     * @return uint256 : new token Id
     */
     function mint(address to, address palPool, address palLoan) external override poolsOnly returns(uint256){
-        require(palLoan != address(0), Errors.ZERO_ADDRESS);
+        if(palLoan == address(0)) revert Errors.ZeroAddress();
 
         //Call the internal mint method, and get the new token Id
         uint256 newId = _mint(to);
@@ -549,14 +576,14 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         uint ownerIndex = balances[to];
         ownedTokens[to].push(tokenId);
         ownedTokensIndex[tokenId] = ownerIndex;
-        balances[to] = balances[to].add(1);
+        balances[to] += 1;
     }
 
 
     function _removeTokenToOwner(address from, uint tokenId) internal {
         // To prevent any gap in the array, we subsitute the last token with the one to remove, 
         // and pop the last element in the array
-        uint256 lastTokenIndex = balances[from].sub(1);
+        uint256 lastTokenIndex = balances[from] - 1;
         uint256 tokenIndex = ownedTokensIndex[tokenId];
         if (tokenIndex != lastTokenIndex) {
             uint256 lastTokenId = ownedTokens[from][lastTokenIndex];
@@ -565,7 +592,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         }
         delete ownedTokensIndex[tokenId];
         ownedTokens[from].pop();
-        balances[from] = balances[from].sub(1);
+        balances[from] -= 1;
     }
 
 
@@ -579,8 +606,8 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
 
         //Get the new token Id, and increase the global index
         uint tokenId = index;
-        index = index.add(1);
-        totalSupply = totalSupply.add(1);
+        index += 1;
+        totalSupply += 1;
 
         //Write this token in the storage
         _addTokenToOwner(to, tokenId);
@@ -604,7 +631,7 @@ contract PalLoanToken is IPalLoanToken, ERC165, Admin {
         _approve(address(0), tokenId);
 
         //Update data in storage
-        totalSupply = totalSupply.sub(1);
+        totalSupply -= 1;
         _removeTokenToOwner(owner, tokenId);
         owners[tokenId] = address(0);
 

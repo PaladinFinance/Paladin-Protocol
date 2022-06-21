@@ -6,12 +6,10 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
-pragma abicoder v2;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "../PalPool.sol";
-import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
 import "../utils/IERC20.sol";
 import "../interfaces/IhPAL.sol";
@@ -22,7 +20,6 @@ import {Errors} from  "../utils/Errors.sol";
 /** @title PalPoolhPal contract  */
 /// @author Paladin
 contract PalPoolhPal is PalPool {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     uint256 private constant MAX_UINT256 = type(uint256).max;
@@ -100,7 +97,7 @@ contract PalPoolhPal is PalPool {
     * @return bool : amount of minted palTokens
     */
     function deposit(uint _amount) public override(PalPool) returns(uint){
-        require(claimPal());
+        if(!claimPal()) revert Errors.FailPoolClaim();
         return super.deposit(_amount);
     }
 
@@ -111,7 +108,7 @@ contract PalPoolhPal is PalPool {
     * @return uint : amount of underlying returned
     */
     function withdraw(uint _amount) public override(PalPool) returns(uint){
-        require(claimPal());
+        if(!claimPal()) revert Errors.FailPoolClaim();
         return super.withdraw(_amount);
     }
 
@@ -123,7 +120,7 @@ contract PalPoolhPal is PalPool {
     * @return uint : amount of paid fees
     */
     function borrow(address _delegatee, uint _amount, uint _feeAmount) public override(PalPool) returns(uint){
-        require(claimPal());
+        if(!claimPal()) revert Errors.FailPoolClaim();
         return super.borrow(_delegatee, _amount, _feeAmount);
     }
 
@@ -134,7 +131,7 @@ contract PalPoolhPal is PalPool {
     * @return bool : Amount of fees paid
     */
     function expandBorrow(address _loan, uint _feeAmount) public override(PalPool) returns(uint){
-        require(claimPal());
+        if(!claimPal()) revert Errors.FailPoolClaim();
         return super.expandBorrow(_loan, _feeAmount);
     }
 
@@ -145,7 +142,7 @@ contract PalPoolhPal is PalPool {
     * @param _loan Address of the Loan
     */
     function closeBorrow(address _loan) public override(PalPool) {
-        require(claimPal());
+        if(!claimPal()) revert Errors.FailPoolClaim();
         super.closeBorrow(_loan);
     }
 
@@ -155,13 +152,13 @@ contract PalPoolhPal is PalPool {
     * @param _loan Address of the Loan
     */
     function killBorrow(address _loan) public override(PalPool) {
-        require(claimPal());
+        if(!claimPal()) revert Errors.FailPoolClaim();
         super.killBorrow(_loan);
     }
 
 
     function changeBorrowDelegatee(address _loan, address _newDelegatee) public override(PalPool) {
-        require(claimPal());
+        if(!claimPal()) revert Errors.FailPoolClaim();
         super.changeBorrowDelegatee(_loan, _newDelegatee);
     }
 }

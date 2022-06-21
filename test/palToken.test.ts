@@ -115,7 +115,7 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(pool).mint(ethers.constants.AddressZero, amount)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
             
         });
 
@@ -164,7 +164,7 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(user2).transfer(user1.address, amount)
-            ).to.be.revertedWith('4')
+            ).to.be.revertedWith('BalanceTooLow()')
             
         });
 
@@ -172,11 +172,11 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(user1).transfer(user1.address, amount)
-            ).to.be.revertedWith('6')
+            ).to.be.revertedWith('SelfTransfer()')
 
             await expect(
                 token.connect(user1).transfer(ethers.constants.AddressZero, amount)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
             
         });
 
@@ -245,17 +245,17 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(user1).approve(ethers.constants.AddressZero, allowance)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
             
         });
         
-        it(' should fail to decrease allwoance under 0', async () => {
+        it(' should fail to decrease allowance under 0', async () => {
 
             await token.connect(user1).approve(user2.address, allowance)
 
             await expect(
                 token.connect(user1).decreaseAllowance(user2.address, over_allowance)
-            ).to.be.revertedWith('decreased allowance below zero')
+            ).to.be.revertedWith('AllowanceUnderflow()')
             
         });
 
@@ -315,7 +315,7 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(user1).transferFrom(user2.address, user1.address, amount)
-            ).to.be.revertedWith('4')
+            ).to.be.revertedWith('BalanceTooLow()')
             
         });
 
@@ -325,7 +325,7 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(user2).transferFrom(user1.address, user2.address, amount)
-            ).to.be.revertedWith('5')
+            ).to.be.revertedWith('AllowanceTooLow()')
             
         });
 
@@ -333,7 +333,7 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(user2).transferFrom(user1.address, user2.address, amount)
-            ).to.be.revertedWith('5')
+            ).to.be.revertedWith('AllowanceTooLow()')
             
         });
 
@@ -343,11 +343,11 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(user1).transferFrom(user1.address, user1.address, amount)
-            ).to.be.revertedWith('6')
+            ).to.be.revertedWith('SelfTransfer()')
 
             await expect(
                 token.connect(user1).transferFrom(user1.address, ethers.constants.AddressZero, amount)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
             
         });
 
@@ -401,7 +401,7 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(pool).burn(user2.address, amount)
-            ).to.be.revertedWith('10')
+            ).to.be.revertedWith('InsufficientBalance()')
             
         });
 
@@ -409,7 +409,7 @@ describe('PalToken contract tests', () => {
 
             await expect(
                 token.connect(pool).burn(ethers.constants.AddressZero, amount)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
             
         });
 

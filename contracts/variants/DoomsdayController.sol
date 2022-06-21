@@ -6,20 +6,19 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "../utils/SafeMath.sol";
 import "../IPaladinController.sol";
 import "../ControllerStorage.sol";
 import "../PalPool.sol";
 import "../IPalPool.sol";
 import "../utils/IERC20.sol";
+import {Errors} from  "../utils/Errors.sol";
 
 /** @title DoomsdayController contract -> blocks any transaction from the PalPools  */
 /// @author Paladin
 contract DoomsdayController is IPaladinController, ControllerStorage {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     constructor(){
@@ -63,8 +62,8 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Success
     */ 
     function setInitialPools(address[] memory _palTokens, address[] memory _palPools) external override adminOnly returns(bool){
-        require(!initialized, Errors.POOL_LIST_ALREADY_SET);
-        require(_palTokens.length == _palPools.length, Errors.LIST_SIZES_NOT_EQUAL);
+        if(initialized) revert Errors.PoolListAlreadySet();
+        if(_palTokens.length != _palPools.length) revert Errors.ListSizesNotEqual();
         palPools = _palPools;
         palTokens = _palTokens;
         initialized = true;
@@ -104,11 +103,11 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     */ 
     function removePool(address _palPool) external override adminOnly returns(bool){
         //Remove a palToken & palPool from the list
-        require(isPalPool(_palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(_palPool)) revert Errors.PoolNotListed();
 
         address[] memory _pools = palPools;
         
-        uint lastIndex = (_pools.length).sub(1);
+        uint lastIndex = _pools.length - 1;
         for(uint i = 0; i < _pools.length; i++){
             if(_pools[i] == _palPool){
                 //get the address of the PalToken for the Event
@@ -167,7 +166,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function depositVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
 
         palPool;
         dest;
@@ -186,7 +185,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function withdrawVerify(address palPool, address dest, uint amount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         palPool;
         dest;
@@ -207,7 +206,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function borrowVerify(address palPool, address borrower, address delegatee, uint amount, uint feesAmount, address loanPool) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         palPool;
         borrower;
@@ -227,7 +226,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function expandBorrowVerify(address palPool, address loanAddress, uint newFeesAmount) external view override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
 
         palPool;
         loanAddress;
@@ -245,7 +244,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function closeBorrowVerify(address palPool, address borrower, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         borrower;
 
@@ -265,7 +264,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     * @return bool : Verification Success
     */
     function killBorrowVerify(address palPool, address killer, address loanAddress) external override returns(bool){
-        require(isPalPool(msg.sender), Errors.CALLER_NOT_POOL);
+        if(!isPalPool(msg.sender)) revert Errors.CallerNotPool();
         
         killer;
 
@@ -307,7 +306,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         uint supplySpeed = supplySpeeds[palPool];
 
         // Calculate the number of blocks since last update
-        uint ellapsedBlocks = currentBlock.sub(uint(state.blockNumber));
+        uint ellapsedBlocks = currentBlock - uint(state.blockNumber);
 
         // If an update is needed : block ellapsed & non-null speed (rewards to distribute)
         if(ellapsedBlocks > 0 && supplySpeed > 0){
@@ -315,14 +314,14 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
             uint totalDeposited = totalSupplierDeposits[palPool];
 
             // Calculate the amount of rewards token accrued since last update
-            uint accruedAmount = ellapsedBlocks.mul(supplySpeed);
+            uint accruedAmount = ellapsedBlocks * supplySpeed;
 
             // And the new ratio for reward distribution to user
             // Based on the amount of rewards accrued, and the change in the TotalSupply
-            uint ratio = totalDeposited > 0 ? accruedAmount.mul(1e36).div(totalDeposited) : 0;
+            uint ratio = totalDeposited > 0 ? (accruedAmount * 1e36) / totalDeposited : 0;
 
             // Write new Supply Rewards values in the storage
-            state.index = safe224(uint(state.index).add(ratio));
+            state.index = safe224(uint(state.index) + ratio);
             state.blockNumber = safe32(currentBlock);
         }
         else if(ellapsedBlocks > 0){
@@ -356,17 +355,17 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         }
 
         // Get the difference of index with the last one for user
-        uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+        uint indexDiff = currentSupplyIndex - userSupplyIndex;
 
         if(indexDiff > 0){
             // And using the user PalToken balance deposited in the Controller,
             // we can get how much rewards where accrued
             uint userBalance = supplierDeposits[palPool][user];
 
-            uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+            uint userAccruedRewards = (userBalance * indexDiff) / 1e36;
 
             // Add the new amount of rewards to the user total claimable balance
-            accruedRewards[user] = accruedRewards[user].add(userAccruedRewards);
+            accruedRewards[user] += userAccruedRewards;
         }
 
     }
@@ -392,10 +391,10 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
             (borrower,,,,,,,feesUsedAmount,,,,) = pool.getBorrowData(loanAddress);
 
-            uint userAccruedRewards = feesUsedAmount.mul(feesUsedAmount).div(1e18);
+            uint userAccruedRewards = (feesUsedAmount * feesUsedAmount) / 1e18;
 
             // Add the new amount of rewards to the user total claimable balance
-            accruedRewards[borrower] = accruedRewards[borrower].add(userAccruedRewards);
+            accruedRewards[borrower] += userAccruedRewards;
         }
 
     }
@@ -416,7 +415,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         // Calculate the amount of rewards based on the Pool ratio & the amount of usedFees in the Loan
         uint poolBorrowRatio = loansBorrowRatios[loanAddress] > 0 ? loansBorrowRatios[loanAddress] : borrowRatios[palPool];
 
-        return feesUsedAmount.mul(poolBorrowRatio).div(1e18);
+        return (feesUsedAmount * poolBorrowRatio) / 1e18;
     }
 
     /**
@@ -465,17 +464,17 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
             }
 
             // Get the difference of index with the last one for user
-            uint indexDiff = currentSupplyIndex.sub(userSupplyIndex);
+            uint indexDiff = currentSupplyIndex - userSupplyIndex;
 
             if(indexDiff > 0){
                 // And using the user PalToken balance deposited in the Controller,
                 // we can get how much rewards where accrued
                 uint userBalance = supplierDeposits[_pools[i]][user];
 
-                uint userAccruedRewards = userBalance.mul(indexDiff).div(1e36);
+                uint userAccruedRewards = (userBalance * indexDiff) / 1e36;
 
                 // Add the new amount of rewards to the user total claimable balance
-                _total = _total.add(userAccruedRewards);
+                _total += userAccruedRewards;
             }
         }
 
@@ -509,7 +508,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
         address[] memory _pools = palPools;
         uint totalSpeed = 0;
         for(uint i = 0; i < _pools.length; i++){
-            totalSpeed = totalSpeed.add(supplySpeeds[_pools[i]]);
+            totalSpeed += supplySpeeds[_pools[i]];
         }
         return totalSpeed;
     }
@@ -526,7 +525,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
     function becomeImplementation(ControllerProxy proxy) external override adminOnly {
         // Only to call after the contract was set as Pending Implementation in the Proxy contract
         // To accept the delegatecalls, and update the Implementation address in the Proxy
-        require(proxy.acceptImplementation(), Errors.FAIL_BECOME_IMPLEMENTATION);
+        if(!proxy.acceptImplementation()) revert Errors.FailBecomeImplementation();
     }
 
     function updateRewardToken(address newRewardTokenAddress) external override adminOnly {
@@ -535,12 +534,12 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
     // Allows to withdraw reward tokens from the Controller if rewards are removed or changed
     function withdrawRewardToken(uint256 amount, address recipient) external override adminOnly {
-        require(recipient != address(0), Errors.ZERO_ADDRESS);
-        require(amount > 0, Errors.INVALID_PARAMETERS);
+        if(recipient == address(0)) revert Errors.ZeroAddress();
+        if(amount == 0) revert Errors.InvalidParameters();
 
         IERC20 token = IERC20(rewardToken());
 
-        require(amount <= token.balanceOf(address(this)), Errors.BALANCE_TOO_LOW);
+        if(amount > token.balanceOf(address(this))) revert Errors.BalanceTooLow();
 
         token.safeTransfer(recipient, amount);
     }
@@ -563,7 +562,7 @@ contract DoomsdayController is IPaladinController, ControllerStorage {
 
     // set a pool rewards values (admin)
     function updatePoolRewards(address palPool, uint newSupplySpeed, uint newBorrowRatio, bool autoBorrowReward) external override adminOnly {
-        require(isPalPool(palPool), Errors.POOL_NOT_LISTED);
+        if(!isPalPool(palPool)) revert Errors.PoolNotListed();
 
         if(newSupplySpeed != supplySpeeds[palPool]){
             //Make sure it's updated before setting the new speed

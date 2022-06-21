@@ -6,17 +6,16 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "./AaveDelegator.sol";
 import "../tokens/AAVE/IStakedAave.sol";
 import "../utils/SafeERC20.sol";
-import "../utils/SafeMath.sol";
+
 /** @title Aave Governance token Delegator that claims rewards for the stkAave token */
 /// @author Paladin
 contract AaveDelegatorClaimer is AaveDelegator {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     constructor(){

@@ -5,15 +5,19 @@ import { PalToken } from "../../typechain/PalToken";
 import { PalLoanToken } from "../../typechain/PalLoanToken";
 import { PalPool } from "../../typechain/PalPool";
 import { PaladinController } from "../../typechain/PaladinController";
-import { InterestCalculator } from "../../typechain/InterestCalculator";
-import { Comp } from "../../typechain/Comp";
-import { BasicDelegator } from "../../typechain/BasicDelegator";
+import { InterestCalculator } from "../../typechain/interests/InterestCalculator";
+import { Comp } from "../../typechain/tests/Comp";
+import { BasicDelegator } from "../../typechain/delegators/BasicDelegator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
+import { IERC20 } from "../../typechain/utils/IERC20";
+import { IERC20__factory } from "../../typechain/factories/utils/IERC20__factory";
+import { getERC20 } from "../utils/getERC20";
 
 chai.use(solidity);
 const { expect } = chai;
+const { provider } = ethers;
 
 let poolFactory: ContractFactory
 let tokenFactory: ContractFactory
@@ -26,6 +30,7 @@ let palLoanTokenFactory: ContractFactory
 describe('PalPool : 4 - Admin functions tests', () => {
     let admin: SignerWithAddress
     let user1: SignerWithAddress
+    let user2: SignerWithAddress
     let wrong_address: SignerWithAddress
 
     let pool: PalPool
@@ -52,7 +57,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
 
     beforeEach( async () => {
-        [admin, user1, wrong_address] = await ethers.getSigners();
+        [admin, user1, user2, wrong_address] = await ethers.getSigners();
 
         token = (await tokenFactory.connect(admin).deploy(name, symbol)) as PalToken;
         await token.deployed();
@@ -113,7 +118,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).setNewController(new_controller.address)
-            ).to.be.revertedWith('29')
+            ).to.be.revertedWith('CallerNotController()')
 
         });
 
@@ -142,7 +147,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).setNewInterestModule(new_interest.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 
@@ -171,7 +176,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).setNewDelegator(new_delegator.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 
@@ -198,7 +203,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).updateMinBorrowLength(newMinValue)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 
@@ -227,11 +232,11 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(admin).updatePoolFactors(0, 0)
-            ).to.be.revertedWith('28')
+            ).to.be.revertedWith('InvalidParameters()')
 
             await expect(
                 pool.connect(admin).updatePoolFactors(newReserveFactor, wrongKillerRatio)
-            ).to.be.revertedWith('28')
+            ).to.be.revertedWith('InvalidParameters()')
             
         });
 
@@ -240,7 +245,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).updatePoolFactors(newReserveFactor, newKillerRatio)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 
@@ -274,7 +279,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).addReserve(amount)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 
@@ -311,7 +316,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(admin).removeReserve(amount)
-            ).to.be.revertedWith('19')
+            ).to.be.revertedWith('ReserveFundsInsufficient()')
         });
 
 
@@ -321,7 +326,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(admin).removeReserve(amount)
-            ).to.be.revertedWith('19')
+            ).to.be.revertedWith('ReserveFundsInsufficient()')
         });
 
 
@@ -329,7 +334,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).removeReserve(amount)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 
@@ -381,7 +386,7 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(admin).withdrawFees(ethers.utils.parseEther('50'), admin.address)
-            ).to.be.revertedWith('34')
+            ).to.be.revertedWith('FeesAccruedInsufficient()')
 
         });
 
@@ -407,8 +412,71 @@ describe('PalPool : 4 - Admin functions tests', () => {
 
             await expect(
                 pool.connect(user1).withdrawFees(ethers.utils.parseEther('2'), admin.address)
-            ).to.be.revertedWith('29')
+            ).to.be.revertedWith('CallerNotController()')
             
+        });
+
+    });
+
+    describe('recoverERC20', async () => {
+
+        const otherERC20_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"; // DAI
+        const otherERC20_holder = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503";
+        const erc20 = IERC20__factory.connect(otherERC20_address, provider);
+
+        const lost_amount = ethers.utils.parseEther('1000');
+
+
+        it(' should retrieve the lost tokens and send it to the admin', async () => {
+
+            await getERC20(admin, otherERC20_holder, erc20, user2.address, lost_amount);
+
+            await erc20.connect(user2).transfer(pool.address, lost_amount);
+
+            const oldBalance = await erc20.balanceOf(admin.address);
+
+            await pool.connect(admin).recoverERC20(erc20.address, lost_amount)
+
+            const newBalance = await erc20.balanceOf(admin.address);
+
+            expect(newBalance.sub(oldBalance)).to.be.eq(lost_amount)
+
+        });
+
+        it(' should not allow to recover the underyling token', async () => {
+
+            await underlying.connect(admin).transfer(pool.address, lost_amount);
+
+            await expect(
+                pool.connect(admin).recoverERC20(underlying.address, lost_amount)
+            ).to.be.revertedWith('InvalidToken()')
+
+        });
+
+        it(' should fail if given incorrect amounts', async () => {
+
+            await underlying.connect(admin).transfer(pool.address, lost_amount);
+
+            await expect(
+                pool.connect(admin).recoverERC20(erc20.address, 0)
+            ).to.be.revertedWith('InvalidAmount()')
+
+            await expect(
+                pool.connect(admin).recoverERC20(erc20.address, lost_amount.mul(2))
+            ).to.be.revertedWith('InvalidAmount()')
+
+        });
+
+        it(' should block non-admin caller', async () => {
+
+            await getERC20(admin, otherERC20_holder, erc20, user2.address, lost_amount);
+
+            await erc20.connect(user2).transfer(pool.address, lost_amount);
+
+            await expect(
+                pool.connect(user2).recoverERC20(erc20.address, ethers.utils.parseEther('10'))
+            ).to.be.revertedWith('CallerNotAdmin()')
+
         });
 
     });

@@ -1,4 +1,4 @@
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 
@@ -9,24 +9,52 @@ contract Admin {
     /** @notice (Admin) Event when the contract admin is updated */
     event NewAdmin(address oldAdmin, address newAdmin);
 
+    /** @notice (Admin) Event when the contract pendingAdmin is updated */
+    event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
+
     /** @dev Admin address for this contract */
-    address payable internal admin;
+    address public admin;
+
+    /** @dev Pending admin address for this contract */
+    address public pendingAdmin;
     
     modifier adminOnly() {
         //allows only the admin of this contract to call the function
-        require(msg.sender == admin, '1');
+        if(msg.sender!= admin) revert CallerNotAdmin();
         _;
     }
 
-        /**
-    * @notice Set a new Admin
-    * @dev Changes the address for the admin parameter
-    * @param _newAdmin address of the new Controller Admin
-    */
-    function setNewAdmin(address payable _newAdmin) external adminOnly {
-        address _oldAdmin = admin;
-        admin = _newAdmin;
+    error CallerNotAdmin();
+    error CannotBeAdmin();
+    error CallerNotpendingAdmin();
+    error AdminZeroAddress();
 
-        emit NewAdmin(_oldAdmin, _newAdmin);
+    constructor() {
+        admin = msg.sender;
+    }
+
+    
+    function transferAdmin(address newAdmin) external adminOnly {
+        if(newAdmin == address(0)) revert AdminZeroAddress();
+        if(newAdmin == admin) revert CannotBeAdmin();
+        address oldPendingAdmin = pendingAdmin;
+
+        pendingAdmin = newAdmin;
+
+        emit NewPendingAdmin(oldPendingAdmin, newAdmin);
+    }
+
+    function acceptAdmin() external {
+        if(pendingAdmin == address(0)) revert AdminZeroAddress();
+        if(msg.sender != pendingAdmin) revert CallerNotpendingAdmin();
+        address newAdmin = pendingAdmin;
+        address oldAdmin = admin;
+        admin = newAdmin;
+
+        emit NewAdmin(oldAdmin, newAdmin);
+
+        pendingAdmin = address(0);
+
+        emit NewPendingAdmin(newAdmin, address(0));
     }
 }

@@ -6,17 +6,16 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "./InterestInterface.sol";
 
-import "../utils/SafeMath.sol";
-
 /** @title Interest Module for Paladin PalPools  */
 /// @author Paladin
 contract InterestCalculator is InterestInterface {
-    using SafeMath for uint;
+
+    uint256 private UNIT = 1e18;
 
     /** @notice admin address (contract creator) */
     address public admin;
@@ -37,10 +36,10 @@ contract InterestCalculator is InterestInterface {
 
         uint blocksPerYear = 2336000;
         //Target yearly values for Borrow Rate
-        multiplierPerBlock = uint(0.7e18).div(blocksPerYear);
-        baseRatePerBlock = uint(0.57e18).div(blocksPerYear);
-        kinkMultiplierPerBlock = uint(12.6e18).div(blocksPerYear);
-        kinkBaseRatePerBlock = uint(1.13e18).div(blocksPerYear);
+        multiplierPerBlock = uint(0.7e18) / blocksPerYear;
+        baseRatePerBlock = uint(0.57e18) / blocksPerYear;
+        kinkMultiplierPerBlock = uint(12.6e18) / blocksPerYear;
+        kinkBaseRatePerBlock = uint(1.13e18) / blocksPerYear;
     }
 
     /**
@@ -57,7 +56,7 @@ contract InterestCalculator is InterestInterface {
             return 0;
         }
         // Utilization Rate = Borrows / (Cash + Borrows - Reserves)
-        return borrows.mul(1e18).div(cash.add(borrows).sub(reserves));
+        return (borrows * 1e18) / (cash + borrows - reserves);
     }
 
     /**
@@ -78,8 +77,8 @@ contract InterestCalculator is InterestInterface {
         uint _bRate = _borrowRate(cash, borrows, reserves);
 
         //Supply Rate = Utilization Rate * (Borrow Rate * (1 - Reserve Factor))
-        uint _tempRate = _bRate.mul(uint(1e18).sub(reserveFactor)).div(1e18);
-        return _utilRate.mul(_tempRate).div(1e18);
+        uint _tempRate = (_bRate * (UNIT - reserveFactor)) / UNIT;
+        return (_utilRate * _tempRate) / UNIT;
     }
     
     /**
@@ -111,13 +110,12 @@ contract InterestCalculator is InterestInterface {
         //If the Utilization Rate is less than the Kink value
         // Borrow Rate = Multiplier * Utilization Rate + Base Rate
         if(_utilRate < kink) {
-            return _utilRate.mul(multiplierPerBlock).div(1e18).add(baseRatePerBlock);
+            return ((_utilRate * multiplierPerBlock) / UNIT) + baseRatePerBlock;
         }
         //If the Utilization Rate is more than the Kink value
         // Borrow Rate = Kink Multiplier * (Utilization Rate - 0.8) + Kink Rate
         else {
-            uint _temp = _utilRate.sub(0.8e18);
-            return kinkMultiplierPerBlock.mul(_temp).div(1e18).add(kinkBaseRatePerBlock);
+            return ((kinkMultiplierPerBlock * (_utilRate - kink)) / UNIT) + kinkBaseRatePerBlock;
         }
     }
 }

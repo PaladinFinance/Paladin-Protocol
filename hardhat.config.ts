@@ -19,7 +19,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.7.6",
+        version: "0.8.10",
         settings: {
           optimizer: {
             enabled: true,
@@ -29,43 +29,16 @@ const config: HardhatUserConfig = {
       }
     ],
     overrides: {
-      "contracts/PalPool.sol" : {
-        version: "0.7.6",
+      "contracts/tests/DelegateRegistry.sol" : {
+        version: "0.7.2",
         settings: {
           optimizer: {
-            enabled: true,
-            runs: 25000,
+            enabled: false,
+            runs: 200,
           }
         }
       },
-      "contracts/PalToken.sol" : {
-        version: "0.7.6",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 25000,
-          }
-        }
-      },
-      "contracts/variants/PalPoolStkAave.sol" : {
-        version: "0.7.6",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 99999,
-          }
-        }
-      },
-      "contracts/variants/PalPoolhPal.sol" : {
-        version: "0.7.6",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 25000,
-          }
-        }
-      },
-      "contracts/PriceOracle.sol" : {
+      "contracts/tests/Comp.sol" : {
         version: "0.7.6",
         settings: {
           optimizer: {
@@ -78,7 +51,7 @@ const config: HardhatUserConfig = {
   },
   contractSizer: {
     alphaSort: true,
-    runOnCompile: false,
+    runOnCompile: true,
     disambiguatePaths: false,
   },
   networks: {
@@ -93,13 +66,6 @@ const config: HardhatUserConfig = {
       accounts: process.env.KOVAN_PRIVATE_KEY ? [process.env.KOVAN_PRIVATE_KEY] : TEST_ACCOUNT,
       /*accounts: {
         mnemonic: process.env.KOVAN_MNEMONIC,
-      },*/
-    },
-    rinkeby: {
-      url: process.env.RINKEBY_URI || '',
-      accounts: process.env.RINKEBY_PRIVATE_KEY ? [process.env.RINKEBY_PRIVATE_KEY] : TEST_ACCOUNT,
-      /*accounts: {
-        mnemonic: process.env.RINKEBY_MNEMONIC,
       },*/
     },
     mainnet: {

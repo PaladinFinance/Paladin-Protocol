@@ -7,9 +7,9 @@ import { PalLoanToken } from "../../typechain/PalLoanToken";
 import { IPalLoan } from "../../typechain/IPalLoan";
 import { IPalLoan__factory } from "../../typechain/factories/IPalLoan__factory";
 import { PaladinController } from "../../typechain/PaladinController";
-import { InterestCalculator } from "../../typechain/InterestCalculator";
-import { Comp } from "../../typechain/Comp";
-import { BasicDelegator } from "../../typechain/BasicDelegator";
+import { InterestCalculator } from "../../typechain/interests/InterestCalculator";
+import { Comp } from "../../typechain/tests/Comp";
+import { BasicDelegator } from "../../typechain/delegators/BasicDelegator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -283,7 +283,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user2).borrow(user1.address, ethers.utils.parseEther('5000'), fees_amount)
-            ).to.be.revertedWith('9')
+            ).to.be.revertedWith('InsufficientCash()')
             
         });
 
@@ -292,7 +292,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user1).borrow(ethers.constants.AddressZero, borrow_amount, fees_amount)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
             
         });
 
@@ -301,7 +301,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user2).borrow(user1.address, borrow_amount, ethers.utils.parseEther('0.001'))
-            ).to.be.revertedWith('23')
+            ).to.be.revertedWith('BorrowInsufficientFees()')
             
         });
 
@@ -319,7 +319,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user1).borrow(user2.address, 0, fees_amount)
-            ).to.be.revertedWith('27')
+            ).to.be.revertedWith('ZeroBorrow()')
             
         });
 
@@ -328,7 +328,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user1).borrow(user2.address, 1, 0)
-            ).to.be.revertedWith('23')
+            ).to.be.revertedWith('BorrowInsufficientFees()')
             
         });
 
@@ -429,7 +429,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user1).expandBorrow(loan_address, expand_fees_amount)
-            ).to.be.revertedWith('14')
+            ).to.be.revertedWith('LoanClosed()')
             
         });
 
@@ -440,7 +440,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user2).expandBorrow(loan_address, expand_fees_amount)
-            ).to.be.revertedWith('15')
+            ).to.be.revertedWith('NotLoanOwner()')
             
         });
 
@@ -643,7 +643,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user1).closeBorrow(loan_address)
-            ).to.be.revertedWith('14')
+            ).to.be.revertedWith('LoanClosed()')
             
         });
 
@@ -656,7 +656,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user2).closeBorrow(loan_address)
-            ).to.be.revertedWith('15')
+            ).to.be.revertedWith('NotLoanOwner()')
             
         });
 
@@ -852,7 +852,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user2).killBorrow(loan_address)
-            ).to.be.revertedWith('18')
+            ).to.be.revertedWith('NotKillable()')
             
         });
 
@@ -863,7 +863,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user1).killBorrow(loan_address)
-            ).to.be.revertedWith('16')
+            ).to.be.revertedWith('LoanOwner()')
             
         });
 
@@ -876,7 +876,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user2).killBorrow(loan_address)
-            ).to.be.revertedWith('14')
+            ).to.be.revertedWith('LoanClosed()')
             
         });
 
@@ -958,7 +958,7 @@ describe('PalPool : 3 - Borrows tests', () => {
 
             await expect(
                 pool.connect(user1).changeBorrowDelegatee(loan_address, ethers.constants.AddressZero)
-            ).to.be.revertedWith('22')
+            ).to.be.revertedWith('ZeroAddress()')
             
         });
 

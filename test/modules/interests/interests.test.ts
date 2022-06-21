@@ -1,7 +1,7 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { InterestCalculator } from "../../../typechain/InterestCalculator";
+import { InterestCalculator } from "../../../typechain/interests/InterestCalculator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "@ethersproject/bignumber";
 
@@ -129,11 +129,11 @@ describe('Interest Calculator contract tests', () => {
 
         await expect(
             interest.utilizationRate(largestUint, largestUint, 0)
-        ).to.be.revertedWith("SafeMath: addition overflow")
+        ).to.be.reverted
 
         await expect(
             interest.getBorrowRate(fakeAddress,0, largestUint, 0)
-        ).to.be.revertedWith("SafeMath: multiplication overflow")
+        ).to.be.reverted
     })
 
 });

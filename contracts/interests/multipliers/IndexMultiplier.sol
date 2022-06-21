@@ -6,18 +6,17 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                      
 
-pragma solidity ^0.7.6;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
 import "./IMultiplierCalculator.sol";
 import "./utils/IPalPoolSimplified.sol";
-import "../../utils/SafeMath.sol";
 import "../../utils/Admin.sol";
+import {Errors} from  "../../utils/Errors.sol";
 
 /** @title Multiplier Calculator for Index Coop Governance  */
 /// @author Paladin
 contract IndexMultiplier is IMultiplierCalculator, Admin {
-    using SafeMath for uint256;
 
     address[] public pools;
 
@@ -36,7 +35,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
 
         currentQuorum = _currentQuorum;
 
-        activationThreshold = _currentQuorum.mul(activationFactor).div(10000);
+        activationThreshold = (_currentQuorum * activationFactor) / 10000;
         
         for(uint256 i = 0; i < _pools.length; i++){
             pools.push(_pools[i]);
@@ -48,7 +47,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
 
         if(totalBorrowed > activationThreshold){
 
-            return baseMultiplier.mul(totalBorrowed).div(currentQuorum);
+            return (baseMultiplier * totalBorrowed) / currentQuorum;
         }
         //default case
         return 1e18;
@@ -60,7 +59,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
         address[] memory _pools = pools;
         uint256 length = _pools.length;
         for(uint256 i; i < length; i++){
-            total = total.add(IPalPoolSimplified(_pools[i]).totalBorrowed());
+            total += IPalPoolSimplified(_pools[i]).totalBorrowed();
         }
         return total;
     }
@@ -78,7 +77,7 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
         uint256 length = _pools.length;
         for(uint256 i; i < length; i++){
             if(_pools[i] == _pool){
-                uint256 lastIndex = length.sub(1);
+                uint256 lastIndex = length - 1;
                 if(i != lastIndex){
                     pools[i] = pools[lastIndex];
                 }
@@ -88,25 +87,25 @@ contract IndexMultiplier is IMultiplierCalculator, Admin {
     }
 
     function updateBaseMultiplier(uint256 newBaseMultiplier) external adminOnly {
-        require(newBaseMultiplier != 0);
+        if(newBaseMultiplier == 0) revert Errors.InvalidParameters();
         baseMultiplier = newBaseMultiplier;
     }
 
     function updateQuorum(uint256 newQuorum) external adminOnly {
-        require(newQuorum != 0);
+        if(newQuorum == 0) revert Errors.InvalidParameters();
         currentQuorum = newQuorum;
 
         //Update activationThreshold
-        activationThreshold = newQuorum.mul(activationFactor).div(10000);
+        activationThreshold = (newQuorum * activationFactor) / 10000;
     }
 
     function updateActivationFactor(uint256 newFactor) external adminOnly {
-        require(newFactor <= 10000);
-        require(newFactor != 0);
+        if(newFactor > 10000) revert Errors.InvalidParameters();
+        if(newFactor == 0) revert Errors.InvalidParameters();
         activationFactor = newFactor;
 
         //Update activationThreshold
-        activationThreshold = currentQuorum.mul(newFactor).div(10000);
+        activationThreshold = (currentQuorum * newFactor) / 10000;
     }
 
 }

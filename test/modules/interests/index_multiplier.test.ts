@@ -1,8 +1,8 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { IndexMultiplier } from "../../../typechain/IndexMultiplier";
-import { MockPoolBorrowsOnly } from "../../../typechain/MockPoolBorrowsOnly";
+import { IndexMultiplier } from "../../../typechain/interests/multipliers/IndexMultiplier";
+import { MockPoolBorrowsOnly } from "../../../typechain/tests/MockPoolBorrowsOnly";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -297,23 +297,23 @@ describe('IndexMultiplier contract tests', () => {
 
             await expect(
                 multiplier.connect(nonAdmin).addPool(pool2.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).removePool(pool1.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateBaseMultiplier(ethers.utils.parseEther('15'))
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateQuorum(ethers.utils.parseEther('350000'))
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateActivationFactor(2500)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 

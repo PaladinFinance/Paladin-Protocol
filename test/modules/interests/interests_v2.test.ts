@@ -1,10 +1,10 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { InterestCalculatorV2 } from "../../../typechain/InterestCalculatorV2";
-import { GovernorMultiplier } from "../../../typechain/GovernorMultiplier";
-import { MockGovernor } from "../../../typechain/MockGovernor";
-import { MockPoolBorrowsOnly } from "../../../typechain/MockPoolBorrowsOnly";
+import { InterestCalculatorV2 } from "../../../typechain/interests/InterestCalculatorV2";
+import { GovernorMultiplier } from "../../../typechain/interests/multipliers/GovernorMultiplier";
+import { MockGovernor } from "../../../typechain/tests/MockGovernor";
+import { MockPoolBorrowsOnly } from "../../../typechain/tests/MockPoolBorrowsOnly";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -105,7 +105,7 @@ describe('InterestCalculator V2 contract tests', () => {
                     [pool.address],
                     [governorMultiplier.address]
                 )
-            ).to.be.revertedWith('Already initiated')
+            ).to.be.revertedWith('AlreadyInitialized()')
 
         });
 
@@ -120,7 +120,7 @@ describe('InterestCalculator V2 contract tests', () => {
                     [pool.address],
                     [governorMultiplier.address]
                 )
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
         });
 
@@ -413,23 +413,23 @@ describe('InterestCalculator V2 contract tests', () => {
 
             await expect(
                 interest.connect(nonAdmin).activateMultiplier(pool.address)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).stopMultiplier(pool.address)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).updateBaseValues(1,1,1)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).updateBlocksPerYear(4)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
 
             await expect(
                 interest.connect(nonAdmin).updatePoolMultiplierCalculator(pool.address, governorMultiplier.address)
-            ).to.be.revertedWith('1');
+            ).to.be.revertedWith('CallerNotAdmin()');
             
         });
 

@@ -5,9 +5,9 @@ import { PalToken } from "../../typechain/PalToken";
 import { PalLoanToken } from "../../typechain/PalLoanToken";
 import { PalPool } from "../../typechain/PalPool";
 import { PaladinController } from "../../typechain/PaladinController";
-import { InterestCalculator } from "../../typechain/InterestCalculator";
-import { Comp } from "../../typechain/Comp";
-import { BasicDelegator } from "../../typechain/BasicDelegator";
+import { InterestCalculator } from "../../typechain/interests/InterestCalculator";
+import { Comp } from "../../typechain/tests/Comp";
+import { BasicDelegator } from "../../typechain/delegators/BasicDelegator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -269,7 +269,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
             await expect(
                 pool.connect(user2).withdraw(paltoken_amount)
-            ).to.be.revertedWith('10')
+            ).to.be.revertedWith('InsufficientBalance()')
             
         });
 
@@ -285,7 +285,7 @@ describe('PalPool : 2 - Deposit & Withdraw tests', () => {
 
             await expect(
                 pool.connect(user1).withdraw(paltoken_amount)
-            ).to.be.revertedWith('9')
+            ).to.be.revertedWith('InsufficientCash()')
             
         });
 

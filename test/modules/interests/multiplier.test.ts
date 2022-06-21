@@ -1,9 +1,9 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { GovernorMultiplier } from "../../../typechain/GovernorMultiplier";
-import { MockGovernor } from "../../../typechain/MockGovernor";
-import { MockPoolBorrowsOnly } from "../../../typechain/MockPoolBorrowsOnly";
+import { GovernorMultiplier } from "../../../typechain/interests/multipliers/GovernorMultiplier";
+import { MockGovernor } from "../../../typechain/tests/MockGovernor";
+import { MockPoolBorrowsOnly } from "../../../typechain/tests/MockPoolBorrowsOnly";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -255,19 +255,19 @@ describe('GovernorMultiplier contract tests', () => {
 
             await expect(
                 multiplier.connect(nonAdmin).addPool(pool2.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).removePool(pool1.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateGovernor(governor.address)
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
                 multiplier.connect(nonAdmin).updateActivationThreshold(ethers.utils.parseEther('0.65'))
-            ).to.be.revertedWith('1')
+            ).to.be.revertedWith('CallerNotAdmin()')
             
         });
 

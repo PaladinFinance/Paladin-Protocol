@@ -6,11 +6,9 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
                                                
 
-pragma solidity ^0.7.6;
-pragma abicoder v2;
+pragma solidity 0.8.10;
 //SPDX-License-Identifier: MIT
 
-import "./utils/SafeMath.sol";
 import "./utils/Admin.sol";
 
 // PalPool Minimal Interface
@@ -46,7 +44,6 @@ interface IChainlinkAggregator {
 /** @title Price Oracle for PalTokens  */
 /// @author Paladin
 contract PriceOracle is Admin {
-    using SafeMath for uint;
 
     /** @notice Decimals of the palToken */
     uint256 public constant PALTOKEN_DECIMALS = 18;
@@ -78,6 +75,14 @@ contract PriceOracle is Admin {
 
     event AssetSourceUpdated(address indexed asset, address source, address sourceUSD);
 
+    // Errors
+
+    error InequalListSizes();
+    error TokenNotListed();
+    error InvalidPrice();
+    error NoPriceSource();
+    error ZeroAddress();
+
 
     // Constructor
     // -> If no valid price source, use address 0x00...00
@@ -88,8 +93,8 @@ contract PriceOracle is Admin {
         address _controller,
         address _baseSource // Chainlink Source for ETH/USD (or any other chain base currency)
     ){
-        require(_assets.length == _sources.length, "PriceOracle: inequal list sizes");
-        require(_assets.length == _sourcesUSD.length, "PriceOracle: inequal list sizes");
+        if(_assets.length != _sources.length) revert InequalListSizes();
+        if(_assets.length != _sourcesUSD.length) revert InequalListSizes();
 
         admin = msg.sender;
 
@@ -126,7 +131,7 @@ contract PriceOracle is Admin {
     */
     function _getPalPool(address _palToken) internal view returns(address) {
         address _palPool = controller.palTokenToPalPool(_palToken);
-        require(_palPool != address(0), "PriceOracle: palToken not listed");
+        if(_palPool == address(0)) revert TokenNotListed();
         return _palPool;
     }
 
@@ -157,7 +162,7 @@ contract PriceOracle is Admin {
 
         uint256 exchangeRate = palPool.exchangeRateStored();
 
-        return amount.mul(exchangeRate).div(MANTISSA_SCALE);
+        return (amount * exchangeRate) / MANTISSA_SCALE;
     }
 
     /**
@@ -170,7 +175,7 @@ contract PriceOracle is Admin {
 
         uint256 exchangeRate = palPool.exchangeRateStored();
 
-        return amount.mul(MANTISSA_SCALE).div(exchangeRate);
+        return (amount * MANTISSA_SCALE) / exchangeRate;
     }
 
     /**
@@ -189,11 +194,11 @@ contract PriceOracle is Admin {
             // Get a valid price from the source
             (,int256 price,,,) = assetsSources[asset].latestRoundData();
 
-            require(price > 0, "PriceOracle: incorrect price");
+            if(price <= 0) revert InvalidPrice();
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         // Else, try to use an USD price source
         else if(address(assetsUSDSources[asset]) != address(0)) {
@@ -205,17 +210,17 @@ contract PriceOracle is Admin {
             (,int256 usdPrice,,,) = assetsUSDSources[asset].latestRoundData();
             (,int256 baseUsdPrice,,,) = baseSource.latestRoundData();
 
-            require(usdPrice > 0 && baseUsdPrice > 0 , "PriceOracle: incorrect price");
+            if(usdPrice <= 0 || baseUsdPrice <= 0) revert InvalidPrice();
 
             // Calculate the ETH price based on the USD price and base price
-            uint256 price = uint256(usdPrice).mul(10**baseSourceDecimals).div(uint256(baseUsdPrice));
+            uint256 price = (uint256(usdPrice) * (10**baseSourceDecimals)) / uint256(baseUsdPrice);
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         else{
-            revert("PriceOracle: no source for asset");
+            revert NoPriceSource();
         }
     }
 
@@ -234,11 +239,11 @@ contract PriceOracle is Admin {
             // Get a valid price from the source
             (,int256 price,,,) = assetsUSDSources[asset].latestRoundData();
 
-            require(price > 0, "PriceOracle: incorrect price");
+            if(price <= 0) revert InvalidPrice();
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         else if(address(assetsSources[asset]) != address(0)) {
             // Get the decimals from the price source
@@ -249,17 +254,17 @@ contract PriceOracle is Admin {
             (,int256 ethPrice,,,) = assetsSources[asset].latestRoundData();
             (,int256 baseUsdPrice,,,) = baseSource.latestRoundData();
 
-            require(ethPrice > 0 && baseUsdPrice > 0 , "PriceOracle: incorrect price");
+            if(ethPrice <= 0 || baseUsdPrice <= 0) revert InvalidPrice();
 
             // Calculate the USD price based on the ETH price and base price
-            uint256 price = uint256(ethPrice).mul(uint256(baseUsdPrice)).div(10**baseSourceDecimals);
+            uint256 price = (uint256(ethPrice) * uint256(baseUsdPrice)) / (10**baseSourceDecimals);
 
             // Scale the price to the palToken, based on the exchangeRate
             // And returns the price, and the decimals for the value
-            return (uint256(price).mul(exchangeRate).div(MANTISSA_SCALE), sourceDecimals);
+            return ((uint256(price) * exchangeRate) / MANTISSA_SCALE, sourceDecimals);
         }
         else{
-            revert("PriceOracle: no source for asset");
+            revert NoPriceSource();
         }
     }
 
@@ -349,7 +354,7 @@ contract PriceOracle is Admin {
     * @param newController Address of the new Controller
     */
     function setNewController(address newController) external adminOnly {
-        require(newController != address(0));
+        if(newController == address(0)) revert ZeroAddress();
         controller = IPaladinController(newController);
 
         emit NewController(newController);
@@ -361,7 +366,7 @@ contract PriceOracle is Admin {
     * @param newBaseSource Address of the base price source (ex: ETH/USD)
     */
     function setNewBaseSource(address newBaseSource) external adminOnly {
-        require(newBaseSource != address(0));
+        if(newBaseSource == address(0)) revert ZeroAddress();
 
         baseSource = IChainlinkAggregator(newBaseSource);
         baseSourceDecimals = baseSource.decimals();
