@@ -25,7 +25,8 @@ const MULTIPLIER_NAMES = {
     GOVERNOR: 'GovernorMultiplier',
     AAVE: 'AaveMultiplier',
     INDEX: 'IndexMultiplier',
-    HPAL: 'HolyPalMultiplier'
+    HPAL: 'HolyPalMultiplier',
+    AAVE2: 'AaveMultiplierV2',
 }
 
 const MULTIPLIER_CONTRACTS = {
@@ -58,6 +59,12 @@ const MULTIPLIER_CONTRACTS = {
         NAME: MULTIPLIER_NAMES.HPAL,
         HPAL_ADDRESS: "0x624D822934e87D3534E435b83ff5C19769Efd9f6"
     },
+    AAVE2: {
+        NAME: MULTIPLIER_NAMES.AAVE2,
+        GOV: 'Aave',
+        GOVERNANCE_ADDRESS: "0xEC568fffba86c094cf06b22134B23074DFE2252c",
+        STRATEGY_ADDRESS: "0xEE56e2B3D491590B5b31738cC34d5232F378a8D5",
+    }
 }
 
 const MULTIPLIER_KEYS = {
@@ -270,6 +277,14 @@ const MULTIPLIERS = {
         ADDRESS: "0xB5B51a7Da57fE6Db797abD787ddfD923daaBaADc",
         POOLS: [
             POOLS.HPAL.POOL
+        ]
+    },
+    AAVE2: {
+        NAME: MULTIPLIER_NAMES.AAVE2,
+        CONTRACT: MULTIPLIER_CONTRACTS.AAVE2,
+        ADDRESS: "0x6616Ec194c0Da06FeDa1a4EF567FE8b8186F068d",
+        POOLS: [
+            POOLS.STKAAVE.POOL
         ]
     },
 }

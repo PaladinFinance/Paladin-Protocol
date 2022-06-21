@@ -1,10 +1,14 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { HolyPalMultiplier } from "../../../typechain/interests/multipliers/HolyPalMultiplier";
+import { AaveMultiplierV2 } from "../../../typechain/interests/multipliers/AaveMultiplierV2";
 import { MockPoolBorrowsOnly } from "../../../typechain/tests/MockPoolBorrowsOnly";
-import { IhPalVotes } from "../../../typechain/interests/multipliers/utils/IhPalVotes";
-import { IhPalVotes__factory } from "../../../typechain/factories/interests/multipliers/utils/IhPalVotes__factory";
+import { IProposalValidator } from "../../../typechain/interests/multipliers/utils/AAVE/IProposalValidator";
+import { IAaveGovernanceV2 } from "../../../typechain/interests/multipliers/utils/AAVE/IAaveGovernanceV2";
+import { IGovernanceStrategy } from "../../../typechain/interests/multipliers/utils/AAVE/IGovernanceStrategy";
+import { IProposalValidator__factory } from "../../../typechain/factories/interests/multipliers/utils/AAVE/IProposalValidator__factory";
+import { IAaveGovernanceV2__factory } from "../../../typechain/factories/interests/multipliers/utils/AAVE/IAaveGovernanceV2__factory";
+import { IGovernanceStrategy__factory } from "../../../typechain/factories/interests/multipliers/utils/AAVE/IGovernanceStrategy__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -14,27 +18,32 @@ chai.use(solidity);
 const { expect } = chai;
 const { provider } = ethers;
 
-const HPAL_ADDRESS = "0x624D822934e87D3534E435b83ff5C19769Efd9f6"
 
+const short_Executor_address = "0xEE56e2B3D491590B5b31738cC34d5232F378a8D5"
+const AAVE_Governance_address = "0xEC568fffba86c094cf06b22134B23074DFE2252c"
 
 let multiplierFactory: ContractFactory
 let mockPoolFactory: ContractFactory
 
-describe('hPalMultiplier contract tests', () => {
+describe('AaveMultiplierV2 contract tests', () => {
     let admin: SignerWithAddress
     let nonAdmin: SignerWithAddress
 
-    let multiplier: HolyPalMultiplier
+    let multiplier: AaveMultiplierV2
+    let governance: IAaveGovernanceV2
+    let executor: IProposalValidator
+    let strategy: IGovernanceStrategy
     let pool1: MockPoolBorrowsOnly
     let pool2: MockPoolBorrowsOnly
-
-    let hPAL: IhPalVotes
     
     before( async () => {
-        multiplierFactory = await ethers.getContractFactory("HolyPalMultiplier");
+        multiplierFactory = await ethers.getContractFactory("AaveMultiplierV2");
         mockPoolFactory = await ethers.getContractFactory("MockPoolBorrowsOnly");
 
-        hPAL = IhPalVotes__factory.connect(HPAL_ADDRESS, provider);
+        governance = IAaveGovernanceV2__factory.connect(AAVE_Governance_address, provider);
+        executor = IProposalValidator__factory.connect(short_Executor_address, provider);
+
+        strategy = IGovernanceStrategy__factory.connect(await governance.getGovernanceStrategy(), provider);
     })
 
 
@@ -48,9 +57,10 @@ describe('hPalMultiplier contract tests', () => {
         await pool2.deployed();
 
         multiplier = (await multiplierFactory.connect(admin).deploy(
-            hPAL.address,
+            governance.address,
+            executor.address,
             [pool1.address]
-        )) as HolyPalMultiplier;
+        )) as AaveMultiplierV2;
         await multiplier.deployed();
     });
 
@@ -59,10 +69,17 @@ describe('hPalMultiplier contract tests', () => {
         expect(multiplier.address).to.properAddress;
 
         expect(await multiplier.activationFactor()).to.be.eq(1000);
-        expect(await multiplier.quorumFactor()).to.be.eq(1500);
         expect(await multiplier.baseMultiplier()).to.be.eq(ethers.utils.parseEther('10'));
 
         expect((await multiplier.pools(0))).to.be.eq(pool1.address);
+
+        const multGovernor = await multiplier.governance();
+        const multExecutor = await multiplier.executor();
+        const multStrategy = await multiplier.strategy();
+
+        expect(multGovernor).to.be.eq(governance.address);
+        expect(multExecutor).to.be.eq(executor.address);
+        expect(multStrategy).to.be.eq(await governance.getGovernanceStrategy());
 
     });
 
@@ -70,11 +87,11 @@ describe('hPalMultiplier contract tests', () => {
 
         it(' should return the correct Quorum', async () => {
 
-            const quorumFactor = await multiplier.quorumFactor();
-
             const quorumAmount = await multiplier.getCurrentQuorum();
 
-            const expectedQuorum = (await hPAL.totalSupply()).mul(quorumFactor).div(10000)
+            const expectedQuorum = await executor.getMinimumVotingPowerNeeded(
+                await strategy.getTotalVotingSupplyAt(provider.blockNumber)
+            )
 
             expect(quorumAmount).to.be.eq(expectedQuorum);
 
@@ -216,9 +233,9 @@ describe('hPalMultiplier contract tests', () => {
 
         it(' should work with updated parameters', async () => {
 
-            const new_quorum_factor = BigNumber.from(2000)
+            const AAVE_Long_Executor_address = "0x61910EcD7e8e942136CE7Fe7943f956cea1CC2f7"
 
-            await multiplier.connect(admin).updateQuorumFactor(new_quorum_factor)
+            await multiplier.connect(admin).updateExecutor(AAVE_Long_Executor_address)
             
             await pool1.changeTotalBorrowed(ethers.utils.parseEther('50'))
 
@@ -298,19 +315,19 @@ describe('hPalMultiplier contract tests', () => {
         });
 
 
-        it(' can update quorumFactor', async () => {
+        it(' can update Executor', async () => {
 
-            const new_quorum_factor = BigNumber.from(2500)
+            const AAVE_Long_Executor_address = "0x61910EcD7e8e942136CE7Fe7943f956cea1CC2f7"
 
-            await multiplier.connect(admin).updateQuorumFactor(new_quorum_factor)
+            await multiplier.connect(admin).updateExecutor(AAVE_Long_Executor_address)
 
-            const multQuorumFactor = await multiplier.quorumFactor();
-            expect(multQuorumFactor).to.be.eq(new_quorum_factor);
+            expect(await multiplier.executor()).to.be.eq(AAVE_Long_Executor_address);
             
 
             await expect(
-                multiplier.connect(admin).updateQuorumFactor(0)
+                multiplier.connect(admin).updateBaseMultiplier(ethers.constants.AddressZero)
             ).to.be.reverted
+
         });
 
 
@@ -326,10 +343,6 @@ describe('hPalMultiplier contract tests', () => {
 
             await expect(
                 multiplier.connect(nonAdmin).updateBaseMultiplier(ethers.utils.parseEther('15'))
-            ).to.be.revertedWith('CallerNotAdmin()')
-
-            await expect(
-                multiplier.connect(nonAdmin).updateQuorumFactor(1250)
             ).to.be.revertedWith('CallerNotAdmin()')
 
             await expect(
