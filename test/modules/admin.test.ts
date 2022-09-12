@@ -2,7 +2,7 @@ const hre = require("hardhat");
 import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { InterestCalculatorV2 } from "../../typechain/interests/InterestCalculatorV2";
+import { InterestCalculatorV2 } from "../../typechain/InterestCalculatorV2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
