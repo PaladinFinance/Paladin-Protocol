@@ -1,8 +1,8 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { IndexMultiplier } from "../../../typechain/interests/multipliers/IndexMultiplier";
-import { MockPoolBorrowsOnly } from "../../../typechain/tests/MockPoolBorrowsOnly";
+import { IndexMultiplier } from "../../../typechain/IndexMultiplier";
+import { MockPoolBorrowsOnly } from "../../../typechain/MockPoolBorrowsOnly";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";

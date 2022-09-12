@@ -1,7 +1,7 @@
 import { ethers, waffle } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { BasicDelegator } from "../../typechain/delegators/BasicDelegator";
+import { BasicDelegator } from "../../typechain/BasicDelegator";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 chai.use(solidity);

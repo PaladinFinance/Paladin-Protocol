@@ -1,9 +1,9 @@
 import { ethers, waffle } from "hardhat";
 import chai, { use } from "chai";
 import { solidity } from "ethereum-waffle";
-import { GovernorMultiplier } from "../../../typechain/interests/multipliers/GovernorMultiplier";
-import { MockGovernor } from "../../../typechain/tests/MockGovernor";
-import { MockPoolBorrowsOnly } from "../../../typechain/tests/MockPoolBorrowsOnly";
+import { GovernorMultiplier } from "../../../typechain/GovernorMultiplier";
+import { MockGovernor } from "../../../typechain/MockGovernor";
+import { MockPoolBorrowsOnly } from "../../../typechain/MockPoolBorrowsOnly";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";

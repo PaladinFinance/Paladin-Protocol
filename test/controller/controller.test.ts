@@ -3,8 +3,8 @@ import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { PaladinController } from "../../typechain/PaladinController";
 import { ControllerProxy } from "../../typechain/ControllerProxy";
-import { Comp } from "../../typechain/tests/Comp";
-import { MockPalPool } from "../../typechain/tests/MockPalPool";
+import { Comp } from "../../typechain/Comp";
+import { MockPalPool } from "../../typechain/MockPalPool";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
