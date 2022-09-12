@@ -16,8 +16,27 @@ interface IRateProvider {
 // PalPool Minimal Interface
 interface IPalPool {
 
-    function exchangeRateStored() external view returns(uint);
-    function exchangeRateCurrent() external returns(uint);
+    function palToken() external view returns(address);
+
+    function exchangeRateStored() external view returns(uint256);
+    function exchangeRateCurrent() external returns(uint256);
+
+    function borrowRatePerBlock() external view returns(uint256);
+
+    function underlyingBalance() external view returns(uint256);
+
+    function accrualBlockNumber() external view returns(uint256);
+
+    function totalBorrowed() external view returns(uint256);
+    function totalReserve() external view returns(uint256);
+
+    function reserveFactor() external view returns(uint256);
+
+}
+
+interface IPalToken {
+
+    function totalSupply() external view returns(uint256);
 
 }
 
@@ -34,6 +53,8 @@ contract PalStkAaveRateProvider is IRateProvider {
     /** @dev 1e18 mantissa used for calculations */
     uint256 internal constant MANTISSA_SCALE = 1e18;
 
+    uint internal constant poolInitialExchangeRate = 1e18;
+
     IPalPool public immutable palStkAavePool;
 
     constructor(IPalPool _palStkAavePool) {
@@ -42,12 +63,30 @@ contract PalStkAaveRateProvider is IRateProvider {
 
     /**
      * @return the value of palStkAAVE in terms of stkAAVE (where 1 stkAAVE redeems 1 AAVE in the Aave Safety Module)
-     *  !!! Uses the last stored exchange rate, not one calculated based on current block
      */
     function getRate() external view override returns (uint256) {
-        uint256 exchangeRate = palStkAavePool.exchangeRateStored();
+        uint256 _lastAccrualBlock = palStkAavePool.accrualBlockNumber();
+        if(_lastAccrualBlock == block.number) return palStkAavePool.exchangeRateStored();
 
-        return (1e18 * exchangeRate) / MANTISSA_SCALE;
+        uint256 _totalSupply = IPalToken(palStkAavePool.palToken()).totalSupply();
+
+        uint256 _oldCash = palStkAavePool.underlyingBalance();
+        uint256 _oldBorrowed = palStkAavePool.totalBorrowed();
+        uint256 _oldReserve = palStkAavePool.totalReserve();
+
+        uint256 _reserveFactor = palStkAavePool.reserveFactor();
+
+        uint256 _borrowRate = palStkAavePool.borrowRatePerBlock();
+
+        uint256 _accumulatedInterests = ((_borrowRate * (block.number - _lastAccrualBlock)) * _oldBorrowed) / MANTISSA_SCALE;
+
+        uint256 _newBorrowed = _oldBorrowed + _accumulatedInterests;
+        uint256 _newReserve = _oldReserve + ((_accumulatedInterests * _reserveFactor) / MANTISSA_SCALE);
+
+        return _totalSupply == 0
+            ? poolInitialExchangeRate
+            : ((_oldCash + _newBorrowed + _newReserve) * MANTISSA_SCALE) / _totalSupply;
+
     }
 
 }
